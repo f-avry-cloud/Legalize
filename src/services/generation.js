@@ -15,7 +15,8 @@ const db = require('../db');
 const { OPERATION_TYPES } = require('../definitions');
 const { buildDocx } = require('../docx');
 
-const STORAGE_DIR = process.env.LEGALIZE_STORAGE_DIR || path.join(__dirname, '..', '..', 'storage');
+const STORAGE_DIR = process.env.LEGALIZE_STORAGE_DIR
+  || (process.env.VERCEL ? '/tmp/legalize/storage' : path.join(__dirname, '..', '..', 'storage'));
 const TEMPLATES_DIR = path.join(__dirname, '..', '..', 'templates', 'generated');
 
 const nbFmt = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
