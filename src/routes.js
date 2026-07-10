@@ -1,13 +1,12 @@
 'use strict';
 
 const path = require('path');
-const fs = require('fs');
 const express = require('express');
 const multer = require('multer');
 
-const db = require('./db');
+const { supabase, q, qCount, uploadFile, downloadFile } = require('./supa');
 const { OPERATION_TYPES } = require('./definitions');
-const { genererDocuments, slugify, STORAGE_DIR } = require('./services/generation');
+const { genererDocuments, operationDir } = require('./services/generation');
 const { comparerVersions } = require('./services/compare');
 
 const router = express.Router();
@@ -32,24 +31,26 @@ router.get('/referentiel', (req, res) => {
 
 /* ---------------------------------------------------------------- groupes */
 
-router.get('/groupes', (req, res) => {
-  const groupes = db.prepare(`
-    SELECT g.*, COUNT(s.id) AS nb_societes
-    FROM groupes g LEFT JOIN societes s ON s.groupe_id = g.id
-    GROUP BY g.id ORDER BY g.nom
-  `).all();
-  res.json(groupes);
+router.get('/groupes', async (req, res) => {
+  const [groupes, societes] = await Promise.all([
+    q(supabase.from('groupes').select('*').order('nom')),
+    q(supabase.from('societes').select('id, groupe_id')),
+  ]);
+  res.json(groupes.map((g) => ({
+    ...g,
+    nb_societes: societes.filter((s) => s.groupe_id === g.id).length,
+  })));
 });
 
-router.post('/groupes', (req, res) => {
+router.post('/groupes', async (req, res) => {
   const { nom, description = '' } = req.body;
   if (!nom) return res.status(400).json({ error: 'Le nom du groupe est requis' });
-  const info = db.prepare('INSERT INTO groupes (nom, description) VALUES (?, ?)').run(nom, description);
-  res.status(201).json(db.prepare('SELECT * FROM groupes WHERE id = ?').get(info.lastInsertRowid));
+  const groupe = await q(supabase.from('groupes').insert({ nom, description }).select().single());
+  res.status(201).json(groupe);
 });
 
-router.delete('/groupes/:id', (req, res) => {
-  db.prepare('DELETE FROM groupes WHERE id = ?').run(req.params.id);
+router.delete('/groupes/:id', async (req, res) => {
+  await q(supabase.from('groupes').delete().eq('id', req.params.id).select());
   res.json({ ok: true });
 });
 
@@ -57,25 +58,23 @@ router.delete('/groupes/:id', (req, res) => {
  * Organigramme du groupe : arbre construit à partir des participations
  * (associés de type société — associes.societe_liee_id).
  */
-router.get('/groupes/:id/organigramme', (req, res) => {
-  const societes = db.prepare('SELECT * FROM societes WHERE groupe_id = ?').all(req.params.id);
+router.get('/groupes/:id/organigramme', async (req, res) => {
+  const societes = await q(supabase.from('societes').select('*').eq('groupe_id', req.params.id));
   const ids = new Set(societes.map((s) => s.id));
-  const liens = db.prepare(`
-    SELECT a.societe_id AS fille_id, a.societe_liee_id AS mere_id, a.nb_titres,
-           (SELECT nb_titres FROM societes WHERE id = a.societe_id) AS total_titres
-    FROM associes a WHERE a.societe_liee_id IS NOT NULL
-  `).all().filter((l) => ids.has(l.fille_id) && ids.has(l.mere_id));
+  const liens = (await q(supabase.from('associes').select('societe_id, societe_liee_id, nb_titres').not('societe_liee_id', 'is', null)))
+    .filter((l) => ids.has(l.societe_id) && ids.has(l.societe_liee_id));
 
+  const byId = new Map(societes.map((s) => [s.id, s]));
   const fillesDe = new Map();
   const aUneMere = new Set();
   for (const l of liens) {
-    if (!fillesDe.has(l.mere_id)) fillesDe.set(l.mere_id, []);
-    const pct = l.total_titres ? Math.round((l.nb_titres / l.total_titres) * 1000) / 10 : null;
-    fillesDe.get(l.mere_id).push({ id: l.fille_id, pourcentage: pct });
-    aUneMere.add(l.fille_id);
+    if (!fillesDe.has(l.societe_liee_id)) fillesDe.set(l.societe_liee_id, []);
+    const total = byId.get(l.societe_id).nb_titres;
+    const pct = total ? Math.round((l.nb_titres / total) * 1000) / 10 : null;
+    fillesDe.get(l.societe_liee_id).push({ id: l.societe_id, pourcentage: pct });
+    aUneMere.add(l.societe_id);
   }
 
-  const byId = new Map(societes.map((s) => [s.id, s]));
   const seen = new Set();
   function node(id, pourcentage) {
     const s = byId.get(id);
@@ -95,197 +94,210 @@ router.get('/groupes/:id/organigramme', (req, res) => {
 
 /* ---------------------------------------------------------------- sociétés */
 
-router.get('/societes', (req, res) => {
-  const societes = db.prepare(`
-    SELECT s.*, g.nom AS groupe_nom,
-      (SELECT COUNT(*) FROM operations o WHERE o.societe_id = s.id AND o.statut = 'en_cours') AS operations_en_cours
-    FROM societes s LEFT JOIN groupes g ON g.id = s.groupe_id
-    ORDER BY s.denomination
-  `).all();
-  res.json(societes);
+router.get('/societes', async (req, res) => {
+  const [societes, groupes, operations] = await Promise.all([
+    q(supabase.from('societes').select('*').order('denomination')),
+    q(supabase.from('groupes').select('id, nom')),
+    q(supabase.from('operations').select('id, societe_id, statut')),
+  ]);
+  res.json(societes.map((s) => ({
+    ...s,
+    groupe_nom: groupes.find((g) => g.id === s.groupe_id)?.nom || null,
+    operations_en_cours: operations.filter((o) => o.societe_id === s.id && o.statut === 'en_cours').length,
+  })));
 });
 
 const SOCIETE_FIELDS = ['groupe_id', 'denomination', 'forme_sociale', 'capital_social', 'nb_titres',
   'siege_social', 'siren', 'rcs_ville', 'objet_social', 'date_cloture', 'statut', 'notes'];
 
-router.post('/societes', (req, res) => {
+router.post('/societes', async (req, res) => {
   if (!req.body.denomination) return res.status(400).json({ error: 'La dénomination est requise' });
-  const defaults = {
-    groupe_id: null, forme_sociale: 'SAS', capital_social: 0, nb_titres: 0, siege_social: '',
-    siren: '', rcs_ville: '', objet_social: '', date_cloture: '31/12', statut: 'active', notes: '',
-  };
-  const values = SOCIETE_FIELDS.map((f) => req.body[f] ?? defaults[f] ?? '');
-  const info = db.prepare(
-    `INSERT INTO societes (${SOCIETE_FIELDS.join(', ')}) VALUES (${SOCIETE_FIELDS.map(() => '?').join(', ')})`
-  ).run(...values);
-  res.status(201).json(db.prepare('SELECT * FROM societes WHERE id = ?').get(info.lastInsertRowid));
+  const record = {};
+  for (const f of SOCIETE_FIELDS) if (req.body[f] !== undefined && req.body[f] !== null) record[f] = req.body[f];
+  if (record.groupe_id === '') record.groupe_id = null;
+  const societe = await q(supabase.from('societes').insert(record).select().single());
+  res.status(201).json(societe);
 });
 
-router.get('/societes/:id', (req, res) => {
-  const societe = db.prepare('SELECT s.*, g.nom AS groupe_nom FROM societes s LEFT JOIN groupes g ON g.id = s.groupe_id WHERE s.id = ?').get(req.params.id);
-  if (!societe) return res.status(404).json({ error: 'Société introuvable' });
-  societe.dirigeants = db.prepare('SELECT * FROM dirigeants WHERE societe_id = ? ORDER BY id').all(societe.id);
-  societe.associes = db.prepare(`
-    SELECT a.*, sl.denomination AS societe_liee_nom
-    FROM associes a LEFT JOIN societes sl ON sl.id = a.societe_liee_id
-    WHERE a.societe_id = ? ORDER BY a.nb_titres DESC
-  `).all(societe.id);
-  societe.operations = db.prepare('SELECT * FROM operations WHERE societe_id = ? ORDER BY created_at DESC').all(societe.id);
+router.get('/societes/:id', async (req, res) => {
+  const societe = await q(supabase.from('societes').select('*').eq('id', req.params.id).single());
+  const [groupe, dirigeants, associes, operations, societesLiees] = await Promise.all([
+    societe.groupe_id ? q(supabase.from('groupes').select('nom').eq('id', societe.groupe_id).single()) : null,
+    q(supabase.from('dirigeants').select('*').eq('societe_id', societe.id).order('id')),
+    q(supabase.from('associes').select('*').eq('societe_id', societe.id).order('nb_titres', { ascending: false })),
+    q(supabase.from('operations').select('*').eq('societe_id', societe.id).order('created_at', { ascending: false })),
+    q(supabase.from('societes').select('id, denomination')),
+  ]);
+  societe.groupe_nom = groupe ? groupe.nom : null;
+  societe.dirigeants = dirigeants;
+  societe.associes = associes.map((a) => ({
+    ...a,
+    societe_liee_nom: societesLiees.find((x) => x.id === a.societe_liee_id)?.denomination || null,
+  }));
+  societe.operations = operations;
   res.json(societe);
 });
 
-router.put('/societes/:id', (req, res) => {
-  const sets = SOCIETE_FIELDS.filter((f) => f in req.body);
-  if (sets.length) {
-    db.prepare(`UPDATE societes SET ${sets.map((f) => `${f} = ?`).join(', ')} WHERE id = ?`)
-      .run(...sets.map((f) => req.body[f]), req.params.id);
-  }
-  res.json(db.prepare('SELECT * FROM societes WHERE id = ?').get(req.params.id));
+router.put('/societes/:id', async (req, res) => {
+  const patch = {};
+  for (const f of SOCIETE_FIELDS) if (f in req.body) patch[f] = req.body[f] === '' && f === 'groupe_id' ? null : req.body[f];
+  const societe = Object.keys(patch).length
+    ? await q(supabase.from('societes').update(patch).eq('id', req.params.id).select().single())
+    : await q(supabase.from('societes').select('*').eq('id', req.params.id).single());
+  res.json(societe);
 });
 
-router.delete('/societes/:id', (req, res) => {
-  db.prepare('DELETE FROM societes WHERE id = ?').run(req.params.id);
+router.delete('/societes/:id', async (req, res) => {
+  await q(supabase.from('societes').delete().eq('id', req.params.id).select());
   res.json({ ok: true });
 });
 
-router.post('/societes/:id/dirigeants', (req, res) => {
+router.post('/societes/:id/dirigeants', async (req, res) => {
   const { civilite = 'M.', nom, prenom = '', fonction = 'Président', adresse = '', date_nomination = '' } = req.body;
   if (!nom) return res.status(400).json({ error: 'Le nom est requis' });
-  const info = db.prepare(
-    'INSERT INTO dirigeants (societe_id, civilite, nom, prenom, fonction, adresse, date_nomination) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).run(req.params.id, civilite, nom, prenom, fonction, adresse, date_nomination);
-  res.status(201).json(db.prepare('SELECT * FROM dirigeants WHERE id = ?').get(info.lastInsertRowid));
+  const dirigeant = await q(supabase.from('dirigeants')
+    .insert({ societe_id: Number(req.params.id), civilite, nom, prenom, fonction, adresse, date_nomination })
+    .select().single());
+  res.status(201).json(dirigeant);
 });
 
-router.delete('/dirigeants/:id', (req, res) => {
-  db.prepare('DELETE FROM dirigeants WHERE id = ?').run(req.params.id);
+router.delete('/dirigeants/:id', async (req, res) => {
+  await q(supabase.from('dirigeants').delete().eq('id', req.params.id).select());
   res.json({ ok: true });
 });
 
-router.post('/societes/:id/associes', (req, res) => {
+router.post('/societes/:id/associes', async (req, res) => {
   const { type = 'physique', civilite = 'M.', nom = '', prenom = '', denomination = '',
     societe_liee_id = null, nb_titres = 0, adresse = '' } = req.body;
   if (type === 'physique' && !nom) return res.status(400).json({ error: 'Le nom est requis' });
   if (type === 'morale' && !denomination && !societe_liee_id) return res.status(400).json({ error: 'La dénomination est requise' });
   let deno = denomination;
   if (societe_liee_id) {
-    const liee = db.prepare('SELECT denomination FROM societes WHERE id = ?').get(societe_liee_id);
+    const liee = await q(supabase.from('societes').select('denomination').eq('id', societe_liee_id).single());
     if (liee) deno = liee.denomination;
   }
-  const info = db.prepare(
-    'INSERT INTO associes (societe_id, type, civilite, nom, prenom, denomination, societe_liee_id, nb_titres, adresse) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(req.params.id, type, civilite, nom, prenom, deno, societe_liee_id, nb_titres, adresse);
-  res.status(201).json(db.prepare('SELECT * FROM associes WHERE id = ?').get(info.lastInsertRowid));
+  const associe = await q(supabase.from('associes')
+    .insert({ societe_id: Number(req.params.id), type, civilite, nom, prenom, denomination: deno, societe_liee_id, nb_titres, adresse })
+    .select().single());
+  res.status(201).json(associe);
 });
 
-router.delete('/associes/:id', (req, res) => {
-  db.prepare('DELETE FROM associes WHERE id = ?').run(req.params.id);
+router.delete('/associes/:id', async (req, res) => {
+  await q(supabase.from('associes').delete().eq('id', req.params.id).select());
   res.json({ ok: true });
 });
 
 /* ---------------------------------------------------------------- opérations */
 
-router.get('/operations', (req, res) => {
-  const operations = db.prepare(`
-    SELECT o.*, s.denomination AS societe_nom,
-      (SELECT COUNT(*) FROM documents d WHERE d.operation_id = o.id AND d.statut = 'a_faire' AND d.obligatoire = 1) AS docs_manquants,
-      (SELECT COUNT(*) FROM documents d WHERE d.operation_id = o.id) AS docs_total
-    FROM operations o JOIN societes s ON s.id = o.societe_id
-    ORDER BY o.created_at DESC
-  `).all();
-  res.json(operations);
+router.get('/operations', async (req, res) => {
+  const [operations, societes, documents] = await Promise.all([
+    q(supabase.from('operations').select('*').order('created_at', { ascending: false })),
+    q(supabase.from('societes').select('id, denomination')),
+    q(supabase.from('documents').select('id, operation_id, statut, obligatoire')),
+  ]);
+  res.json(operations.map((o) => {
+    const docs = documents.filter((d) => d.operation_id === o.id);
+    return {
+      ...o,
+      societe_nom: societes.find((s) => s.id === o.societe_id)?.denomination || '',
+      docs_manquants: docs.filter((d) => d.statut === 'a_faire' && d.obligatoire).length,
+      docs_total: docs.length,
+    };
+  }));
 });
 
-router.post('/operations', (req, res) => {
+router.post('/operations', async (req, res) => {
   const { societe_id, type, libelle, variables = {} } = req.body;
   const def = OPERATION_TYPES[type];
   if (!societe_id || !def) return res.status(400).json({ error: "Société et type d'opération valides requis" });
-  const societe = db.prepare('SELECT * FROM societes WHERE id = ?').get(societe_id);
-  if (!societe) return res.status(400).json({ error: 'Société introuvable' });
+  const societe = await q(supabase.from('societes').select('denomination').eq('id', societe_id).single());
 
-  const create = db.transaction(() => {
-    const info = db.prepare('INSERT INTO operations (societe_id, type, libelle, variables) VALUES (?, ?, ?, ?)')
-      .run(societe_id, type, libelle || `${def.libelle} — ${societe.denomination}`, JSON.stringify(variables));
-    const opId = info.lastInsertRowid;
-    // La checklist du type d'opération instancie automatiquement les documents requis.
-    const insertDoc = db.prepare('INSERT INTO documents (operation_id, code, nom, obligatoire) VALUES (?, ?, ?, ?)');
-    for (const d of def.documents) insertDoc.run(opId, d.code, d.nom, d.obligatoire ? 1 : 0);
-    return opId;
-  });
-  const opId = create();
-  res.status(201).json(db.prepare('SELECT * FROM operations WHERE id = ?').get(opId));
+  const operation = await q(supabase.from('operations')
+    .insert({ societe_id, type, libelle: libelle || `${def.libelle} — ${societe.denomination}`, variables })
+    .select().single());
+  // La checklist du type d'opération instancie automatiquement les documents requis.
+  await q(supabase.from('documents').insert(def.documents.map((d) => ({
+    operation_id: operation.id, code: d.code, nom: d.nom, obligatoire: Boolean(d.obligatoire),
+  }))).select());
+  res.status(201).json(operation);
 });
 
-router.get('/operations/:id', (req, res) => {
-  const operation = db.prepare(`
-    SELECT o.*, s.denomination AS societe_nom FROM operations o JOIN societes s ON s.id = o.societe_id WHERE o.id = ?
-  `).get(req.params.id);
-  if (!operation) return res.status(404).json({ error: 'Opération introuvable' });
-  operation.variables = JSON.parse(operation.variables || '{}');
-  operation.documents = db.prepare('SELECT * FROM documents WHERE operation_id = ? ORDER BY id').all(operation.id);
-  const versions = db.prepare('SELECT * FROM document_versions WHERE document_id = ? ORDER BY numero DESC');
-  for (const d of operation.documents) d.versions = versions.all(d.id);
+router.get('/operations/:id', async (req, res) => {
+  const operation = await q(supabase.from('operations').select('*').eq('id', req.params.id).single());
+  const [societe, documents, factures] = await Promise.all([
+    q(supabase.from('societes').select('denomination').eq('id', operation.societe_id).single()),
+    q(supabase.from('documents').select('*').eq('operation_id', operation.id).order('id')),
+    q(supabase.from('factures').select('*').eq('operation_id', operation.id).order('created_at', { ascending: false })),
+  ]);
+  const versions = documents.length
+    ? await q(supabase.from('document_versions').select('*').in('document_id', documents.map((d) => d.id)))
+    : [];
+  operation.societe_nom = societe.denomination;
+  operation.documents = documents.map((d) => ({
+    ...d,
+    versions: versions.filter((v) => v.document_id === d.id).sort((a, b) => b.numero - a.numero),
+  }));
   operation.manquants = operation.documents.filter((d) => d.statut === 'a_faire' && d.obligatoire);
-  operation.factures = db.prepare('SELECT * FROM factures WHERE operation_id = ? ORDER BY created_at DESC').all(operation.id)
-    .map((f) => ({ ...f, lignes: JSON.parse(f.lignes) }));
+  operation.factures = factures;
   res.json(operation);
 });
 
-router.put('/operations/:id', (req, res) => {
-  const op = db.prepare('SELECT * FROM operations WHERE id = ?').get(req.params.id);
-  if (!op) return res.status(404).json({ error: 'Opération introuvable' });
-  const { libelle, statut, variables } = req.body;
-  db.prepare('UPDATE operations SET libelle = coalesce(?, libelle), statut = coalesce(?, statut), variables = coalesce(?, variables) WHERE id = ?')
-    .run(libelle ?? null, statut ?? null, variables !== undefined ? JSON.stringify(variables) : null, req.params.id);
-  res.json(db.prepare('SELECT * FROM operations WHERE id = ?').get(req.params.id));
+router.put('/operations/:id', async (req, res) => {
+  const patch = {};
+  for (const f of ['libelle', 'statut', 'variables']) if (req.body[f] !== undefined) patch[f] = req.body[f];
+  const operation = Object.keys(patch).length
+    ? await q(supabase.from('operations').update(patch).eq('id', req.params.id).select().single())
+    : await q(supabase.from('operations').select('*').eq('id', req.params.id).single());
+  res.json(operation);
 });
 
-router.delete('/operations/:id', (req, res) => {
-  db.prepare('DELETE FROM operations WHERE id = ?').run(req.params.id);
+router.delete('/operations/:id', async (req, res) => {
+  await q(supabase.from('operations').delete().eq('id', req.params.id).select());
   res.json({ ok: true });
 });
 
 /** Génération en un clic : tous les documents de la checklist en une passe. */
-router.post('/operations/:id/generer', (req, res) => {
-  res.json(genererDocuments(Number(req.params.id)));
+router.post('/operations/:id/generer', async (req, res) => {
+  res.json(await genererDocuments(Number(req.params.id)));
+});
+// Alias GET (tests / intégrations simples) — même effet que le POST.
+router.get('/operations/:id/generer', async (req, res) => {
+  res.json(await genererDocuments(Number(req.params.id)));
 });
 
 /* ---------------------------------------------------------------- documents & versions */
 
 const STATUTS_DOC = ['a_faire', 'genere', 'envoye', 'recu_markup', 'signe', 'finalise', 'non_applicable'];
 
-router.put('/documents/:id', (req, res) => {
+router.put('/documents/:id', async (req, res) => {
   const { statut } = req.body;
   if (!STATUTS_DOC.includes(statut)) return res.status(400).json({ error: 'Statut invalide' });
-  db.prepare('UPDATE documents SET statut = ? WHERE id = ?').run(statut, req.params.id);
-  res.json(db.prepare('SELECT * FROM documents WHERE id = ?').get(req.params.id));
+  const document = await q(supabase.from('documents').update({ statut }).eq('id', req.params.id).select().single());
+  res.json(document);
 });
 
 /** Dépôt d'une version reçue (markup) ou importée — .docx ou .pdf. */
-router.post('/documents/:id/versions', upload.single('fichier'), (req, res) => {
-  const document = db.prepare('SELECT * FROM documents WHERE id = ?').get(req.params.id);
-  if (!document) return res.status(404).json({ error: 'Document introuvable' });
+router.post('/documents/:id/versions', upload.single('fichier'), async (req, res) => {
+  const document = await q(supabase.from('documents').select('*').eq('id', req.params.id).single());
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ « fichier »)' });
   const ext = path.extname(req.file.originalname).toLowerCase();
   if (!['.docx', '.pdf'].includes(ext)) return res.status(400).json({ error: 'Formats acceptés : .docx, .pdf' });
 
-  const operation = db.prepare('SELECT * FROM operations WHERE id = ?').get(document.operation_id);
-  const societe = db.prepare('SELECT * FROM societes WHERE id = ?').get(operation.societe_id);
-  const dir = path.join(STORAGE_DIR, slugify(societe.denomination), `${operation.id}-${slugify(operation.libelle)}`);
-  fs.mkdirSync(dir, { recursive: true });
+  const operation = await q(supabase.from('operations').select('*').eq('id', document.operation_id).single());
+  const societe = await q(supabase.from('societes').select('*').eq('id', operation.societe_id).single());
 
   const source = req.body.source === 'importe' ? 'importe' : 'recu';
-  const last = db.prepare('SELECT MAX(numero) AS n FROM document_versions WHERE document_id = ?').get(document.id);
-  const numero = (last.n || 0) + 1;
+  const existantes = await q(supabase.from('document_versions').select('numero').eq('document_id', document.id));
+  const numero = existantes.reduce((max, v) => Math.max(max, v.numero), 0) + 1;
   const filename = `${document.code}_v${numero}_${source}${ext}`;
-  const filepath = path.join(dir, filename);
-  fs.writeFileSync(filepath, req.file.buffer);
+  const filepath = `${operationDir(societe, operation)}/${filename}`;
+  await uploadFile(filepath, req.file.buffer, req.file.mimetype || 'application/octet-stream');
 
-  const info = db.prepare(
-    'INSERT INTO document_versions (document_id, numero, source, filename, filepath) VALUES (?, ?, ?, ?, ?)'
-  ).run(document.id, numero, source, filename, filepath);
-  if (source === 'recu') db.prepare("UPDATE documents SET statut = 'recu_markup' WHERE id = ?").run(document.id);
-  res.status(201).json(db.prepare('SELECT * FROM document_versions WHERE id = ?').get(info.lastInsertRowid));
+  const version = await q(supabase.from('document_versions')
+    .insert({ document_id: document.id, numero, source, filename, filepath })
+    .select().single());
+  if (source === 'recu') await q(supabase.from('documents').update({ statut: 'recu_markup' }).eq('id', document.id).select());
+  res.status(201).json(version);
 });
 
 /** Comparaison markup entre deux versions (par défaut : dernière envoyée vs dernière reçue). */
@@ -293,7 +305,7 @@ router.get('/documents/:id/compare', async (req, res) => {
   const documentId = Number(req.params.id);
   let { from, to } = req.query;
   if (!from || !to) {
-    const versions = db.prepare('SELECT * FROM document_versions WHERE document_id = ? ORDER BY numero').all(documentId);
+    const versions = await q(supabase.from('document_versions').select('*').eq('document_id', documentId).order('numero'));
     const derniereRecue = [...versions].reverse().find((v) => v.source === 'recu');
     const derniereGeneree = [...versions].reverse().find((v) => v.source !== 'recu');
     if (!derniereRecue || !derniereGeneree) {
@@ -305,79 +317,101 @@ router.get('/documents/:id/compare', async (req, res) => {
   res.json(await comparerVersions(documentId, Number(from), Number(to)));
 });
 
-router.get('/versions/:id/download', (req, res) => {
-  const version = db.prepare('SELECT * FROM document_versions WHERE id = ?').get(req.params.id);
-  if (!version || !fs.existsSync(version.filepath)) return res.status(404).json({ error: 'Fichier introuvable' });
-  res.download(version.filepath, version.filename);
+router.get('/versions/:id/download', async (req, res) => {
+  const version = await q(supabase.from('document_versions').select('*').eq('id', req.params.id).single());
+  const buffer = await downloadFile(version.filepath);
+  res.set('Content-Disposition', `attachment; filename="${encodeURIComponent(version.filename)}"`);
+  res.set('Content-Type', version.filename.endsWith('.pdf') ? 'application/pdf'
+    : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  res.send(buffer);
 });
 
 /* ---------------------------------------------------------------- facturation */
 
-router.get('/factures', (req, res) => {
-  const factures = db.prepare(`
-    SELECT f.*, o.libelle AS operation_libelle, s.denomination AS societe_nom
-    FROM factures f JOIN operations o ON o.id = f.operation_id JOIN societes s ON s.id = o.societe_id
-    ORDER BY f.created_at DESC
-  `).all().map((f) => ({ ...f, lignes: JSON.parse(f.lignes) }));
-  res.json(factures);
+router.get('/factures', async (req, res) => {
+  const [factures, operations, societes] = await Promise.all([
+    q(supabase.from('factures').select('*').order('created_at', { ascending: false })),
+    q(supabase.from('operations').select('id, libelle, societe_id')),
+    q(supabase.from('societes').select('id, denomination')),
+  ]);
+  res.json(factures.map((f) => {
+    const op = operations.find((o) => o.id === f.operation_id);
+    return {
+      ...f,
+      operation_libelle: op?.libelle || '',
+      societe_nom: op ? societes.find((s) => s.id === op.societe_id)?.denomination || '' : '',
+    };
+  }));
 });
 
-router.post('/factures', (req, res) => {
+router.post('/factures', async (req, res) => {
   const { operation_id, type = 'devis', mode = 'forfait', lignes = [], taux_tva = 20 } = req.body;
-  const operation = db.prepare('SELECT * FROM operations WHERE id = ?').get(operation_id);
-  if (!operation) return res.status(400).json({ error: 'Opération introuvable' });
+  await q(supabase.from('operations').select('id').eq('id', operation_id).single());
   const annee = new Date().getFullYear();
   const prefix = type === 'facture' ? 'FAC' : 'DEV';
-  const count = db.prepare("SELECT COUNT(*) AS n FROM factures WHERE type = ? AND numero LIKE ?")
-    .get(type, `${prefix}-${annee}-%`).n;
+  const count = await qCount(supabase.from('factures')
+    .select('id', { count: 'exact', head: true })
+    .eq('type', type).like('numero', `${prefix}-${annee}-%`));
   const numero = `${prefix}-${annee}-${String(count + 1).padStart(3, '0')}`;
-  const info = db.prepare(
-    'INSERT INTO factures (operation_id, type, numero, mode, lignes, taux_tva) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(operation_id, type, numero, mode, JSON.stringify(lignes), taux_tva);
-  const f = db.prepare('SELECT * FROM factures WHERE id = ?').get(info.lastInsertRowid);
-  res.status(201).json({ ...f, lignes: JSON.parse(f.lignes) });
+  const facture = await q(supabase.from('factures')
+    .insert({ operation_id, type, numero, mode, lignes, taux_tva })
+    .select().single());
+  res.status(201).json(facture);
 });
 
-router.put('/factures/:id', (req, res) => {
-  const f = db.prepare('SELECT * FROM factures WHERE id = ?').get(req.params.id);
-  if (!f) return res.status(404).json({ error: 'Introuvable' });
-  const { statut, lignes, mode, taux_tva } = req.body;
-  db.prepare('UPDATE factures SET statut = coalesce(?, statut), lignes = coalesce(?, lignes), mode = coalesce(?, mode), taux_tva = coalesce(?, taux_tva) WHERE id = ?')
-    .run(statut ?? null, lignes !== undefined ? JSON.stringify(lignes) : null, mode ?? null, taux_tva ?? null, req.params.id);
-  const updated = db.prepare('SELECT * FROM factures WHERE id = ?').get(req.params.id);
-  res.json({ ...updated, lignes: JSON.parse(updated.lignes) });
+router.put('/factures/:id', async (req, res) => {
+  const patch = {};
+  for (const f of ['statut', 'lignes', 'mode', 'taux_tva']) if (req.body[f] !== undefined) patch[f] = req.body[f];
+  const facture = Object.keys(patch).length
+    ? await q(supabase.from('factures').update(patch).eq('id', req.params.id).select().single())
+    : await q(supabase.from('factures').select('*').eq('id', req.params.id).single());
+  res.json(facture);
 });
 
-router.delete('/factures/:id', (req, res) => {
-  db.prepare('DELETE FROM factures WHERE id = ?').run(req.params.id);
+router.delete('/factures/:id', async (req, res) => {
+  await q(supabase.from('factures').delete().eq('id', req.params.id).select());
   res.json({ ok: true });
 });
 
 /* ---------------------------------------------------------------- tableau de bord */
 
-router.get('/dashboard', (req, res) => {
-  const compteurs = {
-    societes: db.prepare('SELECT COUNT(*) AS n FROM societes').get().n,
-    groupes: db.prepare('SELECT COUNT(*) AS n FROM groupes').get().n,
-    operations_en_cours: db.prepare("SELECT COUNT(*) AS n FROM operations WHERE statut = 'en_cours'").get().n,
-    documents_manquants: db.prepare(`
-      SELECT COUNT(*) AS n FROM documents d JOIN operations o ON o.id = d.operation_id
-      WHERE d.statut = 'a_faire' AND d.obligatoire = 1 AND o.statut = 'en_cours'
-    `).get().n,
-  };
-  const operations = db.prepare(`
-    SELECT o.id, o.libelle, o.type, o.statut, s.denomination AS societe_nom,
-      (SELECT COUNT(*) FROM documents d WHERE d.operation_id = o.id AND d.statut = 'a_faire' AND d.obligatoire = 1) AS docs_manquants
-    FROM operations o JOIN societes s ON s.id = o.societe_id
-    WHERE o.statut = 'en_cours' ORDER BY o.created_at DESC LIMIT 10
-  `).all();
-  const manquants = db.prepare(`
-    SELECT d.id, d.nom, o.id AS operation_id, o.libelle AS operation_libelle, s.denomination AS societe_nom
-    FROM documents d JOIN operations o ON o.id = d.operation_id JOIN societes s ON s.id = o.societe_id
-    WHERE d.statut = 'a_faire' AND d.obligatoire = 1 AND o.statut = 'en_cours'
-    ORDER BY o.created_at DESC LIMIT 15
-  `).all();
-  res.json({ compteurs, operations, manquants });
+router.get('/dashboard', async (req, res) => {
+  const [societes, groupes, operations, documents] = await Promise.all([
+    q(supabase.from('societes').select('id, denomination')),
+    q(supabase.from('groupes').select('id')),
+    q(supabase.from('operations').select('*').order('created_at', { ascending: false })),
+    q(supabase.from('documents').select('id, operation_id, nom, statut, obligatoire')),
+  ]);
+  const enCours = operations.filter((o) => o.statut === 'en_cours');
+  const enCoursIds = new Set(enCours.map((o) => o.id));
+  const manquantsDocs = documents.filter((d) => d.statut === 'a_faire' && d.obligatoire && enCoursIds.has(d.operation_id));
+
+  res.json({
+    compteurs: {
+      societes: societes.length,
+      groupes: groupes.length,
+      operations_en_cours: enCours.length,
+      documents_manquants: manquantsDocs.length,
+    },
+    operations: enCours.slice(0, 10).map((o) => ({
+      id: o.id,
+      libelle: o.libelle,
+      type: o.type,
+      statut: o.statut,
+      societe_nom: societes.find((s) => s.id === o.societe_id)?.denomination || '',
+      docs_manquants: manquantsDocs.filter((d) => d.operation_id === o.id).length,
+    })),
+    manquants: manquantsDocs.slice(0, 15).map((d) => {
+      const op = operations.find((o) => o.id === d.operation_id);
+      return {
+        id: d.id,
+        nom: d.nom,
+        operation_id: d.operation_id,
+        operation_libelle: op?.libelle || '',
+        societe_nom: societes.find((s) => s.id === op?.societe_id)?.denomination || '',
+      };
+    }),
+  });
 });
 
 module.exports = router;

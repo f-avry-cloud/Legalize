@@ -3,7 +3,8 @@
 /**
  * Génération documentaire en un clic : à partir d'une opération (variables
  * saisies une seule fois) et de la fiche société, génère l'intégralité des
- * documents de la checklist en une passe.
+ * documents de la checklist en une passe. Les fichiers sont déposés dans le
+ * bucket Supabase Storage « documents », arborescence société/opération.
  */
 
 const fs = require('fs');
@@ -11,13 +12,12 @@ const path = require('path');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 
-const db = require('../db');
+const { supabase, q, uploadFile } = require('../supa');
 const { OPERATION_TYPES } = require('../definitions');
 const { buildDocx } = require('../docx');
 
-const STORAGE_DIR = process.env.LEGALIZE_STORAGE_DIR
-  || (process.env.VERCEL ? '/tmp/legalize/storage' : path.join(__dirname, '..', '..', 'storage'));
 const TEMPLATES_DIR = path.join(__dirname, '..', '..', 'templates', 'generated');
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 const nbFmt = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -43,14 +43,14 @@ function slugify(s) {
 }
 
 /** Construit le contexte de fusion : société + dirigeant + associés + variables d'opération. */
-function buildContext(operation) {
-  const societe = db.prepare('SELECT * FROM societes WHERE id = ?').get(operation.societe_id);
-  if (!societe) throw new Error('Société introuvable');
-  const dirigeant = db.prepare('SELECT * FROM dirigeants WHERE societe_id = ? ORDER BY id LIMIT 1').get(societe.id);
-  const associes = db.prepare('SELECT * FROM associes WHERE societe_id = ? ORDER BY nb_titres DESC').all(societe.id);
+async function buildContext(operation) {
+  const societe = await q(supabase.from('societes').select('*').eq('id', operation.societe_id).single());
+  const dirigeants = await q(supabase.from('dirigeants').select('*').eq('societe_id', societe.id).order('id').limit(1));
+  const dirigeant = dirigeants[0];
+  const associes = await q(supabase.from('associes').select('*').eq('societe_id', societe.id).order('nb_titres', { ascending: false }));
   const def = OPERATION_TYPES[operation.type];
   if (!def) throw new Error(`Type d'opération inconnu : ${operation.type}`);
-  const vars = JSON.parse(operation.variables || '{}');
+  const vars = operation.variables || {};
 
   const totalTitres = societe.nb_titres || associes.reduce((s, a) => s + a.nb_titres, 0) || 0;
 
@@ -108,7 +108,7 @@ function buildContext(operation) {
   }
   if (operation.type === 'augmentation_capital') {
     const souscrits = (vars.souscripteurs || []).reduce((s, x) => s + (Number(x.montant) || 0), 0);
-    ctx.capital_apres_fmt = fmtNumber((societe.capital_social || 0) + (Number(vars.montant_augmentation) || 0));
+    ctx.capital_apres_fmt = fmtNumber((Number(societe.capital_social) || 0) + (Number(vars.montant_augmentation) || 0));
     ctx.nb_titres_apres = fmtNumber((societe.nb_titres || 0) + (Number(vars.nb_titres_nouveaux) || 0));
     ctx.total_souscrit_fmt = fmtNumber(souscrits);
   }
@@ -134,50 +134,51 @@ function renderDocx(templateBuffer, ctx) {
   return doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
 
+/** Chemin de rangement d'une opération dans le bucket (arborescence lisible). */
+function operationDir(societe, operation) {
+  return `${slugify(societe.denomination)}/${operation.id}-${slugify(operation.libelle)}`;
+}
+
 /**
  * Génère tous les documents d'une opération en une seule fois.
  * Retourne { generes: [...], non_applicables: [...] }.
  */
-function genererDocuments(operationId) {
-  const operation = db.prepare('SELECT * FROM operations WHERE id = ?').get(operationId);
-  if (!operation) throw new Error('Opération introuvable');
+async function genererDocuments(operationId) {
+  const operation = await q(supabase.from('operations').select('*').eq('id', operationId).single());
   const def = OPERATION_TYPES[operation.type];
-  const { ctx, societe } = buildContext(operation);
+  if (!def) throw new Error(`Type d'opération inconnu : ${operation.type}`);
+  const { ctx, societe } = await buildContext(operation);
+  const documents = await q(supabase.from('documents').select('*').eq('operation_id', operation.id));
+  const versions = await q(supabase.from('document_versions').select('document_id, numero').in('document_id', documents.map((d) => d.id)));
 
-  const dir = path.join(STORAGE_DIR, slugify(societe.denomination), `${operation.id}-${slugify(operation.libelle)}`);
-  fs.mkdirSync(dir, { recursive: true });
-
+  const dir = operationDir(societe, operation);
   const generes = [];
   const nonApplicables = [];
 
   for (const docDef of def.documents) {
-    const document = db
-      .prepare('SELECT * FROM documents WHERE operation_id = ? AND code = ?')
-      .get(operation.id, docDef.code);
+    const document = documents.find((d) => d.code === docDef.code);
     if (!document) continue;
 
     // Clause conditionnelle : document sans objet si la variable pilote est décochée.
     if (docDef.condition && !ctx[docDef.condition]) {
-      db.prepare("UPDATE documents SET statut = 'non_applicable' WHERE id = ?").run(document.id);
+      await q(supabase.from('documents').update({ statut: 'non_applicable' }).eq('id', document.id).select());
       nonApplicables.push(docDef.nom);
       continue;
     }
 
     const rendered = renderDocx(loadTemplate(operation.type, docDef), ctx);
-    const last = db
-      .prepare('SELECT MAX(numero) AS n FROM document_versions WHERE document_id = ?')
-      .get(document.id);
-    const numero = (last.n || 0) + 1;
+    const numero = versions.filter((v) => v.document_id === document.id)
+      .reduce((max, v) => Math.max(max, v.numero), 0) + 1;
     const filename = `${docDef.code}_v${numero}.docx`;
-    const filepath = path.join(dir, filename);
-    fs.writeFileSync(filepath, rendered);
+    const filepath = `${dir}/${filename}`;
+    await uploadFile(filepath, rendered, DOCX_MIME);
 
-    db.prepare(
-      "INSERT INTO document_versions (document_id, numero, source, filename, filepath) VALUES (?, ?, 'genere', ?, ?)"
-    ).run(document.id, numero, filename, filepath);
+    await q(supabase.from('document_versions')
+      .insert({ document_id: document.id, numero, source: 'genere', filename, filepath })
+      .select().single());
     // Ne rétrograde pas un document déjà plus avancé dans le circuit.
     if (['a_faire', 'non_applicable', 'genere'].includes(document.statut)) {
-      db.prepare("UPDATE documents SET statut = 'genere' WHERE id = ?").run(document.id);
+      await q(supabase.from('documents').update({ statut: 'genere' }).eq('id', document.id).select());
     }
     generes.push({ document: docDef.nom, version: numero, filename });
   }
@@ -185,4 +186,4 @@ function genererDocuments(operationId) {
   return { generes, non_applicables: nonApplicables, dossier: dir };
 }
 
-module.exports = { genererDocuments, buildContext, loadTemplate, renderDocx, slugify, STORAGE_DIR, TEMPLATES_DIR };
+module.exports = { genererDocuments, buildContext, loadTemplate, renderDocx, slugify, operationDir, DOCX_MIME };

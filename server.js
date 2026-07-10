@@ -5,12 +5,19 @@ const express = require('express');
 
 const routes = require('./src/routes');
 
-// Mode démo (Vercel ou LEGALIZE_DEMO=1) : base éphémère, re-peuplée à chaque démarrage à froid.
-if (process.env.VERCEL || process.env.LEGALIZE_DEMO === '1') {
-  require('./src/demo-seed').seedIfEmpty();
-}
-
 const app = express();
+
+// Jeu de démonstration chargé au premier démarrage sur base vide (idempotent).
+let initPromise = null;
+app.use((req, res, next) => {
+  if (!initPromise) {
+    initPromise = require('./src/demo-seed').seedIfEmpty()
+      .then((seeded) => { if (seeded) console.log('Jeu de démonstration chargé.'); })
+      .catch((e) => { console.error('Seed de démonstration impossible :', e.message); });
+  }
+  initPromise.then(() => next(), () => next());
+});
+
 app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', routes);

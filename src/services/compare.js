@@ -2,19 +2,18 @@
 
 /**
  * Suivi de versions / markup : extraction du texte des versions (.docx ou
- * .pdf) et comparaison mot à mot (ajouts / suppressions), rendue côté client.
+ * .pdf, stockées dans Supabase Storage) et comparaison mot à mot.
  */
 
-const fs = require('fs');
 const path = require('path');
 const { diffWordsWithSpace } = require('diff');
 
-const db = require('../db');
+const { supabase, q, downloadFile } = require('../supa');
 const { extractDocxText, extractPdfText } = require('../docx');
 
-async function extractText(filepath) {
-  const ext = path.extname(filepath).toLowerCase();
-  const buffer = fs.readFileSync(filepath);
+async function extractText(version) {
+  const ext = path.extname(version.filename).toLowerCase();
+  const buffer = await downloadFile(version.filepath);
   if (ext === '.docx') return extractDocxText(buffer);
   if (ext === '.pdf') return extractPdfText(buffer);
   if (ext === '.txt') return buffer.toString('utf8');
@@ -26,12 +25,10 @@ async function extractText(filepath) {
  * Retourne des segments [{value, added, removed}] + statistiques.
  */
 async function comparerVersions(documentId, versionFromId, versionToId) {
-  const get = db.prepare('SELECT * FROM document_versions WHERE id = ? AND document_id = ?');
-  const vFrom = get.get(versionFromId, documentId);
-  const vTo = get.get(versionToId, documentId);
-  if (!vFrom || !vTo) throw new Error('Version introuvable pour ce document');
+  const vFrom = await q(supabase.from('document_versions').select('*').eq('id', versionFromId).eq('document_id', documentId).single());
+  const vTo = await q(supabase.from('document_versions').select('*').eq('id', versionToId).eq('document_id', documentId).single());
 
-  const [textFrom, textTo] = await Promise.all([extractText(vFrom.filepath), extractText(vTo.filepath)]);
+  const [textFrom, textTo] = await Promise.all([extractText(vFrom), extractText(vTo)]);
   const segments = diffWordsWithSpace(textFrom, textTo).map((s) => ({
     value: s.value,
     added: Boolean(s.added),

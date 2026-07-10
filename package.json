@@ -16,7 +16,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
+    "@supabase/supabase-js": "^2.110.2",
     "diff": "^9.0.0",
     "docxtemplater": "^3.69.0",
     "express": "^5.2.1",

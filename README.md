@@ -7,11 +7,20 @@ nécessite un minimum d'intervention manuelle.
 
 ## Démarrage
 
+Les données vivent dans Supabase (Postgres + Storage) : l'application est
+utilisable depuis n'importe où (cabinet + mobilité) et les documents générés
+sont conservés dans le bucket `documents`.
+
 ```bash
 npm install
-npm run seed        # données de démonstration (optionnel)
 npm start           # http://localhost:3000
 ```
+
+Le jeu de démonstration (Groupe Horizon) est chargé automatiquement au premier
+démarrage sur base vide. `SUPABASE_URL` / `SUPABASE_KEY` permettent de pointer
+un autre projet Supabase (valeurs par défaut dans `src/supa.js`).
+
+Déploiement : compatible Vercel tel quel (`api/index.js` + `vercel.json`).
 
 Autres commandes :
 
@@ -46,8 +55,9 @@ npm run dev               # serveur avec rechargement (node --watch)
 ## Architecture
 
 ```
-server.js               Express (API + fichiers statiques)
-src/db.js               SQLite (better-sqlite3) — schéma Société/Groupe/Opération/Document/Checklist
+server.js               Express (API + fichiers statiques + seed démo au premier démarrage)
+api/index.js            Point d'entrée serverless (Vercel)
+src/supa.js             Client Supabase (Postgres via PostgREST + Storage)
 src/definitions.js      Référentiel métier : types d'opérations, variables, checklists, templates
 src/docx.js             Construction .docx (OOXML) + extraction de texte (.docx/.pdf)
 src/routes.js           API REST
@@ -55,9 +65,17 @@ src/services/generation.js   Génération en un clic (contexte de fusion + docxt
 src/services/compare.js      Comparaison de versions (diff mot à mot)
 scripts/                seed, build-templates, smoke-test
 public/                 Interface web (vanilla JS, sans build)
-storage/                Documents générés — arborescence Société/Opération (gitignoré)
-data/                   Base SQLite (gitignoré)
 ```
+
+Le schéma Postgres (tables `societes`, `groupes`, `operations`, `documents`,
+`document_versions`, `factures`, `dirigeants`, `associes`) est versionné dans
+les migrations du projet Supabase. Les documents sont rangés dans le bucket
+Storage `documents` sous une arborescence lisible `société/opération/fichier`.
+
+> **Posture de sécurité (démo)** : l'application et la base sont accessibles
+> sans authentification (politiques RLS ouvertes). Avant d'y mettre de vrais
+> dossiers clients : activer Supabase Auth, restreindre les politiques RLS et
+> protéger l'accès à l'interface.
 
 ### Personnalisation des templates
 
@@ -70,10 +88,10 @@ fiche société sont listées en tête de `src/definitions.js`.
 
 ### Stockage
 
-Les documents sont écrits dans une arborescence lisible
-`storage/<société>/<n°-opération>/` : le dossier peut être synchronisé tel quel
-avec l'arborescence existante du cabinet (OneDrive/serveur). Variables
-d'environnement : `PORT`, `LEGALIZE_DATA_DIR`, `LEGALIZE_STORAGE_DIR`.
+Les documents sont rangés dans le bucket Supabase `documents` sous une
+arborescence lisible `<société>/<n°-opération>/<fichier>`, exportable telle
+quelle vers l'arborescence existante du cabinet (OneDrive/serveur). Variables
+d'environnement : `PORT`, `SUPABASE_URL`, `SUPABASE_KEY`.
 
 ## Hors périmètre MVP (conforme au cahier des charges)
 
