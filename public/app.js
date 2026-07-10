@@ -4,6 +4,10 @@
 
 const $main = document.getElementById('main');
 
+// Racine de l'API : '/api' en local (Express), '<chemin>/api' derrière un
+// hébergement à préfixe (ex. Supabase Edge Function /functions/v1/legalize).
+const API_ROOT = location.pathname.replace(/\/$/, '') + '/api';
+
 async function api(method, url, body, isForm) {
   const opts = { method };
   if (body !== undefined && !isForm) {
@@ -12,7 +16,7 @@ async function api(method, url, body, isForm) {
   } else if (body !== undefined) {
     opts.body = body;
   }
-  const res = await fetch(`/api${url}`, opts);
+  const res = await fetch(`${API_ROOT}${url}`, opts);
   const json = await res.json().catch(() => null);
   if (!res.ok) throw new Error(json?.error || `Erreur ${res.status}`);
   return json;
@@ -600,11 +604,11 @@ async function operationDetail(id) {
                 ${Object.entries(STATUT_DOC).map(([v, l]) => `<option value="${v}" ${d.statut === v ? 'selected' : ''}>${l}</option>`).join('')}
               </select></td>
               <td>${d.versions.length ? d.versions.map((v) => `
-                <div><a href="/api/versions/${v.id}/download">v${v.numero}</a>
+                <div><a href="${API_ROOT}/versions/${v.id}/download">v${v.numero}</a>
                 <span class="muted">· ${v.source === 'genere' ? 'générée' : v.source === 'recu' ? 'reçue' : 'importée'} · ${fmtDate(v.created_at)}</span></div>`).join('')
                 : '<span class="muted">—</span>'}</td>
               <td style="white-space:nowrap">
-                ${last ? `<a class="btn btn-sm" href="/api/versions/${last.id}/download">Télécharger</a>` : ''}
+                ${last ? `<a class="btn btn-sm" href="${API_ROOT}/versions/${last.id}/download">Télécharger</a>` : ''}
                 <button class="btn-sm" data-upload="${d.id}">Déposer une version</button>
                 ${d.versions.filter((v) => v.source === 'recu').length && d.versions.filter((v) => v.source !== 'recu').length
                   ? `<button class="btn-sm" data-compare="${d.id}">Comparer le markup</button>` : ''}
