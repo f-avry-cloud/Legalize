@@ -1,9 +1,10 @@
 -- Schéma du module « Formalités INPI » (Supabase / Postgres).
 -- À exécuter une fois dans le SQL editor du projet Supabase.
 --
--- Posture identique au reste du MVP : pas de RLS, accès par la clé
--- publishable. Le bloc de durcissement est fourni en fin de fichier et doit
--- être activé avant d'y mettre de vrais dossiers clients.
+-- Posture identique au reste du MVP : RLS activé, mais avec une policy
+-- permissive « demo acces complet » (accès total par la clé publishable),
+-- exactement comme les tables existantes. À restreindre avant d'y mettre de
+-- vrais dossiers clients (voir la fin de ce fichier).
 
 create table if not exists formalites (
   id            bigint generated always as identity primary key,
@@ -66,10 +67,30 @@ create table if not exists formalite_evenements (
 create index if not exists formalite_evenements_formalite_idx on formalite_evenements (formalite_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
--- Durcissement (à activer avant mise en production réelle) :
+-- Sécurité : même posture démo que les tables existantes (RLS activé, policy
+-- permissive). PostgREST refuserait l'accès sans policy.
+
+alter table formalites           enable row level security;
+alter table formalite_pieces     enable row level security;
+alter table formalite_evenements enable row level security;
+
+do $$
+begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='formalites') then
+    create policy "demo acces complet" on formalites for all using (true) with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='formalite_pieces') then
+    create policy "demo acces complet" on formalite_pieces for all using (true) with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='formalite_evenements') then
+    create policy "demo acces complet" on formalite_evenements for all using (true) with check (true);
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Durcissement (avant mise en production réelle) : remplacer la policy
+-- permissive par une restriction au cabinet / à l'utilisateur authentifié.
 --
--- alter table formalites          enable row level security;
--- alter table formalite_pieces    enable row level security;
--- alter table formalite_evenements enable row level security;
+-- drop policy "demo acces complet" on formalites;
 -- create policy "cabinet" on formalites for all to authenticated using (true) with check (true);
--- (idem sur les deux autres tables, puis restreindre par cabinet/utilisateur)
+-- (idem sur les deux autres tables)
