@@ -1,14 +1,16 @@
 {
   "name": "legalize",
   "version": "0.1.0",
-  "description": "Logiciel métier droit des affaires / corporate — MVP : sociétés, groupes, opérations, génération documentaire en un clic, checklists, suivi de versions, facturation",
+  "description": "Logiciel métier droit des affaires / corporate — MVP : sociétés, groupes, opérations, génération documentaire en un clic, checklists, suivi de versions, facturation, formalités INPI (guichet unique + RNE)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node scripts/seed.js",
     "build:templates": "node scripts/build-templates.js",
-    "test": "node scripts/smoke-test.js"
+    "test": "node scripts/smoke-test.js",
+    "test:formalites": "node scripts/test-formalites.js",
+    "test:api": "node scripts/test-api-formalites.js"
   },
   "engines": {
     "node": ">=20"

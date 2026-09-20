@@ -10,6 +10,10 @@ const { genererDocuments, operationDir } = require('./services/generation');
 const { comparerVersions } = require('./services/compare');
 
 const router = express.Router();
+
+// Module « Formalités INPI » (guichet unique + RNE) : routes /api/inpi/* et
+// /api/formalites/*, montées en tête pour rester indépendantes du reste.
+router.use(require('./routes-formalites'));
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
