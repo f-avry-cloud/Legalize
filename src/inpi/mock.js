@@ -4,12 +4,15 @@
  * Backend simulé, utilisé quand aucun identifiant INPI n'est configuré.
  *
  * Il permet de dérouler et de démontrer l'intégralité du parcours — recherche
- * par SIREN, pré-remplissage, contrôles, payload, dépôt, avancement du statut,
- * demande de régularisation — sans compte e-procédures et sans jamais rien
- * envoyer à l'INPI.
+ * par SIREN, pré-remplissage, contrôles, payload, dépôt, signature, paiement,
+ * suivi et demande de régularisation — sans compte e-procédures et sans
+ * jamais rien envoyer à l'INPI.
  *
- * Tout est déterministe (dérivé du SIREN ou de l'identifiant de liasse) : pas
- * d'état en mémoire, donc un comportement identique en serverless.
+ * Le cycle reproduit celui du Guichet unique (§ 9.1 du contrat d'interface) :
+ * ce qui avance tout seul avance tout seul (RECEIVED → SIGNATURE_PENDING,
+ * puis VALIDATION_PENDING → VALIDATED), et ce qui attend une action du
+ * mandataire l'attend vraiment (signature, paiement). Les données entreprise
+ * sont dérivées du SIREN, donc stables d'un appel à l'autre.
  */
 
 const { formaterSiren, nettoyerSiren } = require('./normalize');
@@ -115,42 +118,140 @@ function rechercheSimulee(terme) {
 
 /* --------------------------------------------------------- Guichet unique */
 
-const ETAPES = ['DEPOSEE', 'EN_COURS', 'VALIDEE'];
+/**
+ * État des dépôts simulés. Volontairement en mémoire : un dépôt simulé n'a
+ * pas à survivre au processus — le statut de référence reste celui stocké en
+ * base par l'application. Au redémarrage, l'étape est redérivée de l'horodatage
+ * contenu dans l'identifiant.
+ */
+const depots = new Map();
 
-/** Identifiant de liasse simulé, horodaté pour pouvoir faire avancer le statut. */
+const TARIFS_SIMULES = { formalites: 195.71, formalitesModification: 195.71, comptesAnnuels: 47.36 };
+
+/** Identifiant de liasse simulé, horodaté pour pouvoir redériver l'étape. */
 function liasseSimulee() {
-  return `DEMO-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 46656).toString(36).toUpperCase().padStart(3, '0')}`;
+  return `SIM-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 46656).toString(36).toUpperCase().padStart(3, '0')}`;
 }
 
 function horodatageDe(id) {
-  const m = String(id).match(/^DEMO-([0-9A-Z]+)-/);
+  const m = String(id).match(/^SIM-([0-9A-Z]+)-/);
   const t = m ? parseInt(m[1], 36) : NaN;
   return Number.isFinite(t) ? t : Date.now();
 }
 
-/**
- * Statut simulé : la formalité avance d'une étape toutes les deux minutes.
- * Une liasse sur cinq bascule en régularisation — pour que le suivi des
- * régularisations soit démontrable sans attendre un vrai greffe.
- */
-function statutSimule(id) {
-  const minutes = (Date.now() - horodatageDe(id)) / 60000;
-  const etape = Math.min(ETAPES.length - 1, Math.floor(minutes / 2));
-  const regularisation = empreinte(id) % 5 === 0;
-  if (regularisation && etape >= 1) {
-    return {
-      id,
-      status: 'REGULARISATION',
-      status_date: new Date().toISOString(),
-      regularisations: [{
-        date: new Date().toISOString(),
-        motif: 'Pièce illisible : l’attestation de parution au journal d’annonces légales doit être fournie en intégralité.',
-        delai_reponse_jours: 15,
-      }],
-      _simule: true,
-    };
+function etatDe(id) {
+  if (!depots.has(id)) {
+    // Dépôt inconnu du processus (redémarrage) : on repart de l'horodatage.
+    const secondes = (Date.now() - horodatageDe(id)) / 1000;
+    depots.set(id, {
+      etape: secondes > 30 ? 'SIGNATURE_PENDING' : 'RECEIVED',
+      depuis: horodatageDe(id),
+      montant: TARIFS_SIMULES.formalites,
+    });
   }
-  return { id, status: ETAPES[etape], status_date: new Date().toISOString(), _simule: true };
+  return depots.get(id);
 }
 
-module.exports = { entrepriseSimulee, rechercheSimulee, liasseSimulee, statutSimule };
+/** Dépôt simulé : renvoie une formalité au format du Guichet unique. */
+function deposerSimule(requete) {
+  const id = liasseSimulee();
+  depots.set(id, {
+    etape: 'RECEIVED',
+    depuis: Date.now(),
+    montant: TARIFS_SIMULES[requete?.endpoint] ?? TARIFS_SIMULES.formalites,
+  });
+  const enveloppe = requete?.corps?.newFormality || requete?.corps || {};
+  return {
+    id,
+    liasseNumber: id,
+    companyName: enveloppe.companyName || null,
+    referenceMandataire: enveloppe.referenceMandataire || null,
+    status: 'RECEIVED',
+    statusDate: new Date().toISOString(),
+    carts: { total: depots.get(id).montant },
+    _simule: true,
+  };
+}
+
+/**
+ * Statut simulé. Les transitions automatiques du Guichet unique s'appliquent
+ * (génération du document de synthèse, puis validation par les partenaires) ;
+ * les étapes qui demandent une action du mandataire restent bloquantes.
+ * Un dépôt sur cinq part en régularisation, pour que le suivi de
+ * régularisation soit démontrable sans attendre un vrai valideur.
+ */
+function statutSimule(id) {
+  const etat = etatDe(id);
+  const secondes = (Date.now() - etat.depuis) / 1000;
+
+  if (etat.etape === 'RECEIVED' && secondes > 30) {
+    etat.etape = 'SIGNATURE_PENDING';
+    etat.depuis = Date.now();
+  } else if (etat.etape === 'VALIDATION_PENDING' && secondes > 60) {
+    etat.etape = empreinte(id) % 5 === 0 ? 'AMENDMENT_PENDING' : 'VALIDATED';
+    etat.depuis = Date.now();
+  }
+
+  const regularisations = etat.etape === 'AMENDMENT_PENDING' ? [{
+    id: 1,
+    type: 'INVALID_ATTACHMENT',
+    motif: 'Pièce illisible : l’attestation de parution au journal d’annonces légales doit être fournie en intégralité.',
+    champ: null,
+    piece: null,
+    echeance: new Date(Date.now() + 15 * 24 * 3600 * 1000).toISOString(),
+    frais: null,
+  }] : [];
+
+  return {
+    id,
+    liasseNumber: id,
+    status: etat.etape,
+    statusDate: new Date().toISOString(),
+    carts: { total: etat.montant, paymentDate: etat.paiement || null },
+    signedDate: etat.signature || null,
+    regularisations,
+    _simule: true,
+  };
+}
+
+function signerSimule(id) {
+  const etat = etatDe(id);
+  etat.signature = new Date().toISOString();
+  etat.etape = etat.montant > 0 ? 'PAYMENT_PENDING' : 'VALIDATION_PENDING';
+  etat.depuis = Date.now();
+  return { signature_id: `SIM-SIG-${Date.now()}`, date: etat.signature, simule: true };
+}
+
+function payerSimule(id) {
+  const etat = etatDe(id);
+  etat.paiement = new Date().toISOString();
+  etat.etape = 'VALIDATION_PENDING';
+  etat.depuis = Date.now();
+  return { ok: true, montant: etat.montant, simule: true };
+}
+
+/** Document de synthèse simulé (PDF minimal mais valide). */
+function syntheseSimulee(id) {
+  const texte = `Document de synthese simule - liasse ${id}`;
+  const contenu = `BT /F1 12 Tf 60 720 Td (${texte}) Tj ET`;
+  const objets = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${contenu.length} >>\nstream\n${contenu}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [];
+  objets.forEach((o, i) => { offsets.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objets.length + 1}\n0000000000 65535 f \n`;
+  offsets.forEach((o) => { pdf += `${String(o).padStart(10, '0')} 00000 n \n`; });
+  pdf += `trailer\n<< /Size ${objets.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return Buffer.from(pdf, 'latin1');
+}
+
+module.exports = {
+  entrepriseSimulee, rechercheSimulee,
+  deposerSimule, statutSimule, signerSimule, payerSimule, syntheseSimulee, liasseSimulee,
+};

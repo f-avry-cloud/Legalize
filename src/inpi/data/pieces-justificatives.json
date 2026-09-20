@@ -1,0 +1,673 @@
+{
+ "_source": "8a86758b-inpi_dictionnaire-donne_es-mandataire_06-2026.xlsx",
+ "valeurs": {
+  "PJ_01": {
+   "libelle": "Copie des statuts",
+   "nota": null
+  },
+  "PJ_02": {
+   "libelle": "Copie des statuts mis à jour",
+   "nota": null
+  },
+  "PJ_03": {
+   "libelle": "Copie des actes de nomination des membres des organes de gestion, d'administration, de direction, de surveillance et de contrôle de la société",
+   "nota": null
+  },
+  "PJ_04": {
+   "libelle": "Rapport du commissaire aux apports",
+   "nota": null
+  },
+  "PJ_05": {
+   "libelle": "Décision des fondateurs et documents relatifs à la description et à l'évaluation des apports",
+   "nota": null
+  },
+  "PJ_06": {
+   "libelle": "Certificat du dépositaire des fonds correspondant aux souscriptions avec en annexe la liste des souscripteurs",
+   "nota": null
+  },
+  "PJ_07": {
+   "libelle": "Copie du procès-verbal de l’assemblée constitutive",
+   "nota": null
+  },
+  "PJ_08": {
+   "libelle": "Attestation de parution dans un journal d’annonces légales",
+   "nota": null
+  },
+  "PJ_09": {
+   "libelle": "Copie de l’insertion dans un journal d’annonces légales",
+   "nota": null
+  },
+  "PJ_10": {
+   "libelle": "Copie du récépissé de dépôt des actes constitutifs de la société déposés au greffe avant la demande d’immatriculation.",
+   "nota": null
+  },
+  "PJ_11": {
+   "libelle": "Copie de la carte nationale d’identité",
+   "nota": "Nota bene : Veuillez ne pas oublier que votre copie de la carte nationale d’identité doit être numérisée, après avoir été préalablement revêtue d'une mention manuscrite d'attestation sur l'honneur de conformité à l'original, d'une date et de la signature manuscrite de la personne qui effectue la déclaration."
+  },
+  "PJ_12": {
+   "libelle": "Copie du passeport en cours de validité",
+   "nota": "Nota bene : Veuillez ne pas oublier que votre copie du passeport en cours de validité doit être numérisée, après avoir été préalablement revêtue d'une mention manuscrite d'attestation sur l'honneur de conformité à l'original, d'une date et de la signature manuscrite de la personne qui effectue la déclaration."
+  },
+  "PJ_13": {
+   "libelle": "Copie du visa",
+   "nota": null
+  },
+  "PJ_14": {
+   "libelle": "Copie de la carte de séjour",
+   "nota": null
+  },
+  "PJ_15": {
+   "libelle": "Copie de la carte de résident ou copie de son récépissé de renouvellement",
+   "nota": null
+  },
+  "PJ_16": {
+   "libelle": "Justificatif d’identité faisant état du mariage pounr un conjoint collaborateur ou un conjoint salarié",
+   "nota": null
+  },
+  "PJ_17": {
+   "libelle": "Attestation sur l’honneur, sur papier libre, relative à l’absence de condamnation ou de sanction civile ou administrative de nature à interdire l’exercice d’une activité commerciale, faisant apparaître la filiation.",
+   "nota": null
+  },
+  "PJ_18": {
+   "libelle": "Attestation d'élection de domicile mentionnant la date d'expiration",
+   "nota": null
+  },
+  "PJ_19": {
+   "libelle": "Récépissé de dépôt de déclaration préalable délivré par la Préfecture (étranger ne résidant pas en France)",
+   "nota": null
+  },
+  "PJ_20": {
+   "libelle": "Extrait de l'immatriculation au RCS datant de moins de 3 mois",
+   "nota": null
+  },
+  "PJ_22": {
+   "libelle": "Extrait d’immatriculation ou document équivalent d'un établissement situé dans un Etat membre de l’Union européenne.",
+   "nota": null
+  },
+  "PJ_23": {
+   "libelle": "Titre justifiant de l'existence si non immatriculé au RCS",
+   "nota": null
+  },
+  "PJ_24": {
+   "libelle": "Copie de l’acte ou de la décision conférant à l’intéressé la qualité de représentant permanent",
+   "nota": null
+  },
+  "PJ_25": {
+   "libelle": "Justificatif de la jouissance des locaux (photocopie d’un titre de propriété, contrat de bail, quittances de loyer, factures de gaz, électricité ou téléphone, etc)",
+   "nota": null
+  },
+  "PJ_26": {
+   "libelle": "Justificatif de l’adresse de l’entreprise fixée au local d’habitation, par tout document établi au nom de la personne tenue à l’immatriculation permettant de justifier la réalité de l’adresse déclarée.",
+   "nota": "Nota bene : Veuillez ne pas oublier que votre justificatif doit être daté de moins de trois mois et doit comporter la même adresse postale que votre établissement."
+  },
+  "PJ_29": {
+   "libelle": "Copie du contrat de domiciliation",
+   "nota": null
+  },
+  "PJ_31": {
+   "libelle": "Copie du diplôme, du titre ou de l’autorisation provisoire ou définitive permettant à la société d’exercer l’activité réglementée",
+   "nota": null
+  },
+  "PJ_33": {
+   "libelle": "Copie de l’acte enregistré de l'acquisition par achat, licitation , attribution par voie de partage",
+   "nota": null
+  },
+  "PJ_34": {
+   "libelle": "Copie de l’acte d'acquisiton par donation",
+   "nota": null
+  },
+  "PJ_35": {
+   "libelle": "Copie de l’acte de notoriété ou de l’intitulé d’inventaire pour acquisition par dévolution successorale, sans partage ni licitation",
+   "nota": null
+  },
+  "PJ_36": {
+   "libelle": "Copie de l’acte d'acquisition par apport",
+   "nota": null
+  },
+  "PJ_37": {
+   "libelle": "Contrat de location gérance pour le locataire gérant ou acte constatant la fin de la location-gérance",
+   "nota": null
+  },
+  "PJ_38": {
+   "libelle": "Contrat de gérance mandat pour le mandataire ou acte constatant la fin de la gérance mandat",
+   "nota": null
+  },
+  "PJ_39": {
+   "libelle": "Copie du jugement ordonnant le plan de cession pour un fonds de commerce acquis ou reçu dans le cadre d’un plan de cession, pour la gestion d’un fonds de commerce cédé",
+   "nota": null
+  },
+  "PJ_40": {
+   "libelle": "Justification de l’inscription sur la liste des CAC",
+   "nota": null
+  },
+  "PJ_41": {
+   "libelle": "Lettre du CAC acceptant sa désignation",
+   "nota": null
+  },
+  "PJ_42": {
+   "libelle": "Justificatif d’identité faisant état du mariage du conjoint collaborateur ou du conjoint associé.",
+   "nota": null
+  },
+  "PJ_43": {
+   "libelle": "Attestation notariée relative à l’insaisissabilité",
+   "nota": null
+  },
+  "PJ_45": {
+   "libelle": "Extrait du RCS ou du répertoire des métiers du domiciliataire",
+   "nota": null
+  },
+  "PJ_46": {
+   "libelle": "Etablissement public français : copie du Journal officiel mentionnant l’acte qui a autorisé sa création ou copie de l’acte ayant créé l’établissement",
+   "nota": null
+  },
+  "PJ_47": {
+   "libelle": "Etablissement public français : copie de la décision nommant les personnes chargées de le représenter ou de l’administrer",
+   "nota": null
+  },
+  "PJ_48": {
+   "libelle": "Etablissement public français : copie du Journal officiel mentionnant l’acte qui en a modifié l’organisation ou son fonctionnement ou copie du ou des actes ayant décidé les modifications.",
+   "nota": null
+  },
+  "PJ_49": {
+   "libelle": "Représentation ou agence commerciale des Etats, collectivités ou établissements publics étrangers : certificat de l’autorité diplomatique ou consulaire dont les personnes chargées de le représenter relèvent attestant la réalité et le caractère officiel de la représentation ou de l’agence",
+   "nota": null
+  },
+  "PJ_51": {
+   "libelle": "Eventuel pouvoir si mandataire",
+   "nota": "Nota bene : Veuillez ne pas oublier que si vous êtes un mandataire, vous devez obligatoirement attacher un justificatif (procuration)."
+  },
+  "PJ_52": {
+   "libelle": "Décision de modification certifiée conforme par le représentant légal",
+   "nota": null
+  },
+  "PJ_53": {
+   "libelle": "En cas de suppression d’une activité non sédentaire, carte permettant l’exercice de cette activité",
+   "nota": null
+  },
+  "PJ_54": {
+   "libelle": "PV ayant décidé et constaté la modification enregistrée, certifié conforme par le représentant légal",
+   "nota": null
+  },
+  "PJ_55": {
+   "libelle": "Décision du CA ou du Directoire (modification du capital social d’une SA ou d'une SAS)",
+   "nota": null
+  },
+  "PJ_56": {
+   "libelle": "Certificat du dépositaire (modification du capital social d’une SA ou d'une SAS)",
+   "nota": null
+  },
+  "PJ_57": {
+   "libelle": "Certificat constatant la libération par compensation ( modification du capital social d’une SA ou d'une SAS)",
+   "nota": null
+  },
+  "PJ_58": {
+   "libelle": "Récépissé de dépôt au greffe du rapport du commissaire à la transformation (transformation d’un SARL en SA)",
+   "nota": null
+  },
+  "PJ_59": {
+   "libelle": "Récépissé du dépôt de clôture des comptes de liquidation",
+   "nota": null
+  },
+  "PJ_60": {
+   "libelle": "Extrait de l'acte de décès en cas de décès de la personne physique immatriculée",
+   "nota": null
+  },
+  "PJ_61": {
+   "libelle": "Copie du contrat d'appui au projet d'entreprise pour la création ou la reprise d'une activité économique certifiée conforme par le représentant légal",
+   "nota": null
+  },
+  "PJ_62": {
+   "libelle": "Attestation de délivrance de l'information donnée à son conjoint des conséquences sur les biens communs des dettes contractées dans l'exercice de sa profession, si l'entrepreneur individuel est marié sous le régime de la communauté légale ou conventionnelle",
+   "nota": null
+  },
+  "PJ_63": {
+   "libelle": "Déclaration sur l'honneur de non-condamnation datée et signée en original par l'intéressé",
+   "nota": null
+  },
+  "PJ_64": {
+   "libelle": "Attestation de filiation (nom et prénoms des parents)",
+   "nota": null
+  },
+  "PJ_65": {
+   "libelle": "Copie authentique de la déclaration relative à l'insaisissabilité",
+   "nota": null
+  },
+  "PJ_67": {
+   "libelle": "Exemplaire de l'état descriptif des biens, droits, obligations, sûretés affectés à l'exercice de l'activité professionnelle, daté et certifié conforme par l'entrepreneur individuel",
+   "nota": null
+  },
+  "PJ_68": {
+   "libelle": "Exemplaire de l'accord exprès et de l'information préalable du conjoint (daté et signé)",
+   "nota": null
+  },
+  "PJ_69": {
+   "libelle": "Exemplaire de l'accord exprès et de l'information préalable du coïndivisaire (daté et signé)",
+   "nota": null
+  },
+  "PJ_72": {
+   "libelle": "Extrait de l'acte de décès",
+   "nota": null
+  },
+  "PJ_73": {
+   "libelle": "Pouvoir d'un des héritiers",
+   "nota": null
+  },
+  "PJ_74": {
+   "libelle": "Décision d'inscription ou de nomination par l'autorité compétente.",
+   "nota": null
+  },
+  "PJ_75": {
+   "libelle": "Attestation de parution de l'avis relatif au projet de constitution au BALO, si l'une au moins des sociétés participantes fait appel public à l'épargne ou lorsque ses actions ne revêtent pas toutes la forme nominative.",
+   "nota": null
+  },
+  "PJ_76": {
+   "libelle": "Attestation de parution de l'avis constatant que les conditions de constitution de la société européenne holding sont réunies pour chaque société immatriculée en France participant à cette opération, dans un journal habilité à recevoir des annonces légales au niveau national et au BODACC.",
+   "nota": null
+  },
+  "PJ_77": {
+   "libelle": "Copie du récépissé du dépôt du projet de constitution au greffe du tribunal de commerce pour chacune des sociétés participant à l'opération (Immatriculation d'une société européenne holding à directoire ou conseil de surveillance)",
+   "nota": null
+  },
+  "PJ_79": {
+   "libelle": "Contrat de groupement s'il est établi par acte authentique, ou un original du contrat timbré et enregistré par la recette des impôts, paraphé, daté et signé par tous les membres en personne ou par leurs mandataires, si le contrat est établi par acte sous seing privé. Le(s) pouvoir(s) pour la signature du contrat est(sont) déposé(s) en un exemplaire original.",
+   "nota": null
+  },
+  "PJ_80": {
+   "libelle": "Copie certifiée conforme de l'acte conférant la qualité de représentant permanent d'une personne morale nommée administrateur.",
+   "nota": null
+  },
+  "PJ_81": {
+   "libelle": "Copie du livret de famille ou extrait d'acte de mariage ou acte de naissance si pacsé",
+   "nota": null
+  },
+  "PJ_82": {
+   "libelle": "Compte de liquidation certifié conforme par le liquidateur",
+   "nota": null
+  },
+  "PJ_83": {
+   "libelle": "Acte de cession de fonds de commerce",
+   "nota": null
+  },
+  "PJ_85": {
+   "libelle": "Déclaration de régularité et de conformité",
+   "nota": null
+  },
+  "PJ_87": {
+   "libelle": "Réalisation de l'apport partiel d'actif",
+   "nota": null
+  },
+  "PJ_90": {
+   "libelle": "Convention de gérance-mandat",
+   "nota": null
+  },
+  "PJ_91": {
+   "libelle": "Rapport commissaire à la transformation (transformation juridique)",
+   "nota": null
+  },
+  "PJ_92": {
+   "libelle": "Certificat de dépôt de fonds",
+   "nota": "Nota bene : Veuillez ne pas oublier que l’attestation bancaire, valant certificat de fonds, doit être signée par le dépositaire."
+  },
+  "PJ_93": {
+   "libelle": "PV AG de désignation des administrateurs",
+   "nota": null
+  },
+  "PJ_94": {
+   "libelle": "Déclaration d'option du conjoint collaborateur",
+   "nota": null
+  },
+  "PJ_97": {
+   "libelle": "Liste des sièges sociaux antérieurs",
+   "nota": null
+  },
+  "PJ_98": {
+   "libelle": "Écrit signé avec un mandant",
+   "nota": null
+  },
+  "PJ_108": {
+   "libelle": "Copie de la délibération de l'assemblée ou de la décision de l'associé unique",
+   "nota": null
+  },
+  "PJ_115": {
+   "libelle": "Document de synthèse signé",
+   "nota": null
+  },
+  "PJ_120": {
+   "libelle": "Document de synthèse des bénéficiaires effectifs signé",
+   "nota": null
+  },
+  "PJ_132": {
+   "libelle": "Convention de représentation",
+   "nota": null
+  },
+  "PJ_133": {
+   "libelle": "Procès-verbal de clôture et de liquidation",
+   "nota": null
+  },
+  "PJ_134": {
+   "libelle": "Procès-verbal de clôture et de liquidation avec mention d'enregistrement auprès des impôts",
+   "nota": null
+  },
+  "PJ_135": {
+   "libelle": "Procès-verbal d'Assemblée Générale extraordinaire de la société absorbée constant l'approbation de la fusion enregistrée auprès des services fiscaux et certifié conforme par le représentant légal de la société absorbée",
+   "nota": null
+  },
+  "PJ_136": {
+   "libelle": "Certificat de vie commune ou déclaration sur l’honneur de concubinage",
+   "nota": null
+  },
+  "PJ_137": {
+   "libelle": "Extrait d’immatriculation ou document équivalent pour tout établissement situé dans un autre Etat membre de l’Union européenne ou partie à l’accord sur l’Espace économique européen",
+   "nota": null
+  },
+  "PJ_138": {
+   "libelle": "Liste des souscripteurs",
+   "nota": null
+  },
+  "PJ_139": {
+   "libelle": "Attestation de renonciation à la protection du patrimoine personnel",
+   "nota": null
+  },
+  "PJ_140": {
+   "libelle": "Copie du certificat d'inscription au registre du commerce ou assimilé dans votre pays",
+   "nota": null
+  },
+  "PJ_141": {
+   "libelle": "Attestation d'assujettissement à la TVA dans le pays dans lequel votre entreprise a son siège ou son principal établissement",
+   "nota": null
+  },
+  "PJ_142": {
+   "libelle": "Traduction de statut",
+   "nota": null
+  },
+  "PJ_143": {
+   "libelle": "Extraits d'actes relatifs à la détention de parts (précisant les noms, adresses, numéro SIRET, pourcentage de détention des sociétés dans lesquelles vous détenez des parts ainsi que la date d'acquisition des parts)",
+   "nota": null
+  },
+  "PJ_144": {
+   "libelle": "Comptes combinés",
+   "nota": null
+  },
+  "PJ_152": {
+   "libelle": "Procès-verbal décidant de la mise à jour des statuts",
+   "nota": null
+  },
+  "PJ_153": {
+   "libelle": "Procès-verbal de transformation",
+   "nota": null
+  },
+  "PJ_155": {
+   "libelle": "La décision d’augmentation du capital/procès-verbal d’assemblée générale (PV)",
+   "nota": null
+  },
+  "PJ_156": {
+   "libelle": "Procès verbal de décision d'assemblée générale actant le principe d'une réduction de capital.",
+   "nota": null
+  },
+  "PJ_157": {
+   "libelle": "Enregistrement des actes (PV ET statuts)",
+   "nota": null
+  },
+  "PJ_158": {
+   "libelle": "Le projet de transformation",
+   "nota": null
+  },
+  "PJ_159": {
+   "libelle": "L’acte de sa nomination du commissaire à la transformation",
+   "nota": null
+  },
+  "PJ_160": {
+   "libelle": "Le rapport du commissaire à la transformation",
+   "nota": null
+  },
+  "PJ_161": {
+   "libelle": "Le projet de fusion",
+   "nota": null
+  },
+  "PJ_162": {
+   "libelle": "Publication au BODACC dans les 30 jours au moins avant la date de la première assemblée générale appelée à statuer sur l’opération",
+   "nota": null
+  },
+  "PJ_163": {
+   "libelle": "Le rapport du commissaire aux apports",
+   "nota": null
+  },
+  "PJ_164": {
+   "libelle": "Un exemplaire du projet commun de fusion transfrontalière, daté et signé par les parties",
+   "nota": null
+  },
+  "PJ_165": {
+   "libelle": "Un exemplaire de la déclaration de conformité relatant tous les actes et formalités préalables à la fusion, daté et signé par les parties.",
+   "nota": null
+  },
+  "PJ_166": {
+   "libelle": "Un exemplaire du pouvoir donné à la personne ayant signé seul la déclaration de conformité au nom de la société absorbée française, daté et certifié conforme",
+   "nota": null
+  },
+  "PJ_167": {
+   "libelle": "Une copie de l'attestation de parution de l'avis relatif au projet commun de fusion transfrontalière dans un journal habilité à recevoir des annonces légales",
+   "nota": null
+  },
+  "PJ_168": {
+   "libelle": "Une copie de l'avis au BODACC relatif au projet commun de fusion transfrontalière",
+   "nota": null
+  },
+  "PJ_170": {
+   "libelle": "Les statuts de la société issue de la fusion transfrontalière",
+   "nota": null
+  },
+  "PJ_171": {
+   "libelle": "L’attestation de conformité délivrée par le greffier datant de moins de six mois",
+   "nota": null
+  },
+  "PJ_172": {
+   "libelle": "Une copie de l’attestation de parution dans un journal d’annonces légales du projet commun de fusion transfrontalière",
+   "nota": null
+  },
+  "PJ_173": {
+   "libelle": "Projet d'apport partiel d'actif",
+   "nota": null
+  },
+  "PJ_174": {
+   "libelle": "Un document attestant que les sociétés qui fusionnent ont approuvé le projet de fusion dans les mêmes termes et que les modalités relatives à la participation des salariés ont été fixés conformément au titre VII du livre III de la deuxième partie du Code du travail.",
+   "nota": null
+  },
+  "PJ_175": {
+   "libelle": "Une copie du procès-verbal des assemblées générales d'approbation du projet de fusion des sociétés ayant participé à l'opération de fusion",
+   "nota": null
+  },
+  "PJ_176": {
+   "libelle": "Publication au BODACC",
+   "nota": null
+  },
+  "PJ_178": {
+   "libelle": "Déclaration d'information donnée au conjoint également,",
+   "nota": null
+  },
+  "PJ_180": {
+   "libelle": "Attestation de dépôt des fonds",
+   "nota": null
+  },
+  "PJ_181": {
+   "libelle": "Attestation sur l'honneur relative au statut choisi par le conjoint, le partenaire lié par un pacte civil de solidarité ou le concubin du chef d'exploitation ou d'entreprise agricole, qui exerce une activité professionnelle régulière dans l'exploitation ou l'entreprise agricole",
+   "nota": null
+  },
+  "PJ_182": {
+   "libelle": "Attestation de détention des participations précisant le pourcentage de détention de votre société étrangère dans la société française",
+   "nota": null
+  },
+  "PJ_183": {
+   "libelle": "Requête au juge commis à la surveillance du RCS ou ordonnance du juge commis à la surveillance du RCS",
+   "nota": null
+  },
+  "PJ_184": {
+   "libelle": "Document attestant de l’autorisation du transfert et de la transformation en société française dans la législation du pays d'origine",
+   "nota": null
+  },
+  "PJ_185": {
+   "libelle": "Décision des associés de transférer le siège social et de transformer l’entreprise en société de droit français",
+   "nota": null
+  },
+  "PJ_186": {
+   "libelle": "Justificatif d’accomplissement des formalités de transfert de siège dans le pays d'origine",
+   "nota": null
+  },
+  "PJ_187": {
+   "libelle": "Extrait d’immatriculation de la société sur le registre public du pays d’origine",
+   "nota": null
+  },
+  "PJ_188": {
+   "libelle": "Extrait d'immatriculation de l'associé unique",
+   "nota": null
+  },
+  "PJ_189": {
+   "libelle": "Acte notarié de modification de la répartition des parts sociales (cession, dévolution, donation)",
+   "nota": null
+  },
+  "PJ_190": {
+   "libelle": "Acte sous seing privé de modification de la répartition des parts sociales (cession, donation)",
+   "nota": null
+  },
+  "PJ_191": {
+   "libelle": "Attestation précisant qu'aucune circonstance nouvelle n'est venue modifier une évaluation antérieure des apports",
+   "nota": null
+  },
+  "PJ_192": {
+   "libelle": "Avenant au projet de fusion",
+   "nota": null
+  },
+  "PJ_193": {
+   "libelle": "Avenant au projet de scission",
+   "nota": null
+  },
+  "PJ_194": {
+   "libelle": "Ordonnance",
+   "nota": null
+  },
+  "PJ_195": {
+   "libelle": "Procès verbal de décision d’assemblée générale actant le non recours à la désignation d'un commissaire aux apports.",
+   "nota": null
+  },
+  "PJ_196": {
+   "libelle": "Procès verbal de décision d'assemblée générale actant la non approbation finale du projet de sicission ou fusion (transfrontalière ou intranationale)",
+   "nota": null
+  },
+  "PJ_197": {
+   "libelle": "Procès verbal de décision d'assemblée générale actant le principe du projet de sicission ou fusion (transfrontalière ou intranationale)",
+   "nota": null
+  },
+  "PJ_198": {
+   "libelle": "Procès verbal de décision d'assemblée générale actant le refus d'approbation des comptes annuels",
+   "nota": null
+  },
+  "PJ_199": {
+   "libelle": "Projet de scission",
+   "nota": null
+  },
+  "PJ_200": {
+   "libelle": "Projet de statuts mis à jour",
+   "nota": null
+  },
+  "PJ_201": {
+   "libelle": "Projet de traité d'apport",
+   "nota": null
+  },
+  "PJ_202": {
+   "libelle": "Rapport du commissaire à la fusion (intranationale ou transfrontalière)",
+   "nota": null
+  },
+  "PJ_203": {
+   "libelle": "Rapport du commissaire à la scission",
+   "nota": null
+  },
+  "PJ_204": {
+   "libelle": "Rapport du liquidateur",
+   "nota": null
+  },
+  "PJ_212": {
+   "libelle": "Délégation de pouvoir",
+   "nota": null
+  },
+  "PJ_213": {
+   "libelle": "Autre pièce d’identité de substitution non diffusible (Extrait d'acte de naissance)",
+   "nota": null
+  },
+  "PJ_220": {
+   "libelle": "Attestation de renonciation à la confidentialité",
+   "nota": null
+  },
+  "PJ_225": {
+   "libelle": "Lettre de désignation du représentant fiscal",
+   "nota": null
+  },
+  "PJ_226": {
+   "libelle": "Autorisation du Mineur",
+   "nota": null
+  },
+  "PJ_230": {
+   "libelle": "Lettre de démission du dirigeant",
+   "nota": null
+  },
+  "PJ_231": {
+   "libelle": "Bilan et compte de résultat",
+   "nota": null
+  },
+  "PJ_232": {
+   "libelle": "Bilan, compte de résultat et annexes",
+   "nota": null
+  },
+  "PJ_233": {
+   "libelle": "Bilan et annexes",
+   "nota": null
+  },
+  "PJ_234": {
+   "libelle": "Bilan simplifié et annexes",
+   "nota": null
+  },
+  "PJ_235": {
+   "libelle": "Rapport CAC",
+   "nota": null
+  },
+  "PJ_236": {
+   "libelle": "PV d’assemblée (proposition et résolution d’affectation du résultat votée)",
+   "nota": null
+  },
+  "PJ_237": {
+   "libelle": "Décision d’émancipation du mineur par le  juge",
+   "nota": null
+  },
+  "PJ_238": {
+   "libelle": "Copie du journal officiel mentionnant l’acte qui à autorisé la création ou copie de l’acte ayant créé l’établissement",
+   "nota": null
+  },
+  "PJ_239": {
+   "libelle": "Décision préfectorale d’agrément du GAEC",
+   "nota": null
+  },
+  "PJ_240": {
+   "libelle": "Attestation fiscale",
+   "nota": null
+  },
+  "PJ_241": {
+   "libelle": "Attestation de régularité sociale",
+   "nota": null
+  },
+  "PJ_242": {
+   "libelle": "Copie d’un jugement non diffusible",
+   "nota": "Nota Bene : Ce document ne sera pas diffusé par le Registre National des Entreprises."
+  },
+  "PJ_243": {
+   "libelle": "Copie d’un jugement diffusible",
+   "nota": "Nota Bene : Ce document sera diffusé par le Registre National des Entreprises en accès libre."
+  },
+  "PJ_244": {
+   "libelle": "Certificat d'adressage",
+   "nota": "Nota Bene : Ce document ne sera pas diffusé par le Registre National des Entreprises en accès libre"
+  },
+  "PJ_245": {
+   "libelle": "Autre justificatif de correction",
+   "nota": null
+  }
+ }
+}

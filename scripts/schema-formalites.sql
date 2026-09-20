@@ -10,6 +10,7 @@ create table if not exists formalites (
   societe_id    bigint references societes(id) on delete set null,
   operation_id  bigint references operations(id) on delete set null,
   type          text not null,
+  service       text not null default 'formalites',  -- formalites | comptes_annuels
   libelle       text not null default '',
   reference     text,                       -- référence mandataire (notre côté)
   siren         text,
@@ -17,10 +18,15 @@ create table if not exists formalites (
   reponses      jsonb not null default '{}'::jsonb,   -- questionnaire (le « delta »)
   payload       jsonb,                      -- JSON INPI déposé (ou prêt à déposer)
   statut        text not null default 'BROUILLON',
+  action_attendue text,                      -- deposer | signer | payer | regulariser | attendre
   inpi_id       text,
   numero_liasse text,
-  statut_inpi   text,
+  statut_inpi   text,                        -- statut brut renvoyé par l'INPI
   statut_date   timestamptz,
+  montant       numeric(10,2),               -- taxes calculées par le guichet après dépôt
+  num_nat       text,                        -- numéro national attribué au paiement
+  signature_date timestamptz,
+  paiement_date timestamptz,
   echeance      date,
   simule        boolean not null default false,
   regularisations jsonb not null default '[]'::jsonb,
@@ -31,11 +37,12 @@ create table if not exists formalites (
 create index if not exists formalites_statut_idx   on formalites (statut);
 create index if not exists formalites_societe_idx  on formalites (societe_id);
 create index if not exists formalites_echeance_idx on formalites (echeance);
+create index if not exists formalites_action_idx   on formalites (action_attendue);
 
 create table if not exists formalite_pieces (
   id           bigint generated always as identity primary key,
   formalite_id bigint not null references formalites(id) on delete cascade,
-  code         text not null,               -- code du référentiel de pièces
+  code         text not null,               -- code officiel INPI (PJ_01, PJ_54…)
   libelle      text not null default '',
   filename     text not null default '',
   filepath     text not null default '',    -- chemin dans le bucket « documents »

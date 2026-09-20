@@ -55,7 +55,10 @@ function verifier(nom, condition, detail) {
   const initial = await appel('GET', `/formalites/${id}`);
   verifier('fiche RNE rapatriée et figée', Boolean(initial.corps.fiche?.denomination), initial.corps.fiche);
   verifier('contrôles bloquants au départ', initial.corps.controles.pret === false);
-  verifier('pièces exigées calculées', initial.corps.pieces_exigees.length === 4, initial.corps.pieces_exigees);
+  verifier('pièces exigées : codes officiels du guichet unique',
+    initial.corps.pieces_exigees.length === 4
+      && initial.corps.pieces_exigees.every((p) => /^PJ_\d+$/.test(p.code)),
+    initial.corps.pieces_exigees.map((p) => p.code));
 
   const refus = await appel('POST', `/formalites/${id}/deposer`);
   verifier('dépôt refusé tant que le dossier est incomplet', refus.statut === 422, refus.corps);
@@ -70,7 +73,7 @@ function verifier(nom, condition, detail) {
   verifier('échéance légale calculée', Boolean(apresSaisie.corps.controles.echeance?.limite));
   verifier('récapitulatif alimenté', apresSaisie.corps.apercu.length > 0);
 
-  for (const code of ['PV', 'STATUTS', 'JOUISSANCE', 'JAL']) {
+  for (const code of ['PJ_54', 'PJ_02', 'PJ_25', 'PJ_08']) {
     const form = new FormData();
     form.append('code', code);
     form.append('libelle', code);
@@ -80,20 +83,49 @@ function verifier(nom, condition, detail) {
   }
   const complet = await appel('GET', `/formalites/${id}`);
   verifier('dossier prêt une fois les pièces jointes', complet.corps.controles.pret === true, complet.corps.controles.bloquants);
-  verifier('payload INPI produit', complet.corps.payload?.typeFormalite === 'M', complet.corps.payload);
+  verifier('payload de modification (previousFormality + newFormality)',
+    complet.corps.payload_endpoint === 'formalitesModification'
+      && complet.corps.payload?.newFormality?.typeFormalite === 'M'
+      && Boolean(complet.corps.payload?.previousFormality?.content),
+    complet.corps.payload_endpoint);
 
   const depot = await appel('POST', `/formalites/${id}/deposer`);
   verifier('dépôt accepté', depot.statut === 200 && depot.corps.numero_liasse, depot.corps);
+  verifier('statut initial RECEIVED, comme au guichet unique', depot.corps.statut === 'RECEIVED', depot.corps.statut);
+  verifier('montant des taxes remonté', Number(depot.corps.montant) > 0, depot.corps.montant);
   verifier('dépôt marqué comme simulé (pas d’identifiants)', depot.corps.simule === true);
+
+  const redepot = await appel('POST', `/formalites/${id}/deposer`);
+  verifier('un second dépôt est refusé', redepot.statut === 409, redepot.corps);
 
   const suivi = await appel('POST', `/formalites/${id}/synchroniser`);
   verifier('statut synchronisé auprès de l’INPI', suivi.corps.synchronise === true, suivi.corps);
 
-  const journal = (await appel('GET', `/formalites/${id}`)).corps.evenements;
-  verifier('journal alimenté automatiquement', journal.length >= 6, journal.map((e) => e.type));
+  const signature = await appel('POST', `/formalites/${id}/signer`, {});
+  verifier('signature → passage en attente de paiement',
+    signature.corps.statut === 'PAYMENT_PENDING' && signature.corps.action_attendue === 'payer',
+    { statut: signature.corps.statut, action: signature.corps.action_attendue });
+
+  const paiementRefuse = await appel('POST', `/formalites/${id}/payer`, {});
+  verifier('paiement refusé tant qu’il n’est pas configuré', paiementRefuse.statut === 409, paiementRefuse.corps);
+
+  const apresSignature = await appel('GET', `/formalites/${id}`);
+  verifier('cycle INPI reflété dans le dossier',
+    Boolean(apresSignature.corps.signature_date) && apresSignature.corps.statut_libelle === 'À payer',
+    { signature: apresSignature.corps.signature_date, statut: apresSignature.corps.statut_libelle });
+
+  const journal = apresSignature.corps.evenements;
+  verifier('journal alimenté automatiquement', journal.length >= 7, journal.map((e) => e.type));
 
   const tableau = await appel('GET', '/formalites/dashboard');
-  verifier('tableau de bord alimenté', tableau.corps.compteurs.total === 1, tableau.corps.compteurs);
+  verifier('tableau de bord : le dossier attend une action de notre côté',
+    tableau.corps.compteurs.total === 1 && tableau.corps.compteurs.a_payer === 1,
+    tableau.corps.compteurs);
+
+  const etat = await appel('GET', '/inpi/etat');
+  verifier('référentiels officiels servis au formulaire',
+    etat.corps.formes_juridiques.length > 100 && Object.keys(etat.corps.types_voie).length > 100,
+    { formes: etat.corps.formes_juridiques.length, voies: Object.keys(etat.corps.types_voie || {}).length });
 
   const suppression = await appel('DELETE', `/formalites/${id}`);
   verifier('un dossier déposé n’est pas supprimable', suppression.statut === 409, suppression.corps);

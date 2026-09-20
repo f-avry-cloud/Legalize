@@ -3,15 +3,17 @@
 /**
  * Orchestration des dossiers de formalité.
  *
- * Le parcours tient en quatre temps, et c'est tout l'objet du module :
- *   1. identifier   — un SIREN, et la fiche entreprise est rapatriée du RNE ;
- *   2. répondre     — uniquement ce qui change (le « delta ») ;
- *   3. contrôler    — complétude, cohérence, pièces, délai légal ;
- *   4. déposer/suivre — dépôt au Guichet unique puis suivi automatique du
- *      statut, des régularisations et des échéances.
+ * Le parcours suit celui du Guichet unique, mais sans jamais le faire porter
+ * à l'utilisateur :
+ *   1. identifier — un SIREN, et la fiche entreprise est rapatriée du RNE ;
+ *   2. répondre   — uniquement ce qui change (le « delta ») ;
+ *   3. contrôler  — complétude, cohérence, pièces, délai légal ;
+ *   4. déposer    — puis signer, payer et suivre : statut, régularisations,
+ *      échéances. À chaque instant le dossier sait quelle est l'action
+ *      attendue, et de qui.
  *
  * Chaque étape écrit dans le journal du dossier : le suivi n'est pas un écran
- * de plus à tenir à jour à la main, il se construit tout seul.
+ * de plus à tenir à jour, il se construit tout seul.
  */
 
 const { supabase, q, uploadFile, downloadFile } = require('../supa');
@@ -21,7 +23,7 @@ const { definition, piecesExigees } = require('../inpi/catalogue');
 const { controler, echeance } = require('../inpi/controles');
 const { construirePayload } = require('../inpi/payload');
 const { versFicheSociete, nettoyerSiren, formaterSiren } = require('../inpi/normalize');
-const { STATUTS } = require('../inpi/referentiels');
+const { statut: statutInfo } = require('../inpi/referentiels');
 
 /* ------------------------------------------------------------- utilitaires */
 
@@ -57,12 +59,17 @@ function reference(id) {
   return `LGZ-${new Date().getFullYear()}-${String(id).padStart(5, '0')}`;
 }
 
+function estTerminal(statut) {
+  return Boolean(statutInfo(statut).terminal);
+}
+
 /* ------------------------------------------------------- création / lecture */
 
 /**
  * Crée un dossier. Le seul élément indispensable est le SIREN (ou une société
  * déjà en base) : la fiche RNE est rapatriée et figée comme instantané de
- * référence du dossier.
+ * référence, qui servira aussi d'état antérieur lors d'un dépôt de
+ * modification.
  */
 async function creer({ societe_id = null, operation_id = null, type, siren = '', libelle = '' }) {
   const def = definition(type);
@@ -95,6 +102,7 @@ async function creer({ societe_id = null, operation_id = null, type, siren = '',
   const formalite = await db(supabase.from('formalites').insert({
     societe_id, operation_id, type, libelle: nom,
     siren: sirenUtilise || null,
+    service: def.service,
     fiche, reponses: prefill(type, fiche),
     statut: 'BROUILLON',
   }).select().single());
@@ -137,9 +145,30 @@ function prefill(type, fiche) {
     const mois = fiche.date_cloture.slice(2, 4);
     const annee = new Date().getFullYear() - 1;
     r.exercice_clos = `${annee}-${mois}-${jour}`;
+    r.exercice_debut = `${annee}-01-01`;
   }
-  if (type === 'modification_capital') r.sens = 'augmentation';
+  if (type === 'modification_capital') { r.sens = 'augmentation'; r.modalite = 'APPORT_NUMERAIRE'; }
+  if (type === 'creation_societe' && fiche.forme_juridique_code) r.forme_juridique_code = fiche.forme_juridique_code;
   return r;
+}
+
+/** Rassemble ce qui décrit le dossier, pour les contrôles et le payload. */
+function dossierDe(formalite, pieces) {
+  return {
+    type: formalite.type,
+    siren: formalite.siren,
+    reference: formalite.reference,
+    libelle: formalite.libelle,
+    fiche: formalite.fiche,
+    reponses: formalite.reponses,
+    pieces: (pieces || []).map((p) => ({
+      code: p.code, nom: p.filename, chemin: p.filepath, taille: p.taille,
+    })),
+  };
+}
+
+function construireSansEchec(dossier) {
+  try { return construirePayload(dossier); } catch { return null; }
 }
 
 /** Dossier complet : réponses, pièces, contrôles, payload, journal. */
@@ -153,12 +182,10 @@ async function lire(id) {
       : null,
   ]);
 
-  const dossier = {
-    type: formalite.type, siren: formalite.siren, reference: formalite.reference,
-    libelle: formalite.libelle, fiche: formalite.fiche, reponses: formalite.reponses,
-    pieces: pieces.map((p) => ({ code: p.code, nom: p.filename, chemin: p.filepath })),
-  };
+  const dossier = dossierDe(formalite, pieces);
+  const payload = construireSansEchec(dossier);
   const def = definition(formalite.type);
+  const info = statutInfo(formalite.statut);
 
   return {
     ...formalite,
@@ -166,28 +193,30 @@ async function lire(id) {
     definition: def ? {
       code: formalite.type, libelle: def.libelle, categorie: def.categorie,
       resume: def.resume, delai: def.delai, champs: def.champs,
+      signature: def.signature, evenement: def.evenement, service: def.service,
     } : null,
     pieces,
     pieces_exigees: piecesExigees(formalite.type, formalite.reponses),
     evenements,
-    controles: controler(dossier),
+    controles: controler({ ...dossier, payload }),
     apercu: def?.apercu ? def.apercu(formalite.reponses || {}, formalite.fiche || {})
       .filter(([, v]) => v !== undefined && v !== null && v !== '')
       .map(([label, valeur]) => ({ label, valeur: String(valeur) })) : [],
-    payload: construirePayloadSur(dossier),
-    statut_libelle: STATUTS[formalite.statut]?.libelle || formalite.statut,
+    payload: payload ? payload.corps : null,
+    payload_endpoint: payload ? payload.endpoint : null,
+    statut_libelle: info.libelle,
+    statut_couleur: info.couleur,
+    action_attendue: formalite.statut === 'BROUILLON' ? 'deposer' : info.action,
+    // La fiche RNE brute est volumineuse et n'a pas d'usage côté interface.
+    fiche: formalite.fiche ? { ...formalite.fiche, brut: undefined } : {},
   };
 }
 
-function construirePayloadSur(dossier) {
-  try { return construirePayload(dossier); } catch { return null; }
-}
-
-/* ------------------------------------------------------------- mise à jour */
+/* --------------------------------------------------------------- réponses */
 
 async function enregistrerReponses(id, reponses) {
   const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
-  if (STATUTS[formalite.statut]?.terminal) {
+  if (estTerminal(formalite.statut)) {
     const e = new Error('Dossier clos : les réponses ne sont plus modifiables.'); e.status = 409; throw e;
   }
   const fusion = { ...(formalite.reponses || {}), ...reponses };
@@ -205,7 +234,7 @@ async function ajouterPiece(id, { code, libelle, fichier }) {
   const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
   const nomFichier = fichier.originalname.replace(/[^\w.\-]+/g, '_');
   const chemin = `formalites/${formalite.id}/${code}_${Date.now()}_${nomFichier}`;
-  await uploadFile(chemin, fichier.buffer, fichier.mimetype || 'application/octet-stream');
+  await uploadFile(chemin, fichier.buffer, fichier.mimetype || 'application/pdf');
   const piece = await db(supabase.from('formalite_pieces').insert({
     formalite_id: formalite.id, code, libelle: libelle || '',
     filename: fichier.originalname, filepath: chemin, taille: fichier.size,
@@ -226,34 +255,49 @@ async function telechargerPiece(pieceId) {
   return { piece, buffer: await downloadFile(piece.filepath) };
 }
 
+/** Les pièces partent en base64 dans le JSON de la formalité. */
+async function piecesEncodees(pieces) {
+  return Promise.all(pieces.map(async (p) => ({
+    code: p.code,
+    nom: p.filename,
+    taille: p.taille,
+    base64: (await downloadFile(p.filepath)).toString('base64'),
+  })));
+}
+
 /* ------------------------------------------------------------------ dépôt */
 
 async function deposer(id) {
   const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
+  if (formalite.inpi_id) {
+    const e = new Error('Ce dossier a déjà été déposé.'); e.status = 409; throw e;
+  }
   const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
-  const dossier = {
-    type: formalite.type, siren: formalite.siren, reference: formalite.reference,
-    libelle: formalite.libelle, fiche: formalite.fiche, reponses: formalite.reponses,
-    pieces: pieces.map((p) => ({ code: p.code, nom: p.filename, chemin: p.filepath })),
-  };
-
-  const controles = controler(dossier);
+  const dossier = dossierDe(formalite, pieces);
+  const controles = controler({ ...dossier, payload: construireSansEchec(dossier) });
   if (!controles.pret) {
     const e = new Error('Dépôt impossible : contrôles bloquants non levés.');
     e.status = 422; e.details = controles;
     throw e;
   }
 
-  const payload = construirePayload(dossier);
-  const resultat = await guichet.deposer(payload);
+  // Les fichiers ne sont encodés qu'au moment du dépôt : inutile de porter
+  // des mégaoctets de base64 dans tous les aperçus.
+  const requete = construirePayload({ ...dossier, pieces: await piecesEncodees(pieces) });
+  const resultat = await guichet.deposer(requete);
 
   const maj = await db(supabase.from('formalites').update({
-    payload,
-    statut: resultat.statut || 'DEPOSEE',
+    // On conserve le payload sans les base64, pour garder la trace exacte du
+    // dépôt sans dupliquer les fichiers déjà présents dans le stockage.
+    payload: construirePayload(dossier).corps,
+    statut: resultat.statut,
     inpi_id: resultat.inpi_id,
     numero_liasse: resultat.numero_liasse,
     statut_inpi: resultat.statut_brut,
     statut_date: resultat.statut_date || new Date().toISOString(),
+    action_attendue: resultat.action_attendue,
+    montant: resultat.montant,
+    num_nat: resultat.num_nat,
     simule: Boolean(resultat.simule),
     updated_at: new Date().toISOString(),
   }).eq('id', id).select().single());
@@ -261,10 +305,55 @@ async function deposer(id) {
   await journal(id, 'depot',
     resultat.simule
       ? `Dépôt simulé (${resultat.motif_simulation}) — liasse ${resultat.numero_liasse}.`
-      : `Formalité déposée au Guichet unique — liasse ${resultat.numero_liasse}.`,
-    { inpi_id: resultat.inpi_id });
+      : `Formalité déposée au guichet unique — liasse ${resultat.numero_liasse}.`,
+    { inpi_id: resultat.inpi_id, endpoint: requete.endpoint, montant: resultat.montant });
 
   return { ...maj, simule: Boolean(resultat.simule), motif_simulation: resultat.motif_simulation || null, controles };
+}
+
+/* -------------------------------------------------- signature et paiement */
+
+/**
+ * Signature du dépôt. Une création se signe d'un simple appel ; une
+ * modification, une cessation ou un dépôt de comptes exigent une signature
+ * électronique avancée : le document de synthèse doit être signé hors ligne
+ * avec un certificat qualifié, puis redéposé (PJ_115) avant cet appel.
+ */
+async function signer(id, { documentSigneId = null } = {}) {
+  const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
+  if (!formalite.inpi_id) { const e = new Error('Dossier non déposé.'); e.status = 409; throw e; }
+
+  const def = definition(formalite.type);
+  if (def?.signature === 'avancee' && !documentSigneId && !formalite.simule) {
+    const e = new Error(
+      'Signature électronique avancée requise : télécharger le document de synthèse, le signer avec un certificat '
+      + 'qualifié, le redéposer en PJ_115, puis transmettre l’identifiant de la pièce signée.',
+    );
+    e.status = 409; throw e;
+  }
+
+  const signature = await guichet.signer(formalite.inpi_id, {
+    documentSigneId, service: formalite.service,
+  });
+  await journal(id, 'signature', `Dépôt signé${signature.simule ? ' (simulation)' : ''}.`, signature);
+  return synchroniser(id);
+}
+
+/** Paiement des taxes : jamais automatique sans configuration dédiée. */
+async function payer(id) {
+  const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
+  if (!formalite.inpi_id) { const e = new Error('Dossier non déposé.'); e.status = 409; throw e; }
+  const resultat = await guichet.payer(formalite.inpi_id, { service: formalite.service });
+  await journal(id, 'paiement',
+    `Taxes réglées${resultat.simule ? ' (simulation)' : ''}${formalite.montant ? ` — ${formalite.montant} €` : ''}.`);
+  return synchroniser(id);
+}
+
+/** Document de synthèse à signer (PDF). */
+async function synthese(id) {
+  const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
+  if (!formalite.inpi_id) { const e = new Error('Dossier non déposé.'); e.status = 409; throw e; }
+  return { formalite, buffer: await guichet.synthese(formalite.inpi_id) };
 }
 
 /* ------------------------------------------------------------------ suivi */
@@ -274,23 +363,29 @@ async function synchroniser(id) {
   const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
   if (!formalite.inpi_id) return { ...formalite, synchronise: false };
 
-  const etat = await guichet.statut(formalite.inpi_id);
+  const etat = await guichet.lire(formalite.inpi_id, formalite.service);
   if (!etat) return { ...formalite, synchronise: false };
 
-  const changement = etat.statut !== formalite.statut;
-  const patch = {
+  // Capturé avant la mise à jour : c'est cette valeur qui est journalisée.
+  const statutPrecedent = formalite.statut;
+  const changement = etat.statut !== statutPrecedent;
+  const maj = await db(supabase.from('formalites').update({
     statut: etat.statut,
     statut_inpi: etat.statut_brut,
     statut_date: etat.statut_date || new Date().toISOString(),
+    action_attendue: etat.action_attendue,
+    montant: etat.montant ?? formalite.montant,
+    num_nat: etat.num_nat ?? formalite.num_nat,
+    signature_date: etat.signature_date ?? formalite.signature_date,
+    paiement_date: etat.paiement_date ?? formalite.paiement_date,
     regularisations: etat.regularisations || [],
     updated_at: new Date().toISOString(),
-  };
-  const maj = await db(supabase.from('formalites').update(patch).eq('id', id).select().single());
+  }).eq('id', id).select().single());
 
   if (changement) {
     await journal(id, 'statut',
-      `Statut : ${STATUTS[formalite.statut]?.libelle || formalite.statut} → ${STATUTS[etat.statut]?.libelle || etat.statut}.`);
-    if (etat.statut === 'REGULARISATION' && etat.regularisations?.length) {
+      `Statut : ${statutInfo(statutPrecedent).libelle} → ${statutInfo(etat.statut).libelle}.`);
+    if (etat.regularisations?.length) {
       await journal(id, 'regularisation',
         `Régularisation demandée : ${etat.regularisations.map((r) => r.motif).join(' | ')}`,
         { regularisations: etat.regularisations });
@@ -301,9 +396,9 @@ async function synchroniser(id) {
 
 /** Synchronise tous les dossiers non terminés (appel manuel ou planifié). */
 async function synchroniserToutes() {
-  const enCours = await db(supabase.from('formalites').select('id, statut, inpi_id')
+  const deposees = await db(supabase.from('formalites').select('id, statut, inpi_id')
     .not('inpi_id', 'is', null));
-  const aSuivre = enCours.filter((f) => !STATUTS[f.statut]?.terminal);
+  const aSuivre = deposees.filter((f) => !estTerminal(f.statut));
   const resultats = [];
   for (const f of aSuivre) {
     try { resultats.push(await synchroniser(f.id)); } catch (e) { resultats.push({ id: f.id, erreur: e.message }); }
@@ -315,7 +410,7 @@ async function synchroniserToutes() {
   };
 }
 
-/* --------------------------------------------------------------- listes */
+/* ---------------------------------------------------------------- listes */
 
 async function lister(filtres = {}) {
   let requete = supabase.from('formalites').select('*').order('created_at', { ascending: false });
@@ -327,36 +422,47 @@ async function lister(filtres = {}) {
     db(supabase.from('societes').select('id, denomination')),
   ]);
   const aujourdhui = new Date().toISOString().slice(0, 10);
-  return formalites.map((f) => ({
-    ...f,
-    societe_nom: societes.find((s) => s.id === f.societe_id)?.denomination || f.fiche?.denomination || '',
-    statut_libelle: STATUTS[f.statut]?.libelle || f.statut,
-    statut_couleur: STATUTS[f.statut]?.couleur || 'gris',
-    type_libelle: definition(f.type)?.libelle || f.type,
-    en_retard: Boolean(f.echeance && f.echeance < aujourdhui && !STATUTS[f.statut]?.terminal),
-    nb_regularisations: Array.isArray(f.regularisations) ? f.regularisations.length : 0,
-  }));
+  return formalites.map((f) => {
+    const info = statutInfo(f.statut);
+    return {
+      ...f,
+      fiche: undefined,
+      payload: undefined,
+      societe_nom: societes.find((s) => s.id === f.societe_id)?.denomination || f.fiche?.denomination || '',
+      statut_libelle: info.libelle,
+      statut_couleur: info.couleur,
+      action_attendue: f.statut === 'BROUILLON' ? 'deposer' : info.action,
+      type_libelle: definition(f.type)?.libelle || f.type,
+      en_retard: Boolean(f.echeance && f.echeance < aujourdhui && !info.terminal),
+      nb_regularisations: Array.isArray(f.regularisations) ? f.regularisations.length : 0,
+    };
+  });
 }
 
-/** Tableau de bord du suivi : ce qui bloque, ce qui presse, ce qui avance. */
+/** Tableau de bord : ce qui attend une action de notre côté d'abord. */
 async function tableauDeBord() {
   const formalites = await lister();
   const parStatut = {};
   for (const f of formalites) parStatut[f.statut] = (parStatut[f.statut] || 0) + 1;
 
-  const actives = formalites.filter((f) => !STATUTS[f.statut]?.terminal);
+  const actives = formalites.filter((f) => !statutInfo(f.statut).terminal);
+  // Une action « à nous » est tout ce qui n'est pas de l'attente côté INPI.
+  const aNous = actives.filter((f) => f.action_attendue && f.action_attendue !== 'attendre');
+
   return {
     compteurs: {
       total: formalites.length,
       en_cours: actives.length,
+      a_traiter: aNous.length,
       brouillons: formalites.filter((f) => f.statut === 'BROUILLON').length,
-      regularisations: formalites.filter((f) => f.statut === 'REGULARISATION').length,
+      a_signer: formalites.filter((f) => f.action_attendue === 'signer').length,
+      a_payer: formalites.filter((f) => f.action_attendue === 'payer').length,
+      regularisations: formalites.filter((f) => f.action_attendue === 'regulariser').length,
       en_retard: formalites.filter((f) => f.en_retard).length,
-      validees: formalites.filter((f) => f.statut === 'VALIDEE').length,
+      validees: formalites.filter((f) => f.statut === 'VALIDATED').length,
     },
     par_statut: parStatut,
-    a_traiter: actives
-      .filter((f) => f.statut === 'REGULARISATION' || f.en_retard || f.statut === 'BROUILLON')
+    a_traiter: aNous
       .sort((a, b) => (a.echeance || '9999').localeCompare(b.echeance || '9999'))
       .slice(0, 15),
     echeances: actives.filter((f) => f.echeance).sort((a, b) => a.echeance.localeCompare(b.echeance)).slice(0, 15),
@@ -374,7 +480,7 @@ async function supprimer(id) {
   return { ok: true };
 }
 
-/* ------------------------------------- passerelle avec la fiche société */
+/* -------------------------------------- passerelle avec la fiche société */
 
 /** Crée (ou met à jour) une fiche société à partir du seul SIREN. */
 async function importerSociete(sirenBrut, { groupe_id = null } = {}) {
@@ -389,14 +495,15 @@ async function importerSociete(sirenBrut, { groupe_id = null } = {}) {
     for (const d of fiche.dirigeants.filter((x) => x.type === 'physique')) {
       await db(supabase.from('dirigeants').insert({
         societe_id: societe.id, civilite: '', nom: d.nom,
-        prenom: (d.prenoms || []).join(' '), fonction: '', adresse: d.adresse?.texte || '',
+        prenom: (d.prenoms || []).join(' '), fonction: d.role_libelle || '', adresse: d.adresse?.texte || '',
       }).select());
     }
   }
-  return { societe, fiche, cree: !existante.length };
+  return { societe, fiche: { ...fiche, brut: undefined }, cree: !existante.length };
 }
 
 module.exports = {
   creer, lire, lister, enregistrerReponses, ajouterPiece, supprimerPiece, telechargerPiece,
-  deposer, synchroniser, synchroniserToutes, tableauDeBord, supprimer, importerSociete,
+  deposer, signer, payer, synthese, synchroniser, synchroniserToutes,
+  tableauDeBord, supprimer, importerSociete,
 };

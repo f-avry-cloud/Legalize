@@ -15,22 +15,38 @@ const multer = require('multer');
 
 const formalites = require('./services/formalites');
 const rne = require('./inpi/rne');
+const guichet = require('./inpi/guichet');
 const { etat } = require('./inpi/config');
 const { catalogue } = require('./inpi/catalogue');
-const { FORMES_JURIDIQUES } = require('./inpi/referentiels');
+const { formesCreation, enumeration } = require('./inpi/referentiels');
+const { verifierConnexion } = require('./inpi/client');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 /* ------------------------------------------------------------------- INPI */
 
-/** État de la connexion (live / démo) + référentiels utiles au formulaire. */
+/** État des connexions + référentiels officiels utiles au formulaire. */
 router.get('/inpi/etat', (req, res) => {
   res.json({
     ...etat(),
-    formes_juridiques: Object.entries(FORMES_JURIDIQUES)
-      .map(([code, f]) => ({ code, libelle: f.libelle, famille: f.famille })),
+    formes_juridiques: formesCreation(),
+    types_voie: enumeration('typeVoie'),
   });
+});
+
+/**
+ * Vérifie que l'identifiant et le mot de passe ouvrent bien une session.
+ * L'INPI ne délivrant pas de clé d'API, c'est le seul moyen de contrôler la
+ * configuration sans rien déposer.
+ */
+router.post('/inpi/test-connexion', async (req, res) => {
+  const cible = req.body?.api === 'rne' ? 'rne' : 'guichet';
+  try {
+    res.json(await verifierConnexion(cible));
+  } catch (e) {
+    res.status(e.status === 401 ? 401 : 502).json({ ok: false, api: cible, error: e.message });
+  }
 });
 
 router.get('/inpi/recherche', async (req, res) => {
@@ -58,6 +74,11 @@ router.post('/inpi/importer-societe', async (req, res) => {
 
 router.get('/formalites/catalogue', (req, res) => {
   res.json({ formalites: catalogue() });
+});
+
+/** Demandes de régularisation en attente sur tout le compte mandataire. */
+router.get('/formalites/regularisations', async (req, res) => {
+  res.json(await guichet.regularisations(null));
 });
 
 router.get('/formalites/dashboard', async (req, res) => {
@@ -126,6 +147,27 @@ router.post('/formalites/:id/deposer', async (req, res) => {
 router.post('/formalites/:id/synchroniser', async (req, res) => {
   res.json(await formalites.synchroniser(Number(req.params.id)));
 });
+
+/** Signature du dépôt (simple pour une création, avancée sinon). */
+router.post('/formalites/:id/signer', async (req, res) => {
+  res.json(await formalites.signer(Number(req.params.id), {
+    documentSigneId: req.body?.documentSigneId || null,
+  }));
+});
+
+/** Paiement des taxes — nécessite une configuration dédiée. */
+router.post('/formalites/:id/payer', async (req, res) => {
+  res.json(await formalites.payer(Number(req.params.id)));
+});
+
+/** Document de synthèse à signer (PDF produit par le guichet unique). */
+router.get('/formalites/:id/synthese', async (req, res) => {
+  const { formalite, buffer } = await formalites.synthese(Number(req.params.id));
+  res.set('Content-Type', 'application/pdf');
+  res.set('Content-Disposition', `inline; filename="synthese-${formalite.reference || formalite.id}.pdf"`);
+  res.send(buffer);
+});
+
 
 router.delete('/formalites/:id', async (req, res) => {
   res.json(await formalites.supprimer(Number(req.params.id)));

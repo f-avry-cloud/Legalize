@@ -1,24 +1,23 @@
 'use strict';
 
 /* ================================================================
-   Module « Formalités INPI » — parcours en trois écrans :
-     #/formalites       suivi (ce qui bloque, ce qui presse, ce qui avance)
+   Module « Formalités INPI » — trois écrans :
+     #/formalites       suivi : qui doit jouer, et sur quoi
      #/formalites/new   ouverture : un SIREN + une formalité
-     #/formalites/:id   questionnaire, pièces, contrôles, dépôt, journal
-   Le formulaire est engendré à partir du catalogue servi par l'API : ajouter
-   une formalité côté serveur suffit, le front n'a pas à être touché.
+     #/formalites/:id   questionnaire, pièces, contrôles, dépôt, cycle INPI
+   Le formulaire est engendré à partir du catalogue servi par l'API, et les
+   libellés de statut viennent du serveur (référentiels officiels INPI).
    ================================================================ */
 
-const STATUT_FORMALITE = {
-  BROUILLON: 'Brouillon', A_SIGNER: 'À signer', SIGNEE: 'Signée', A_PAYER: 'À payer',
-  DEPOSEE: 'Déposée', EN_COURS: 'En cours', REGULARISATION: 'Régularisation',
-  VALIDEE: 'Validée', REJETEE: 'Rejetée', ABANDONNEE: 'Abandonnée',
-};
+const COULEUR_BADGE = { gris: 'brouillon', bleu: 'genere', orange: 'envoye', rouge: 'a_faire', vert: 'finalise' };
 
-const CLASSE_STATUT = {
-  BROUILLON: 'brouillon', A_SIGNER: 'envoye', SIGNEE: 'genere', A_PAYER: 'envoye',
-  DEPOSEE: 'genere', EN_COURS: 'en_cours', REGULARISATION: 'a_faire',
-  VALIDEE: 'finalise', REJETEE: 'a_faire', ABANDONNEE: 'abandonne',
+// Ce que l'application peut faire pour chaque action attendue par le guichet.
+const ACTIONS = {
+  deposer: { libelle: 'Déposer au guichet unique', classe: 'btn-gold' },
+  signer: { libelle: 'Signer le dépôt', classe: 'btn-gold' },
+  payer: { libelle: 'Régler les taxes', classe: 'btn-gold' },
+  regulariser: { libelle: 'Répondre à la régularisation', classe: 'btn-primary' },
+  attendre: { libelle: null, classe: '' },
 };
 
 let catalogueFormalites = null;
@@ -33,15 +32,23 @@ async function getEtatInpi() {
   return etatInpi;
 }
 
+function badgeStatut(f) {
+  const classe = COULEUR_BADGE[f.statut_couleur] || 'brouillon';
+  return `<span class="badge ${classe}">${esc(f.statut_libelle || f.statut)}</span>`;
+}
+
 function bandeauMode(etat) {
-  if (etat.guichet.mode === 'live' && etat.guichet.depotReelAutorise) return '';
-  const raison = etat.guichet.mode === 'demo'
-    ? 'Aucun identifiant Guichet unique configuré'
+  if (etat.guichet.mode === 'reel' && etat.guichet.depotReelAutorise) {
+    return `<div class="alerte alerte-ok"><strong>Dépôt réel actif</strong> — compte ${esc(etat.guichet.compte || '')}
+      sur l'environnement ${esc(etat.guichet.environnement)}. Les formalités déposées partent à l'INPI.</div>`;
+  }
+  const raison = etat.guichet.mode === 'simulation'
+    ? 'Aucun identifiant guichet unique configuré'
     : 'Dépôt réel désactivé (INPI_DEPOT_REEL)';
   return `<div class="alerte alerte-info">
     <strong>Mode simulation.</strong> ${esc(raison)} : le parcours complet est disponible
-    (pré-remplissage${etat.rne.mode === 'demo' ? ' simulé' : ' RNE réel'}, contrôles, JSON INPI, suivi),
-    mais aucune formalité n'est transmise à l'INPI.</div>`;
+    (pré-remplissage ${etat.rne.mode === 'simulation' ? 'simulé' : 'RNE réel'}, contrôles, JSON INPI, dépôt,
+    signature, paiement, suivi), mais rien n'est transmis à l'INPI.</div>`;
 }
 
 /* ================================================================ suivi */
@@ -58,15 +65,15 @@ async function formalitesDashboard() {
     </div>
     ${bandeauMode(etat)}
     <div class="grid cols-4">
-      <div class="card"><div class="stat">${c.en_cours}</div><div class="stat-label">En cours</div></div>
-      <div class="card"><div class="stat">${c.brouillons}</div><div class="stat-label">Brouillons</div></div>
-      <div class="card"><div class="stat" style="color:${c.regularisations ? 'var(--danger)' : 'var(--ok)'}">${c.regularisations}</div><div class="stat-label">Régularisations</div></div>
-      <div class="card"><div class="stat" style="color:${c.en_retard ? 'var(--danger)' : 'var(--ok)'}">${c.en_retard}</div><div class="stat-label">Hors délai</div></div>
+      <div class="card"><div class="stat" style="color:${c.a_traiter ? 'var(--gold)' : 'var(--ok)'}">${c.a_traiter}</div><div class="stat-label">En attente de nous</div></div>
+      <div class="card"><div class="stat">${c.a_signer}</div><div class="stat-label">À signer</div></div>
+      <div class="card"><div class="stat">${c.a_payer}</div><div class="stat-label">À payer</div></div>
+      <div class="card"><div class="stat" style="color:${c.regularisations || c.en_retard ? 'var(--danger)' : 'var(--ok)'}">${c.regularisations + c.en_retard}</div><div class="stat-label">Régularisations & retards</div></div>
     </div>
     <div class="grid cols-2 mt">
       <div class="card">
-        <h2>À traiter en priorité</h2>
-        ${listeFormalites(d.a_traiter, 'Rien à traiter')}
+        <h2>À traiter — l'INPI attend une action de notre côté</h2>
+        ${listeFormalites(d.a_traiter, 'Rien en attente de notre côté')}
       </div>
       <div class="card">
         <h2>Prochaines échéances légales</h2>
@@ -102,18 +109,18 @@ function echeanceHtml(f) {
 function listeFormalites(liste, vide) {
   if (!liste.length) return `<div class="empty">${esc(vide)}</div>`;
   return `<table>
-    <thead><tr><th>Dossier</th><th>Société</th><th>Statut</th><th>Échéance</th></tr></thead>
+    <thead><tr><th>Dossier</th><th>Société</th><th>Statut</th><th>Action</th><th>Échéance</th></tr></thead>
     <tbody>${liste.map((f) => `
       <tr class="clickable" onclick="location.hash='#/formalites/${f.id}'">
-        <td><strong>${esc(f.type_libelle)}</strong><div class="sub">${esc(f.reference || '')}${f.simule ? ' · simulation' : ''}</div></td>
+        <td><strong>${esc(f.type_libelle)}</strong>
+          <div class="sub">${esc(f.reference || '')}${f.numero_liasse ? ` · liasse ${esc(f.numero_liasse)}` : ''}${f.simule ? ' · simulation' : ''}</div></td>
         <td>${esc(f.societe_nom || '—')}</td>
-        <td>${badgeStatut(f.statut)}${f.nb_regularisations ? ' <span class="badge a_faire">à régulariser</span>' : ''}</td>
+        <td>${badgeStatut(f)}${f.nb_regularisations ? ' <span class="badge a_faire">à régulariser</span>' : ''}</td>
+        <td>${f.action_attendue && f.action_attendue !== 'attendre'
+    ? `<span class="badge envoye">${esc(ACTIONS[f.action_attendue]?.libelle || f.action_attendue)}</span>`
+    : '<span class="muted">côté INPI</span>'}</td>
         <td>${echeanceHtml(f)}</td>
       </tr>`).join('')}</tbody></table>`;
-}
-
-function badgeStatut(statut) {
-  return `<span class="badge ${CLASSE_STATUT[statut] || 'brouillon'}">${esc(STATUT_FORMALITE[statut] || statut)}</span>`;
 }
 
 /* ================================================== ouverture d'un dossier */
@@ -155,6 +162,7 @@ async function formaliteNew() {
               <strong>${esc(groupes[f.categorie] || '')} · ${esc(f.libelle)}</strong>
               <em>${esc(f.resume)}</em>
               <em class="delai">${esc(f.delai?.texte || '')}</em>
+              <em class="code-inpi">${f.evenement ? `évènement ${esc(f.evenement)} — ${esc(f.evenement_libelle || '')}` : 'service comptes annuels'}</em>
             </span>
           </label>`).join('')}
       </div>
@@ -253,7 +261,7 @@ function fichePreviewHtml(f) {
       <div><dt>Capital</dt><dd>${f.capital != null ? eur.format(f.capital) : '—'}</dd></div>
       <div><dt>Siège</dt><dd>${esc(f.adresse?.texte || '—')}</dd></div>
       <div><dt>Immatriculation</dt><dd>${fmtDate(f.date_immatriculation)}</dd></div>
-      <div><dt>Dirigeant</dt><dd>${esc(d?.nom_complet || '—')}</dd></div>
+      <div><dt>Dirigeant</dt><dd>${esc(d?.nom_complet || '—')}${d?.role_libelle ? ` <span class="muted">(${esc(d.role_libelle)})</span>` : ''}</dd></div>
     </dl>
     <p class="muted">Ces données proviennent du registre : elles ne seront pas ressaisies.</p>
   </div>`;
@@ -279,20 +287,30 @@ function champHtml(champ, valeur, contexte) {
       const options = champ.source === 'formes'
         ? (contexte.formes || []).map((f) => ({ value: f.code, label: f.libelle }))
         : champ.source === 'dirigeants_rne'
-          ? (contexte.dirigeants || []).map((d) => ({ value: d.nom_complet, label: `${d.nom_complet}` }))
+          ? (contexte.dirigeants || []).map((d) => ({
+            value: d.nom_complet, label: `${d.nom_complet}${d.role_libelle ? ` — ${d.role_libelle}` : ''}`,
+          }))
           : (champ.options || []);
+      const courant = valeur === undefined || valeur === null || valeur === '' ? champ.default : valeur;
       return `<label class="field">${label}
         <select name="${champ.name}" id="${id}" data-pilote="1">
           <option value="">—</option>
-          ${options.map((o) => `<option value="${esc(o.value)}" ${String(valeur) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+          ${options.map((o) => `<option value="${esc(o.value)}" ${String(courant) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
         </select>${aide}</label>`;
     }
     case 'adresse': {
       const a = valeur || {};
+      const types = contexte.typesVoie || {};
       return `<fieldset class="list-field"><legend>${label}</legend>
         <div class="row">
           <label class="field">N°<input name="${champ.name}.numVoie" value="${esc(a.numVoie || '')}"></label>
-          <label class="field">Type de voie<input name="${champ.name}.typeVoie" value="${esc(a.typeVoie || '')}" placeholder="RUE, AVENUE…"></label>
+          <label class="field">Type de voie
+            <select name="${champ.name}.typeVoie">
+              <option value="">—</option>
+              ${Object.entries(types).map(([code, lib]) => `<option value="${esc(code)}" ${a.typeVoie === code ? 'selected' : ''}>${esc(lib)}</option>`).join('')}
+            </select>
+            <em class="aide">Codes officiels du référentiel INPI.</em>
+          </label>
           <label class="field">Voie<input name="${champ.name}.voie" value="${esc(a.voie || '')}"></label>
         </div>
         <div class="row">
@@ -378,22 +396,26 @@ async function formaliteDetail(id) {
   const [f, etat] = await Promise.all([api('GET', `/formalites/${id}`), getEtatInpi()]);
   const def = f.definition;
   const champs = (def?.champs || []).filter((c) => !c.depend || c.depend.valeurs.includes(f.reponses[c.depend.name]));
-  const terminal = ['VALIDEE', 'REJETEE', 'ABANDONNEE'].includes(f.statut);
-  const depose = f.statut !== 'BROUILLON';
+  const terminal = ['VALIDATED', 'REJECTED'].includes(f.statut);
+  const depose = Boolean(f.inpi_id);
 
   $main.innerHTML = `
     <div class="page-head">
       <div>
         <div class="crumb"><a href="#/formalites">Formalités</a> › ${esc(f.reference || '')}</div>
         <h1>${esc(def?.libelle || f.type)}</h1>
-        <div class="muted">${esc(f.societe_nom || '')} ${f.siren ? `· ${esc(f.fiche?.siren_formate || f.siren)}` : ''}</div>
+        <div class="muted">${esc(f.societe_nom || '')} ${f.siren ? `· ${esc(f.fiche?.siren_formate || f.siren)}` : ''}
+          ${def?.evenement ? `· évènement ${esc(def.evenement)}` : ''}</div>
       </div>
-      <div>${badgeStatut(f.statut)}${f.simule ? ' <span class="badge brouillon">simulation</span>' : ''}</div>
+      <div>${badgeStatut(f)}${f.simule ? ' <span class="badge brouillon">simulation</span>' : ''}</div>
     </div>
 
     ${f.regularisations?.length ? `<div class="alerte alerte-bloquant">
       <strong>Régularisation demandée par l'INPI.</strong>
-      <ul>${f.regularisations.map((r) => `<li>${esc(r.motif)}${r.delai_reponse_jours ? ` — à traiter sous ${r.delai_reponse_jours} jours` : ''}</li>`).join('')}</ul>
+      <ul>${f.regularisations.map((r) => `<li>${esc(r.motif)}
+        ${r.piece ? ` <span class="muted">(pièce : ${esc(r.piece)})</span>` : ''}
+        ${r.echeance ? ` — à traiter avant le ${fmtDate(r.echeance)}` : ''}</li>`).join('')}</ul>
+      <div class="sub">Corriger le dossier ci-dessous, puis redéposer : la formalité repart en signature.</div>
     </div>` : ''}
 
     <div class="grid cols-2">
@@ -403,7 +425,7 @@ async function formaliteDetail(id) {
           <p class="muted mb">${esc(def?.resume || '')} Seules les informations que l'INPI ne connaît pas encore sont demandées.</p>
           <form id="form-reponses">
             ${champs.map((c) => champHtml(c, f.reponses[c.name], {
-    formes: etat.formes_juridiques, dirigeants: f.fiche?.dirigeants || [],
+    formes: etat.formes_juridiques, typesVoie: etat.types_voie, dirigeants: f.fiche?.dirigeants || [],
   })).join('')}
             <div class="dialog-actions">
               <button type="submit" class="btn-primary" ${terminal ? 'disabled' : ''}>Enregistrer et contrôler</button>
@@ -413,12 +435,14 @@ async function formaliteDetail(id) {
 
         <div class="card mt">
           <h2>Pièces justificatives</h2>
+          <p class="muted mb">Codes officiels du guichet unique. Format PDF uniquement, 10 Mo maximum par pièce.</p>
           ${f.pieces_exigees.length ? `<table><tbody>${f.pieces_exigees.map((p) => {
     const jointe = f.pieces.find((x) => x.code === p.code);
     return `<tr>
               <td><span class="check-icon">${jointe ? '✓' : (p.obligatoire ? '○' : '·')}</span>
-                ${esc(p.libelle)}${p.obligatoire ? ' <span class="requis">*</span>' : ''}
+                <span class="code-pj">${esc(p.code)}</span> ${esc(p.libelle)}${p.obligatoire ? ' <span class="requis">*</span>' : ''}
                 ${p.aide ? `<div class="sub">${esc(p.aide)}</div>` : ''}
+                ${p.nota ? `<div class="sub">${esc(p.nota)}</div>` : ''}
                 ${jointe ? `<div class="sub"><a href="${API_ROOT}/formalites/pieces/${jointe.id}/download">${esc(jointe.filename)}</a></div>` : ''}
               </td>
               <td class="right">
@@ -427,25 +451,21 @@ async function formaliteDetail(id) {
     : `<button class="btn-sm" data-ajout-piece="${esc(p.code)}" data-libelle="${esc(p.libelle)}" ${terminal ? 'disabled' : ''}>Joindre</button>`}
               </td></tr>`;
   }).join('')}</tbody></table>` : '<div class="empty">Aucune pièce requise</div>'}
-          <input type="file" id="input-fichier" hidden accept=".pdf,.docx,.doc,.jpg,.jpeg,.png">
+          <input type="file" id="input-fichier" hidden accept="application/pdf,.pdf">
         </div>
       </div>
 
       <div>
         <div class="card">
-          <h2>Contrôles avant dépôt</h2>
-          ${controlesHtml(f.controles)}
-          ${f.apercu.length ? `<h2 class="mt">Récapitulatif</h2>
+          <h2>${depose ? 'Où en est le dossier' : 'Contrôles avant dépôt'}</h2>
+          ${depose ? cycleHtml(f, def) : controlesHtml(f.controles)}
+          ${!depose && f.apercu.length ? `<h2 class="mt">Récapitulatif</h2>
             <dl class="recap">${f.apercu.map((a) => `<div><dt>${esc(a.label)}</dt><dd>${esc(valeurLisible(a.valeur))}</dd></div>`).join('')}</dl>` : ''}
-          <div class="dialog-actions">
-            ${depose
-    ? `<button id="btn-sync-un">Actualiser le statut</button>`
-    : `<button class="btn-gold" id="btn-deposer" ${f.controles.pret ? '' : 'disabled'}>Déposer au guichet unique</button>`}
-          </div>
+          <div class="dialog-actions">${actionHtml(f)}</div>
           ${!depose && !f.controles.pret ? '<p class="muted">Le dépôt se débloque dès que les points bloquants sont levés.</p>' : ''}
-          ${depose ? `<p class="muted">Liasse ${esc(f.numero_liasse || '—')}${f.simule ? ' (simulation)' : ''} · statut INPI au ${fmtDate(f.statut_date)}.
-            Le dossier reste modifiable pour préparer une réponse à régularisation, mais une modification n'est pas retransmise automatiquement à l'INPI.</p>` : ''}
         </div>
+
+        ${depose ? `<div class="card mt"><h2>Contrôles du dossier</h2>${controlesHtml(f.controles)}</div>` : ''}
 
         <div class="card mt">
           <h2>Journal du dossier</h2>
@@ -455,6 +475,7 @@ async function formaliteDetail(id) {
 
         <div class="card mt">
           <h2>JSON transmis à l'INPI</h2>
+          <p class="muted">Endpoint : <code>${esc(f.payload_endpoint || '—')}</code></p>
           <details><summary>Afficher le payload</summary>
             <pre class="json">${esc(JSON.stringify(f.payload, null, 2))}</pre>
           </details>
@@ -472,11 +493,9 @@ async function formaliteDetail(id) {
       render();
     } catch (err) { toast(err.message, true); }
   });
-  // Un champ « pilote » (nature, modalité, affectation) réorganise le
+  // Un champ « pilote » (nature, sens, affectation) réorganise le
   // questionnaire : on enregistre et on redessine immédiatement.
-  form.querySelectorAll('select[data-pilote]').forEach((s) => s.addEventListener('change', () => {
-    form.requestSubmit();
-  }));
+  form.querySelectorAll('select[data-pilote]').forEach((s) => s.addEventListener('change', () => form.requestSubmit()));
 
   /* --- pièces --- */
   const $fichier = document.getElementById('input-fichier');
@@ -505,16 +524,25 @@ async function formaliteDetail(id) {
     };
   });
 
-  /* --- dépôt / suivi --- */
-  const $dep = document.getElementById('btn-deposer');
-  if ($dep) {
-    $dep.onclick = async () => {
-      $dep.disabled = true;
+  /* --- actions du cycle INPI --- */
+  const $action = document.getElementById('btn-action');
+  if ($action) {
+    $action.onclick = async () => {
+      const action = $action.dataset.action;
+      $action.disabled = true;
       try {
-        const r = await api('POST', `/formalites/${id}/deposer`);
-        toast(r.simule ? `Dépôt simulé — liasse ${r.numero_liasse}.` : `Formalité déposée — liasse ${r.numero_liasse}.`);
+        if (action === 'deposer') {
+          const r = await api('POST', `/formalites/${id}/deposer`);
+          toast(r.simule ? `Dépôt simulé — liasse ${r.numero_liasse}.` : `Formalité déposée — liasse ${r.numero_liasse}.`);
+        } else if (action === 'signer') {
+          await api('POST', `/formalites/${id}/signer`, {});
+          toast('Dépôt signé.');
+        } else if (action === 'payer') {
+          await api('POST', `/formalites/${id}/payer`, {});
+          toast('Taxes réglées.');
+        }
         render();
-      } catch (e) { toast(e.message, true); $dep.disabled = false; render(); }
+      } catch (e) { toast(e.message, true); $action.disabled = false; render(); }
     };
   }
   const $sync = document.getElementById('btn-sync-un');
@@ -524,6 +552,49 @@ async function formaliteDetail(id) {
       try { await api('POST', `/formalites/${id}/synchroniser`); render(); } catch (e) { toast(e.message, true); $sync.disabled = false; }
     };
   }
+}
+
+/** Bouton correspondant à l'action que le guichet unique attend de nous. */
+function actionHtml(f) {
+  const depose = Boolean(f.inpi_id);
+  const action = f.action_attendue;
+  const boutons = [];
+  if (action && action !== 'attendre' && ACTIONS[action]?.libelle && action !== 'regulariser') {
+    boutons.push(`<button class="${ACTIONS[action].classe}" id="btn-action" data-action="${action}"
+      ${action === 'deposer' && !f.controles.pret ? 'disabled' : ''}>${esc(ACTIONS[action].libelle)}</button>`);
+  }
+  if (depose) boutons.push('<button id="btn-sync-un">Actualiser le statut</button>');
+  return boutons.join(' ');
+}
+
+/** Avancement du dossier dans le cycle du guichet unique. */
+function cycleHtml(f, def) {
+  const etapes = [
+    { cle: 'depot', libelle: 'Dépôt', fait: Boolean(f.inpi_id), date: f.created_at },
+    { cle: 'signature', libelle: 'Signature', fait: Boolean(f.signature_date), date: f.signature_date },
+    { cle: 'paiement', libelle: 'Paiement', fait: Boolean(f.paiement_date), date: f.paiement_date },
+    { cle: 'validation', libelle: 'Validation', fait: f.statut === 'VALIDATED', date: f.statut === 'VALIDATED' ? f.statut_date : null },
+  ];
+  const attente = f.action_attendue && f.action_attendue !== 'attendre'
+    ? `<div class="alerte alerte-alerte"><strong>Action attendue de notre côté :</strong> ${esc(ACTIONS[f.action_attendue]?.libelle || f.action_attendue)}.
+       ${f.action_attendue === 'signer' && def?.signature === 'avancee'
+    ? `<div class="sub">Signature électronique avancée requise : <a href="${API_ROOT}/formalites/${f.id}/synthese" target="_blank">télécharger le document de synthèse</a>,
+       le signer avec un certificat qualifié, puis le redéposer en PJ_115.</div>` : ''}
+       ${f.action_attendue === 'payer' && f.montant ? `<div class="sub">Montant des taxes : ${eur.format(f.montant)}.</div>` : ''}
+       </div>`
+    : `<div class="alerte alerte-info"><strong>En attente côté INPI.</strong> ${esc(f.statut_libelle)}.</div>`;
+
+  return `${attente}
+    <ol class="cycle">${etapes.map((e) => `
+      <li class="${e.fait ? 'fait' : ''}"><span class="puce">${e.fait ? '✓' : '·'}</span>
+        ${esc(e.libelle)}${e.date ? `<span class="quand">${fmtDate(e.date)}</span>` : ''}</li>`).join('')}
+    </ol>
+    <dl class="recap mt">
+      <div><dt>Liasse</dt><dd>${esc(f.numero_liasse || '—')}</dd></div>
+      <div><dt>Statut INPI</dt><dd>${esc(f.statut_inpi || f.statut)}</dd></div>
+      <div><dt>Taxes</dt><dd>${f.montant != null ? eur.format(f.montant) : '—'}</dd></div>
+      <div><dt>N° national</dt><dd>${esc(f.num_nat || '—')}</dd></div>
+    </dl>`;
 }
 
 /** Les dates ISO du récapitulatif sont affichées au format français. */

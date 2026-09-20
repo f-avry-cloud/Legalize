@@ -7,6 +7,14 @@
  * dénomination, forme, capital, siège, objet, dirigeants en fonction. C'est
  * ce qui supprime la ressaisie, principale source de temps perdu et d'erreurs
  * dans les formalités.
+ *
+ * Le contenu renvoyé par le RNE est au format des formalités du Guichet
+ * unique : il est conservé tel quel dans le dossier et réutilisé comme
+ * `previousFormality.content` lors d'un dépôt de modification.
+ *
+ * L'authentification se fait avec l'identifiant et le mot de passe du compte
+ * data.inpi.fr (aucune clé d'API n'est délivrée) ; le jeton de session est
+ * géré par src/inpi/client.js.
  */
 
 const { config } = require('./config');
@@ -20,7 +28,7 @@ async function entreprise(sirenBrut) {
   if (!sirenValide(siren)) {
     throw new ErreurInpi(`SIREN invalide : ${formaterSiren(sirenBrut)} (9 chiffres, clé de Luhn).`, { status: 400, api: 'rne' });
   }
-  if (config.modeRne === 'demo') {
+  if (config.modeRne === 'simulation') {
     const fiche = normaliserEntreprise(mock.entrepriseSimulee(siren));
     return { ...fiche, simule: true };
   }
@@ -43,7 +51,7 @@ async function rechercher(terme) {
       simule: Boolean(fiche.simule),
     }];
   }
-  if (config.modeRne === 'demo') return mock.rechercheSimulee(t).map((r) => ({ ...r, simule: true }));
+  if (config.modeRne === 'simulation') return mock.rechercheSimulee(t).map((r) => ({ ...r, simule: true }));
 
   const json = await appel('rne', {
     chemin: config.rne.paths.recherche,
@@ -62,7 +70,7 @@ async function rechercher(terme) {
 /** Actes et comptes annuels déposés, utiles pour vérifier l'historique. */
 async function pieces(sirenBrut) {
   const siren = nettoyerSiren(sirenBrut);
-  if (config.modeRne === 'demo') return { actes: [], bilans: [], simule: true };
+  if (config.modeRne === 'simulation') return { actes: [], bilans: [], simule: true };
   return appel('rne', { chemin: chemin(config.rne.paths.pieces, { siren }) });
 }
 

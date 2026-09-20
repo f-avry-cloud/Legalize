@@ -9,17 +9,20 @@
  * place) provient du pré-remplissage RNE à partir du seul SIREN.
  *
  * Chaque entrée décrit :
- *   champs   — le questionnaire minimal (rendu automatiquement par le front) ;
- *   pieces   — les pièces justificatives, avec leur condition d'exigibilité ;
- *   delai    — le délai légal, calculé sur une date du questionnaire ;
- *   controles— les vérifications métier propres à la formalité ;
- *   apercu   — le récapitulatif lisible présenté avant dépôt.
+ *   typeFormalite — C création, M modification, R cessation (contrat d'interface) ;
+ *   evenement     — code évènement du RNE (11M, 15M…), affiché pour traçabilité ;
+ *   champs        — le questionnaire minimal, rendu automatiquement par le front ;
+ *   pieces        — les pièces justificatives par CODE OFFICIEL (PJ_xx) ; les
+ *                   libellés viennent du dictionnaire de données, pas d'ici ;
+ *   delai         — le délai légal, calculé sur une date du questionnaire ;
+ *   controles     — les vérifications métier propres à la formalité ;
+ *   apercu        — le récapitulatif lisible présenté avant dépôt.
  *
- * Les délais rappelés sont ceux du code de commerce ; ils sont affichés à
- * titre d'aide au suivi et ne remplacent pas l'analyse du dossier.
+ * Les délais rappelés sont ceux du code de commerce ; ils aident au suivi et
+ * ne remplacent pas l'analyse du dossier.
  */
 
-const { TYPES_FORMALITE, TYPES_PIECE } = require('./referentiels');
+const { TYPES_FORMALITE, piece, EVENEMENTS, enumeration } = require('./referentiels');
 
 const DELAI_MODIFICATION = {
   jours: 30,
@@ -33,27 +36,29 @@ const champDateDecision = {
   aide: 'Date du PV d’assemblée ou de la décision de l’associé unique. Elle déclenche le délai de dépôt.',
 };
 
-const champAdresse = (name, label, aide) => ({
-  name, label, type: 'adresse', required: true, aide,
-});
-
-const champPersonne = (name, label, opts = {}) => ({
-  name, label, type: 'personne', required: true, ...opts,
-});
-
-/* ------------------------------------------------------------- utilitaires */
+const champAdresse = (name, label, aide) => ({ name, label, type: 'adresse', required: true, aide });
+const champPersonne = (name, label, opts = {}) => ({ name, label, type: 'personne', required: true, ...opts });
 
 const nombre = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
 
-/* -------------------------------------------------------------- catalogue */
+/** Options d'un select alimentées par une énumération officielle. */
+function optionsEnum(nom, codes) {
+  const table = enumeration(nom);
+  return (codes || Object.keys(table)).map((code) => ({ value: code, label: table[code] || code }));
+}
+
+/* ---------------------------------------------------------------- catalogue */
 
 const FORMALITES = {
   creation_societe: {
     libelle: 'Création d’une société',
     categorie: 'creation',
     typeFormalite: TYPES_FORMALITE.CREATION,
+    evenement: '01M',
+    service: 'formalites',
     resume: 'Immatriculer une société au registre national des entreprises.',
     sansSiren: true,
+    signature: 'simple',
     delai: {
       base: 'date_debut_activite', jours: 15,
       texte: 'Au plus tard dans les quinze jours du début d’activité.',
@@ -63,11 +68,15 @@ const FORMALITES = {
       { name: 'denomination', label: 'Dénomination sociale', type: 'text', required: true },
       { name: 'sigle', label: 'Sigle', type: 'text' },
       { name: 'capital', label: 'Capital social (€)', type: 'money', required: true },
+      { name: 'capital_variable', label: 'Capital variable', type: 'checkbox' },
+      { name: 'associe_unique', label: 'Société unipersonnelle (associé unique)', type: 'checkbox' },
       { name: 'duree', label: 'Durée (années)', type: 'number', default: 99, required: true },
       { name: 'date_cloture', label: 'Clôture de l’exercice (JJ/MM)', type: 'text', default: '31/12', required: true },
       { name: 'objet', label: 'Objet social', type: 'textarea', required: true },
       champAdresse('adresse_siege', 'Adresse du siège social'),
       { name: 'activite_principale', label: 'Activité principale exercée', type: 'textarea', required: true },
+      { name: 'forme_exercice', label: 'Forme d’exercice de l’activité', type: 'select', default: 'COMMERCIALE',
+        options: optionsEnum('formeExerciceActivitePrincipale') },
       { name: 'date_debut_activite', label: 'Date de début d’activité', type: 'date', required: true },
       { name: 'date_signature_statuts', label: 'Date de signature des statuts', type: 'date', required: true },
       { name: 'depositaire_fonds', label: 'Banque dépositaire des fonds', type: 'text', required: true },
@@ -76,22 +85,21 @@ const FORMALITES = {
       champPersonne('dirigeant', 'Dirigeant (représentant légal)'),
     ],
     pieces: [
-      { type: TYPES_PIECE.STATUTS, obligatoire: true },
-      { type: TYPES_PIECE.ATTESTATION_DEPOT_FONDS, obligatoire: true },
-      { type: TYPES_PIECE.JOUISSANCE_LOCAUX, obligatoire: true },
-      { type: TYPES_PIECE.PIECE_IDENTITE, obligatoire: true },
-      { type: TYPES_PIECE.DNC, obligatoire: true },
-      { type: TYPES_PIECE.JAL, obligatoire: true },
-      { type: TYPES_PIECE.RAPPORT_CAC, obligatoire: true, condition: (r) => Boolean(r.apports_nature),
-        aide: 'Exigé en présence d’apports en nature (sauf dispense régulière).' },
+      { code: 'PJ_01', obligatoire: true },
+      { code: 'PJ_06', obligatoire: true },
+      { code: 'PJ_25', obligatoire: true },
+      { code: 'PJ_11', obligatoire: true },
+      { code: 'PJ_17', obligatoire: true },
+      { code: 'PJ_08', obligatoire: true },
+      { code: 'PJ_04', obligatoire: true, condition: (r) => Boolean(r.apports_nature) },
+      { code: 'PJ_51', obligatoire: false, aide: 'Si le déposant n’est pas le représentant légal.' },
     ],
     controles(r) {
       const alertes = [];
       if (nombre(r.capital) !== null && nombre(r.capital) <= 0) {
         alertes.push({ niveau: 'bloquant', message: 'Le capital social doit être supérieur à zéro.' });
       }
-      if (r.date_signature_statuts && r.date_debut_activite
-        && r.date_debut_activite < r.date_signature_statuts) {
+      if (r.date_signature_statuts && r.date_debut_activite && r.date_debut_activite < r.date_signature_statuts) {
         alertes.push({ niveau: 'alerte', message: 'Le début d’activité est antérieur à la signature des statuts.' });
       }
       return alertes;
@@ -109,7 +117,10 @@ const FORMALITES = {
     libelle: 'Transfert de siège social',
     categorie: 'modification',
     typeFormalite: TYPES_FORMALITE.MODIFICATION,
+    evenement: '11M',
+    service: 'formalites',
     resume: 'Déclarer la nouvelle adresse du siège social.',
+    signature: 'avancee',
     delai: { base: 'date_decision', ...DELAI_MODIFICATION },
     champs: [
       champDateDecision,
@@ -121,11 +132,12 @@ const FORMALITES = {
       { name: 'transfert_etablissement', label: 'L’établissement principal suit le siège', type: 'checkbox', default: true },
     ],
     pieces: [
-      { type: TYPES_PIECE.PV_DECISION, obligatoire: true },
-      { type: TYPES_PIECE.STATUTS, obligatoire: true, aide: 'Statuts mis à jour de la nouvelle adresse.' },
-      { type: TYPES_PIECE.JOUISSANCE_LOCAUX, obligatoire: true },
-      { type: TYPES_PIECE.JAL, obligatoire: true,
+      { code: 'PJ_54', obligatoire: true },
+      { code: 'PJ_02', obligatoire: true },
+      { code: 'PJ_25', obligatoire: true },
+      { code: 'PJ_08', obligatoire: true,
         aide: 'Deux attestations en cas de changement de ressort (ancien et nouveau).' },
+      { code: 'PJ_97', obligatoire: false, condition: (r) => Boolean(r.hors_ressort) },
     ],
     controles(r, fiche) {
       const alertes = [];
@@ -153,7 +165,10 @@ const FORMALITES = {
     libelle: 'Changement de dirigeant',
     categorie: 'modification',
     typeFormalite: TYPES_FORMALITE.MODIFICATION,
+    evenement: '35M',
+    service: 'formalites',
     resume: 'Nomination, cessation ou remplacement d’un représentant légal.',
+    signature: 'avancee',
     delai: { base: 'date_decision', ...DELAI_MODIFICATION },
     champs: [
       champDateDecision,
@@ -168,17 +183,21 @@ const FORMALITES = {
       champPersonne('dirigeant_entrant', 'Nouveau dirigeant', {
         depend: { name: 'nature', valeurs: ['nomination', 'remplacement'] },
       }),
-      { name: 'fonction', label: 'Fonction', type: 'text', required: true, default: '',
+      { name: 'fonction', label: 'Fonction', type: 'text',
         depend: { name: 'nature', valeurs: ['nomination', 'remplacement'] },
-        aide: 'Reprise de la forme juridique si laissée vide (Président, Gérant…).' },
+        aide: 'Déduite de la forme juridique si laissée vide (Président de SAS, Gérant…).' },
+      { name: 'demission', label: 'Départ par démission', type: 'checkbox',
+        depend: { name: 'nature', valeurs: ['cessation', 'remplacement'] } },
     ],
     pieces: [
-      { type: TYPES_PIECE.PV_DECISION, obligatoire: true },
-      { type: TYPES_PIECE.PIECE_IDENTITE, obligatoire: true, condition: (r) => r.nature !== 'cessation' },
-      { type: TYPES_PIECE.DNC, obligatoire: true, condition: (r) => r.nature !== 'cessation' },
-      { type: TYPES_PIECE.STATUTS, obligatoire: false,
-        aide: 'Si le dirigeant est nommé dans les statuts, joindre les statuts mis à jour.' },
-      { type: TYPES_PIECE.JAL, obligatoire: false,
+      { code: 'PJ_54', obligatoire: true },
+      { code: 'PJ_03', obligatoire: false, condition: (r) => r.nature !== 'cessation' },
+      { code: 'PJ_11', obligatoire: true, condition: (r) => r.nature !== 'cessation' },
+      { code: 'PJ_63', obligatoire: true, condition: (r) => r.nature !== 'cessation' },
+      { code: 'PJ_64', obligatoire: true, condition: (r) => r.nature !== 'cessation' },
+      { code: 'PJ_230', obligatoire: false, condition: (r) => Boolean(r.demission) },
+      { code: 'PJ_02', obligatoire: false, aide: 'Si le dirigeant est désigné dans les statuts.' },
+      { code: 'PJ_08', obligatoire: false,
         aide: 'Publication requise pour les sociétés commerciales lors du changement de représentant légal.' },
     ],
     controles(r) {
@@ -203,7 +222,10 @@ const FORMALITES = {
     libelle: 'Changement de dénomination sociale',
     categorie: 'modification',
     typeFormalite: TYPES_FORMALITE.MODIFICATION,
+    evenement: '10M',
+    service: 'formalites',
     resume: 'Modifier le nom de la société (et son sigle).',
+    signature: 'avancee',
     delai: { base: 'date_decision', ...DELAI_MODIFICATION },
     champs: [
       champDateDecision,
@@ -212,9 +234,9 @@ const FORMALITES = {
       { name: 'nouveau_nom_commercial', label: 'Nouveau nom commercial', type: 'text' },
     ],
     pieces: [
-      { type: TYPES_PIECE.PV_DECISION, obligatoire: true },
-      { type: TYPES_PIECE.STATUTS, obligatoire: true },
-      { type: TYPES_PIECE.JAL, obligatoire: true },
+      { code: 'PJ_54', obligatoire: true },
+      { code: 'PJ_02', obligatoire: true },
+      { code: 'PJ_08', obligatoire: true },
     ],
     controles(r, fiche) {
       const alertes = [];
@@ -236,7 +258,10 @@ const FORMALITES = {
     libelle: 'Modification du capital social',
     categorie: 'modification',
     typeFormalite: TYPES_FORMALITE.MODIFICATION,
+    evenement: '15M',
+    service: 'formalites',
     resume: 'Augmentation ou réduction du capital.',
+    signature: 'avancee',
     delai: { base: 'date_decision', ...DELAI_MODIFICATION },
     champs: [
       champDateDecision,
@@ -246,24 +271,26 @@ const FORMALITES = {
           { value: 'reduction', label: 'Réduction de capital' },
         ] },
       { name: 'nouveau_capital', label: 'Nouveau capital social (€)', type: 'money', required: true },
-      { name: 'modalite', label: 'Modalité', type: 'select', required: true, default: 'numeraire',
-        options: [
-          { value: 'numeraire', label: 'Apports en numéraire' },
-          { value: 'nature', label: 'Apports en nature' },
-          { value: 'reserves', label: 'Incorporation de réserves' },
-          { value: 'creances', label: 'Compensation de créances' },
-          { value: 'pertes', label: 'Réduction motivée par des pertes' },
-        ] },
+      // Modalités reprises des énumérations officielles du Guichet unique.
+      { name: 'modalite', label: 'Modalité de l’augmentation', type: 'select', required: true,
+        default: 'APPORT_NUMERAIRE', depend: { name: 'sens', valeurs: ['augmentation'] },
+        options: optionsEnum('typeAugmentationCapital') },
+      { name: 'modalite', label: 'Modalité de la réduction', type: 'select', required: true,
+        default: 'AUTRE', depend: { name: 'sens', valeurs: ['reduction'] },
+        options: optionsEnum('typeReductionCapital') },
       { name: 'capital_variable', label: 'Capital variable', type: 'checkbox' },
     ],
     pieces: [
-      { type: TYPES_PIECE.PV_DECISION, obligatoire: true },
-      { type: TYPES_PIECE.STATUTS, obligatoire: true },
-      { type: TYPES_PIECE.JAL, obligatoire: true },
-      { type: TYPES_PIECE.ATTESTATION_DEPOT_FONDS, obligatoire: true, condition: (r) => r.modalite === 'numeraire' },
-      { type: TYPES_PIECE.RAPPORT_CAC, obligatoire: true,
-        condition: (r) => ['nature', 'creances'].includes(r.modalite),
-        aide: 'Commissaire aux apports (apports en nature) ou rapport du CAC (compensation de créances).' },
+      { code: 'PJ_155', obligatoire: true, condition: (r) => r.sens === 'augmentation' },
+      { code: 'PJ_156', obligatoire: true, condition: (r) => r.sens === 'reduction' },
+      { code: 'PJ_02', obligatoire: true },
+      { code: 'PJ_08', obligatoire: true },
+      { code: 'PJ_56', obligatoire: true,
+        condition: (r) => r.sens === 'augmentation' && String(r.modalite || '').includes('NUMERAIRE') },
+      { code: 'PJ_04', obligatoire: true,
+        condition: (r) => r.sens === 'augmentation' && String(r.modalite || '').includes('NATURE') },
+      { code: 'PJ_57', obligatoire: false, condition: (r) => r.sens === 'augmentation',
+        aide: 'En cas de libération par compensation de créances.' },
     ],
     controles(r, fiche) {
       const alertes = [];
@@ -280,10 +307,10 @@ const FORMALITES = {
           alertes.push({ niveau: 'bloquant', message: `Réduction déclarée mais le capital passe de ${actuel} € à ${nouveau} €.` });
         }
       }
-      if (r.sens === 'reduction' && r.modalite !== 'pertes') {
+      if (r.sens === 'reduction') {
         alertes.push({
           niveau: 'alerte',
-          message: 'Réduction non motivée par des pertes : délai d’opposition des créanciers à purger avant réalisation définitive.',
+          message: 'Réduction de capital : purger le délai d’opposition des créanciers lorsqu’elle n’est pas motivée par des pertes.',
         });
       }
       return alertes;
@@ -300,7 +327,10 @@ const FORMALITES = {
     libelle: 'Modification de l’objet social',
     categorie: 'modification',
     typeFormalite: TYPES_FORMALITE.MODIFICATION,
+    evenement: '12M',
+    service: 'formalites',
     resume: 'Changer l’objet social et, le cas échéant, l’activité déclarée.',
+    signature: 'avancee',
     delai: { base: 'date_decision', ...DELAI_MODIFICATION },
     champs: [
       champDateDecision,
@@ -308,13 +338,13 @@ const FORMALITES = {
       { name: 'nouvelle_activite', label: 'Nouvelle activité principale exercée', type: 'textarea',
         aide: 'À renseigner si l’activité réellement exercée change (impacte le code APE).' },
       { name: 'activite_reglementee', label: 'Activité réglementée', type: 'checkbox',
-        aide: 'Déclenche l’exigence d’un justificatif d’autorisation / diplôme.' },
+        aide: 'Déclenche l’exigence d’un justificatif d’autorisation ou de diplôme.' },
     ],
     pieces: [
-      { type: TYPES_PIECE.PV_DECISION, obligatoire: true },
-      { type: TYPES_PIECE.STATUTS, obligatoire: true },
-      { type: TYPES_PIECE.JAL, obligatoire: true },
-      { type: TYPES_PIECE.POUVOIR, obligatoire: false },
+      { code: 'PJ_54', obligatoire: true },
+      { code: 'PJ_02', obligatoire: true },
+      { code: 'PJ_08', obligatoire: true },
+      { code: 'PJ_31', obligatoire: true, condition: (r) => Boolean(r.activite_reglementee) },
     ],
     controles(r) {
       return r.activite_reglementee
@@ -331,16 +361,21 @@ const FORMALITES = {
     libelle: 'Cessation d’activité / dissolution',
     categorie: 'cessation',
     typeFormalite: TYPES_FORMALITE.CESSATION,
+    evenement: '22M',
+    service: 'formalites',
     resume: 'Dissolution, clôture de liquidation ou cessation totale d’activité.',
+    signature: 'avancee',
     delai: { base: 'date_cessation', ...DELAI_MODIFICATION },
     champs: [
       { name: 'nature', label: 'Nature', type: 'select', required: true, default: 'dissolution',
         options: [
-          { value: 'dissolution', label: 'Dissolution anticipée (ouverture de liquidation)' },
-          { value: 'cloture_liquidation', label: 'Clôture de liquidation (radiation)' },
-          { value: 'cessation_activite', label: 'Cessation totale d’activité' },
+          { value: 'dissolution', label: 'Dissolution anticipée (évènement 22M)' },
+          { value: 'cloture_liquidation', label: 'Clôture de liquidation et radiation (évènement 42M)' },
+          { value: 'cessation_activite', label: 'Cessation totale d’activité sans disparition (évènement 40M)' },
         ] },
       { name: 'date_cessation', label: 'Date de la décision / de cessation', type: 'date', required: true },
+      { name: 'type_dissolution', label: 'Type de dissolution', type: 'select', default: '1',
+        depend: { name: 'nature', valeurs: ['dissolution'] }, options: optionsEnum('typeDissolution') },
       champPersonne('liquidateur', 'Liquidateur', { depend: { name: 'nature', valeurs: ['dissolution'] } }),
       champAdresse('adresse_liquidation', 'Adresse du siège de liquidation',
         'Adresse à laquelle la correspondance doit être adressée pendant la liquidation.'),
@@ -348,11 +383,11 @@ const FORMALITES = {
         depend: { name: 'nature', valeurs: ['cloture_liquidation'] } },
     ],
     pieces: [
-      { type: TYPES_PIECE.PV_DECISION, obligatoire: true },
-      { type: TYPES_PIECE.JAL, obligatoire: true },
-      { type: TYPES_PIECE.COMPTES_LIQUIDATION, obligatoire: true,
-        condition: (r) => r.nature === 'cloture_liquidation' },
-      { type: TYPES_PIECE.PIECE_IDENTITE, obligatoire: true, condition: (r) => r.nature === 'dissolution',
+      { code: 'PJ_54', obligatoire: true, condition: (r) => r.nature !== 'cloture_liquidation' },
+      { code: 'PJ_133', obligatoire: true, condition: (r) => r.nature === 'cloture_liquidation' },
+      { code: 'PJ_82', obligatoire: true, condition: (r) => r.nature === 'cloture_liquidation' },
+      { code: 'PJ_08', obligatoire: true },
+      { code: 'PJ_11', obligatoire: true, condition: (r) => r.nature === 'dissolution',
         aide: 'Pièce d’identité du liquidateur.' },
     ],
     controles(r) {
@@ -370,13 +405,19 @@ const FORMALITES = {
   depot_comptes: {
     libelle: 'Dépôt des comptes annuels',
     categorie: 'depot',
-    typeFormalite: TYPES_FORMALITE.DEPOT_COMPTES,
+    // Service dédié du Guichet unique (/api/annual_accounts), distinct des
+    // formalités de création / modification / cessation.
+    typeFormalite: null,
+    service: 'comptes_annuels',
+    evenement: null,
     resume: 'Déposer les comptes approuvés et, si besoin, demander leur confidentialité.',
+    signature: 'avancee',
     delai: {
       base: 'date_approbation', jours: 60,
       texte: 'Dans le mois de l’approbation, porté à deux mois en cas de dépôt par voie électronique (art. R. 123-111 c. com.).',
     },
     champs: [
+      { name: 'exercice_debut', label: 'Début de l’exercice', type: 'date' },
       { name: 'exercice_clos', label: 'Date de clôture de l’exercice', type: 'date', required: true },
       { name: 'date_approbation', label: 'Date d’approbation des comptes', type: 'date', required: true },
       { name: 'resultat', label: 'Résultat de l’exercice (€)', type: 'money', required: true },
@@ -395,15 +436,15 @@ const FORMALITES = {
           { value: 'resultat', label: 'Compte de résultat confidentiel (petite entreprise)' },
         ],
         aide: 'La confidentialité suppose de respecter les seuils de la catégorie déclarée.' },
+      { name: 'depot_simplifie', label: 'Présentation simplifiée', type: 'checkbox' },
+      { name: 'dispense_annexes', label: 'Dispense de dépôt des annexes', type: 'checkbox' },
       { name: 'comptes_consolides', label: 'Comptes consolidés', type: 'checkbox' },
+      { name: 'commissaire_comptes', label: 'Société dotée d’un commissaire aux comptes', type: 'checkbox' },
     ],
     pieces: [
-      { type: TYPES_PIECE.COMPTES_ANNUELS, obligatoire: true },
-      { type: TYPES_PIECE.PV_APPROBATION, obligatoire: true },
-      { type: TYPES_PIECE.DECLARATION_CONFIDENTIALITE, obligatoire: true,
-        condition: (r) => r.confidentialite && r.confidentialite !== 'aucune' },
-      { type: TYPES_PIECE.RAPPORT_CAC, obligatoire: false,
-        aide: 'Obligatoire si la société est dotée d’un commissaire aux comptes.' },
+      { code: 'PJ_232', obligatoire: true },
+      { code: 'PJ_236', obligatoire: true },
+      { code: 'PJ_235', obligatoire: true, condition: (r) => Boolean(r.commissaire_comptes) },
     ],
     controles(r) {
       const alertes = [];
@@ -411,9 +452,7 @@ const FORMALITES = {
         alertes.push({ niveau: 'bloquant', message: 'L’approbation des comptes ne peut pas précéder la clôture de l’exercice.' });
       }
       if (r.exercice_clos && r.date_approbation) {
-        const clos = new Date(r.exercice_clos);
-        const appro = new Date(r.date_approbation);
-        const mois = (appro - clos) / (30.44 * 24 * 3600 * 1000);
+        const mois = (new Date(r.date_approbation) - new Date(r.exercice_clos)) / (30.44 * 24 * 3600 * 1000);
         if (mois > 6.2) {
           alertes.push({
             niveau: 'alerte',
@@ -435,6 +474,19 @@ const FORMALITES = {
   },
 };
 
+/** Libellé officiel d'une pièce, avec repli si le code n'est pas au catalogue. */
+function decrirePiece(p) {
+  const officielle = piece(p.code);
+  return {
+    code: p.code,
+    libelle: officielle ? officielle.libelle : p.code,
+    nota: officielle?.nota || null,
+    obligatoire: Boolean(p.obligatoire),
+    conditionnelle: Boolean(p.condition),
+    aide: p.aide || null,
+  };
+}
+
 /** Liste destinée au front (les fonctions ne sont pas sérialisables). */
 function catalogue() {
   return Object.entries(FORMALITES).map(([code, f]) => ({
@@ -444,12 +496,13 @@ function catalogue() {
     resume: f.resume,
     sansSiren: Boolean(f.sansSiren),
     typeFormalite: f.typeFormalite,
+    service: f.service,
+    evenement: f.evenement,
+    evenement_libelle: f.evenement ? EVENEMENTS[f.evenement] || null : null,
+    signature: f.signature,
     delai: f.delai,
     champs: f.champs,
-    pieces: f.pieces.map((p) => ({
-      code: p.type.code, libelle: p.type.libelle, obligatoire: p.obligatoire,
-      conditionnelle: Boolean(p.condition), aide: p.aide || null,
-    })),
+    pieces: f.pieces.map(decrirePiece),
   }));
 }
 
@@ -461,12 +514,7 @@ function definition(code) {
 function piecesExigees(code, reponses = {}) {
   const def = definition(code);
   if (!def) return [];
-  return def.pieces
-    .filter((p) => !p.condition || p.condition(reponses))
-    .map((p) => ({
-      code: p.type.code, libelle: p.type.libelle,
-      obligatoire: Boolean(p.obligatoire), aide: p.aide || null,
-    }));
+  return def.pieces.filter((p) => !p.condition || p.condition(reponses)).map(decrirePiece);
 }
 
 /** Champs réellement à saisir (les dépendances masquent le reste). */

@@ -10,7 +10,7 @@
  * doit pas être bloqué parce que l'INPI ne connaît pas le sigle.
  */
 
-const { formeJuridique } = require('./referentiels');
+const { formeJuridique, role: roleInpi } = require('./referentiels');
 
 /* ------------------------------------------------------------------- SIREN */
 
@@ -77,12 +77,14 @@ function nomComplet(d) {
 
 function normaliserPouvoir(p) {
   if (!p) return null;
-  const individu = p.individu?.descriptionPersonne || null;
+  const individu = p.individu?.descriptionPersonne || p.individu?.descriptionEntrepreneur || null;
   const morale = p.entreprise || p.personneMorale?.identite?.entreprise || null;
   if (individu) {
+    const code = String(individu.role ?? p.roleEntreprise ?? '');
     return {
       type: 'physique',
-      role: String(individu.role ?? p.roleEntreprise ?? ''),
+      role: code,
+      role_libelle: roleInpi(code)?.libelle || '',
       nom: individu.nom || '',
       prenoms: Array.isArray(individu.prenoms) ? individu.prenoms : (individu.prenoms ? [individu.prenoms] : []),
       nom_complet: nomComplet(individu),
@@ -93,9 +95,11 @@ function normaliserPouvoir(p) {
     };
   }
   if (morale) {
+    const code = String(morale.roleEntreprise ?? p.roleEntreprise ?? '');
     return {
       type: 'morale',
-      role: String(morale.roleEntreprise ?? p.roleEntreprise ?? ''),
+      role: code,
+      role_libelle: roleInpi(code)?.libelle || '',
       denomination: morale.denomination || '',
       siren: morale.siren || '',
       formeJuridique: String(morale.formeJuridique || ''),

@@ -56,7 +56,7 @@ function requete(table) {
         id: nextId(etat.table), created_at: new Date().toISOString(), ...v,
       }));
       lignes.push(...entrees);
-      return { data: etat.unique ? entrees[0] : entrees, error: null };
+      return { data: etat.unique ? { ...entrees[0] } : entrees.map((e) => ({ ...e })), error: null };
     }
 
     let selection = lignes.filter((l) => correspond(l, etat.filtres));
@@ -72,11 +72,14 @@ function requete(table) {
       });
     }
 
+    // PostgREST renvoie des documents JSON : on copie, pour qu'une mise à
+    // jour ultérieure ne modifie pas rétroactivement un objet déjà lu.
+    const copie = (l) => ({ ...l });
     if (etat.unique) {
       if (!selection.length) return { data: null, error: { message: 'JSON object requested, 0 rows returned' } };
-      return { data: selection[0], error: null };
+      return { data: copie(selection[0]), error: null };
     }
-    return { data: selection, error: null };
+    return { data: selection.map(copie), error: null };
   }
 
   return builder;

@@ -12,7 +12,8 @@
 
 const { definition, piecesExigees, champsActifs } = require('./catalogue');
 const { sirenValide, formaterSiren } = require('./normalize');
-const { formeJuridique, roleDepuisFonction } = require('./referentiels');
+const { formeJuridique, roleDepuisFonction, enumeration, TYPES_FORMALITE } = require('./referentiels');
+const { config } = require('./config');
 
 const JOUR_MS = 24 * 3600 * 1000;
 
@@ -81,6 +82,10 @@ function controler(dossier, maintenant = new Date()) {
       }
       if (!a.commune) bloquants.push(`Commune manquante pour « ${champ.label} ».`);
       if (!a.voie) alertes.push(`Libellé de voie manquant pour « ${champ.label} ».`);
+      // Le type de voie est un code du référentiel INPI (RUE, AV, BD…).
+      if (a.typeVoie && !enumeration('typeVoie')[String(a.typeVoie).toUpperCase()]) {
+        alertes.push(`Type de voie « ${a.typeVoie} » absent du référentiel INPI pour « ${champ.label} » : utiliser un code officiel (RUE, AV, BD…).`);
+      }
     }
     if (champ.type === 'personne' && !estVide(reponses[champ.name])) {
       const p = reponses[champ.name];
@@ -118,6 +123,27 @@ function controler(dossier, maintenant = new Date()) {
   for (const p of piecesManquantes) bloquants.push(`Pièce obligatoire manquante : ${p.libelle}.`);
   for (const p of exigees.filter((x) => !x.obligatoire && !fournies.has(x.code))) {
     infos.push(`Pièce facultative non jointe : ${p.libelle}${p.aide ? ` — ${p.aide}` : ''}`);
+  }
+  // Le Guichet unique n'accepte que des PDF de moins de 10 Mo.
+  for (const p of dossier.pieces || []) {
+    const nom = p.nom || p.filename || p.code;
+    if (!/\.pdf$/i.test(nom)) {
+      bloquants.push(`La pièce « ${nom} » doit être au format PDF (seul format accepté par le guichet unique).`);
+    }
+    if (p.taille && p.taille > config.pieceMaxOctets) {
+      bloquants.push(`La pièce « ${nom} » dépasse 10 Mo (${Math.round(p.taille / 1048576)} Mo).`);
+    }
+  }
+
+  /* --- indicateur d'évènement (formalités de modification) ---
+     Le Guichet unique refuse une modification qui ne porte aucun indicateur
+     `…Triggered` : on le vérifie sur le payload réellement construit. */
+  if (def.typeFormalite === TYPES_FORMALITE.MODIFICATION && dossier.payload) {
+    const { indicateursEvenement } = require('./payload');
+    const contenu = dossier.payload.corps?.newFormality?.content;
+    if (contenu && indicateursEvenement(contenu).length === 0) {
+      bloquants.push('Aucun indicateur d’évènement dans la formalité de modification : le guichet unique la rejetterait.');
+    }
   }
 
   /* --- délai légal ---

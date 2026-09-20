@@ -1,149 +1,196 @@
 'use strict';
 
 /**
- * Référentiels de codes utilisés par les API INPI.
+ * Référentiels du Guichet unique.
  *
- * ⚠️ Point d'attention unique du projet : les tables de codes ci-dessous sont
- * la SEULE partie du connecteur qui dépend des annexes de la documentation
- * technique INPI (« Annexes — référentiels » de la doc API formalités et du
- * contrat d'interface mandataire). Elles sont volontairement regroupées ici
- * pour être vérifiées / complétées d'un seul endroit, sans toucher au reste
- * du code. Les codes « catégorie juridique » suivent la nomenclature INSEE,
- * qui est celle reprise par le RNE.
+ * Les tables ne sont plus saisies à la main : elles sont générées depuis les
+ * fichiers officiels de l'INPI (dictionnaire de données mandataire et liste
+ * des formes juridiques) par `scripts/build-referentiels-inpi.py`, et lues
+ * ici telles quelles. Régénérer les JSON suffit à suivre une mise à jour du
+ * contrat d'interface.
  *
- * Toute valeur inconnue est signalée par les contrôles (src/inpi/controles.js)
- * plutôt que devinée silencieusement.
+ * Ce module n'expose que les accesseurs et les quelques correspondances
+ * métier (fonction de dirigeant → code rôle, forme sociale → code) que le
+ * dictionnaire ne fournit pas.
  */
 
-/* ------------------------------------------------- formes juridiques (INSEE) */
+const FORMES = require('./data/formes-juridiques.json').valeurs;
+const ROLES = require('./data/roles.json').valeurs;
+const PIECES = require('./data/pieces-justificatives.json').valeurs;
+const EVENEMENTS = require('./data/evenements.json').valeurs;
+const ENUMS = require('./data/enumerations.json').valeurs;
 
-const FORMES_JURIDIQUES = {
-  1000: { libelle: 'Entrepreneur individuel', famille: 'ei', titres: null, capital: false, dirigeant: 'Entrepreneur' },
-  5202: { libelle: 'Société en nom collectif', famille: 'snc', titres: 'parts', capital: true, dirigeant: 'Gérant' },
-  5306: { libelle: 'Société en commandite simple', famille: 'scs', titres: 'parts', capital: true, dirigeant: 'Gérant' },
-  5498: { libelle: 'SARL unipersonnelle (EURL)', famille: 'sarl', titres: 'parts', capital: true, dirigeant: 'Gérant' },
-  5499: { libelle: 'SARL', famille: 'sarl', titres: 'parts', capital: true, dirigeant: 'Gérant' },
-  5599: { libelle: 'SA à conseil d’administration', famille: 'sa', titres: 'actions', capital: true, dirigeant: 'Président du conseil d’administration' },
-  5699: { libelle: 'SA à directoire', famille: 'sa', titres: 'actions', capital: true, dirigeant: 'Président du directoire' },
-  5710: { libelle: 'SAS', famille: 'sas', titres: 'actions', capital: true, dirigeant: 'Président' },
-  5720: { libelle: 'SASU', famille: 'sas', titres: 'actions', capital: true, dirigeant: 'Président' },
-  5785: { libelle: 'SELAS', famille: 'sas', titres: 'actions', capital: true, dirigeant: 'Président' },
-  6540: { libelle: 'Société civile immobilière', famille: 'sci', titres: 'parts', capital: true, dirigeant: 'Gérant' },
-  6599: { libelle: 'Autre société civile', famille: 'civile', titres: 'parts', capital: true, dirigeant: 'Gérant' },
-};
+/* ------------------------------------------------------ formes juridiques */
 
+/** @returns {{libelle, famille, categorie, codeInsee, unipersonnelle}|null} */
 function formeJuridique(code) {
-  return FORMES_JURIDIQUES[String(code)] || null;
+  const f = FORMES[String(code || '').trim()];
+  return f ? { code: String(code), ...f } : null;
 }
 
-/** Retrouve un code INSEE à partir d'un libellé libre saisi en fiche société. */
+/** Formes proposables à la création (sous-ensemble utile du formulaire). */
+function formesCreation() {
+  return Object.entries(FORMES)
+    .filter(([, f]) => f.creation)
+    .map(([code, f]) => ({ code, libelle: f.libelle, categorie: f.categorie }))
+    .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
+}
+
+/** Retrouve un code à partir d'une forme sociale saisie en clair (« SAS »). */
 function codeFormeDepuisLibelle(libelle) {
   if (!libelle) return null;
   const n = String(libelle).toUpperCase().replace(/[^A-Z]/g, '');
-  const table = [
-    ['SASU', '5720'], ['SELAS', '5785'], ['SAS', '5710'],
-    ['EURL', '5498'], ['SARLUNIPERSONNELLE', '5498'], ['SARL', '5499'],
+  if (!n) return null;
+  // Sigles usuels : le dictionnaire INPI ne distingue pas SAS et SASU
+  // (même code 5710, l'unipersonnalité est portée par un indicateur).
+  const sigles = [
+    ['SASU', '5710'], ['SELAS', '5785'], ['SAS', '5710'],
+    ['EURL', '5499'], ['SARL', '5499'],
+    ['SCA', '5308'], ['SCS', '5306'], ['SELARL', '5485'],
     ['SADIRECTOIRE', '5699'], ['SA', '5599'],
-    ['SCI', '6540'], ['SNC', '5202'],
+    ['SCI', '6540'], ['SNC', '5202'], ['GIE', '6220'],
   ];
-  for (const [motif, code] of table) if (n.includes(motif)) return code;
-  return null;
+  for (const [motif, code] of sigles) if (n.includes(motif) && FORMES[code]) return code;
+  const exact = Object.entries(FORMES)
+    .find(([, f]) => f.libelle.toUpperCase().replace(/[^A-Z]/g, '') === n);
+  return exact ? exact[0] : null;
 }
 
-/* --------------------------------------------------------- rôles / fonctions */
+/* ------------------------------------------------------------------ rôles */
 
-// Codes « rôle de la personne » du RNE. À confirmer avec l'annexe INPI avant
-// un dépôt réel : un code absent d'ici est signalé en contrôle bloquant.
-const ROLES = {
-  PRESIDENT: { code: '30', libelle: 'Président' },
-  DIRECTEUR_GENERAL: { code: '31', libelle: 'Directeur général' },
-  GERANT: { code: '5', libelle: 'Gérant' },
-  ADMINISTRATEUR: { code: '23', libelle: 'Administrateur' },
-  COMMISSAIRE_COMPTES: { code: '73', libelle: 'Commissaire aux comptes titulaire' },
-  LIQUIDATEUR: { code: '40', libelle: 'Liquidateur' },
-  ASSOCIE: { code: '2', libelle: 'Associé' },
-};
+const ROLES_PAR_LIBELLE = new Map(
+  Object.entries(ROLES).map(([code, libelle]) => [libelle.toLowerCase(), code]),
+);
 
+function role(code) {
+  const libelle = ROLES[String(code || '').trim()];
+  return libelle ? { code: String(code), libelle } : null;
+}
+
+/**
+ * Fonction saisie en clair → code rôle du RNE.
+ * L'ordre compte : « président du conseil d'administration » doit être testé
+ * avant « président ».
+ */
+const CORRESPONDANCES_ROLE = [
+  [/liquidateur/i, '40'],
+  [/commissaire aux comptes suppl/i, '72'],
+  [/commissaire aux comptes/i, '71'],
+  [/pr[ée]sident du conseil d.?administration et directeur g[ée]n[ée]ral/i, '60'],
+  [/pr[ée]sident du conseil d.?administration/i, '51'],
+  [/pr[ée]sident du conseil de surveillance/i, '61'],
+  [/pr[ée]sident du directoire/i, '52'],
+  [/membre du directoire/i, '63'],
+  [/membre du conseil de surveillance/i, '64'],
+  [/directeur g[ée]n[ée]ral d[ée]l[ée]gu/i, '70'],
+  [/directeur g[ée]n[ée]ral unique/i, '69'],
+  [/directeur g[ée]n[ée]ral/i, '53'],
+  [/administrateur provisoire/i, '98'],
+  [/administrateur/i, '65'],
+  [/g[ée]rant/i, '30'],
+  [/pr[ée]sident/i, '73'],
+  [/associ[ée] unique/i, '41'],
+  [/mandataire ad hoc/i, '97'],
+];
+
+/**
+ * Les correspondances sociétaires priment sur la recherche par libellé exact :
+ * « Président » doit donner « Président de SAS » (73) et non le rôle 205,
+ * qui est celui du président d'une association.
+ * @returns {{code, libelle}|null}
+ */
 function roleDepuisFonction(fonction) {
-  const n = String(fonction || '').toLowerCase();
-  if (n.includes('liquidateur')) return ROLES.LIQUIDATEUR;
-  if (n.includes('commissaire')) return ROLES.COMMISSAIRE_COMPTES;
-  if (n.includes('directeur')) return ROLES.DIRECTEUR_GENERAL;
-  if (n.includes('gérant') || n.includes('gerant')) return ROLES.GERANT;
-  if (n.includes('administrateur')) return ROLES.ADMINISTRATEUR;
-  if (n.includes('président') || n.includes('president')) return ROLES.PRESIDENT;
-  return null;
+  const texte = String(fonction || '').trim();
+  if (!texte) return null;
+  for (const [motif, code] of CORRESPONDANCES_ROLE) if (motif.test(texte)) return role(code);
+  const direct = ROLES_PAR_LIBELLE.get(texte.toLowerCase());
+  return direct ? role(direct) : null;
 }
 
-/* ------------------------------------------------------ types de formalité */
+/** Rôle par défaut du représentant légal selon la forme juridique. */
+function rolePrincipal(codeForme) {
+  const f = formeJuridique(codeForme);
+  if (!f) return null;
+  const famille = `${f.famille} ${f.categorie}`.toLowerCase();
+  if (famille.includes('actions simplifi')) return role('73');      // Président de SAS
+  if (famille.includes('anonyme à directoire')) return role('52');  // Président du directoire
+  if (famille.includes('anonyme')) return role('51');               // Président du CA
+  return role('30');                                                // Gérant
+}
 
-// Type de formalité au sens du Guichet unique.
-const TYPES_FORMALITE = {
-  CREATION: 'C',
-  MODIFICATION: 'M',
-  CESSATION: 'F',
-  DEPOT_COMPTES: 'B',
+/* ----------------------------------------------------------- pièces jointes */
+
+function piece(code) {
+  const p = PIECES[String(code || '').trim()];
+  return p ? { code: String(code), ...p } : null;
+}
+
+/* ----------------------------------------------------------- énumérations */
+
+function enumeration(nom) {
+  return ENUMS[nom] || {};
+}
+
+function libelleEnum(nom, code) {
+  return enumeration(nom)[String(code)] || null;
+}
+
+const TYPES_FORMALITE = { CREATION: 'C', MODIFICATION: 'M', CESSATION: 'R', CORRECTION: 'Y', COMPLETION: 'Z' };
+const TYPES_PERSONNE = { MORALE: 'M', PHYSIQUE: 'P', EXPLOITATION: 'E' };
+
+// Rôle de l'établissement pour l'entreprise (annexe rolePourEntreprise).
+const ROLE_ETABLISSEMENT = {
+  SIEGE: '1',
+  SIEGE_ET_PRINCIPAL: '2',
+  PRINCIPAL: '3',
+  SECONDAIRE: '4',
 };
 
-/* ------------------------------------------------------------ pièces jointes */
+// Statut d'un bloc vis-à-vis de la formalité (annexe statutPourLaFormalite).
+const STATUT_BLOC = { ADJONCTION: 'A', MODIFICATION: 'M', SUPPRESSION: 'S', INCHANGE: 'I' };
 
-const TYPES_PIECE = {
-  STATUTS: { code: 'STATUTS', libelle: 'Statuts à jour signés' },
-  PV_DECISION: { code: 'PV', libelle: 'Procès-verbal / décision de l’organe compétent' },
-  JAL: { code: 'JAL', libelle: 'Attestation de parution au journal d’annonces légales' },
-  JOUISSANCE_LOCAUX: { code: 'JOUISSANCE', libelle: 'Justificatif de jouissance des locaux (bail, titre de propriété, contrat de domiciliation)' },
-  PIECE_IDENTITE: { code: 'IDENTITE', libelle: 'Copie de la pièce d’identité du dirigeant' },
-  DNC: { code: 'DNC', libelle: 'Déclaration sur l’honneur de non-condamnation et de filiation' },
-  ATTESTATION_DEPOT_FONDS: { code: 'DEPOT_FONDS', libelle: 'Attestation de dépôt des fonds' },
-  RAPPORT_CAC: { code: 'RAPPORT_CAC', libelle: 'Rapport du commissaire aux apports / aux comptes' },
-  COMPTES_ANNUELS: { code: 'COMPTES', libelle: 'Comptes annuels (bilan, compte de résultat, annexe)' },
-  PV_APPROBATION: { code: 'PV_APPRO', libelle: 'Procès-verbal d’approbation des comptes' },
-  DECLARATION_CONFIDENTIALITE: { code: 'CONFIDENTIALITE', libelle: 'Déclaration de confidentialité des comptes' },
-  COMPTES_LIQUIDATION: { code: 'COMPTES_LIQ', libelle: 'Comptes définitifs de liquidation' },
-  POUVOIR: { code: 'POUVOIR', libelle: 'Pouvoir du signataire (si le déposant n’est pas le représentant légal)' },
-};
+/* ------------------------------------------------- statuts d'une formalité */
 
-/* ---------------------------------------------------------------- statuts GU */
-
-// Statuts renvoyés par l'API mandataire sur une formalité déposée, projetés
-// sur un vocabulaire stable côté application (l'INPI a fait évoluer ses
-// libellés ; on normalise pour que le suivi ne casse pas).
+/**
+ * Statuts renvoyés par le Guichet unique (§ 9.1 du contrat d'interface),
+ * enrichis de l'action attendue côté mandataire : c'est cette colonne qui
+ * pilote le suivi (« qui doit jouer ? »).
+ */
 const STATUTS = {
-  BROUILLON: { libelle: 'Brouillon', couleur: 'gris', terminal: false },
-  A_SIGNER: { libelle: 'À signer', couleur: 'orange', terminal: false },
-  SIGNEE: { libelle: 'Signée', couleur: 'bleu', terminal: false },
-  A_PAYER: { libelle: 'À payer', couleur: 'orange', terminal: false },
-  DEPOSEE: { libelle: 'Déposée', couleur: 'bleu', terminal: false },
-  EN_COURS: { libelle: 'En cours de traitement', couleur: 'bleu', terminal: false },
-  REGULARISATION: { libelle: 'Régularisation demandée', couleur: 'rouge', terminal: false },
-  VALIDEE: { libelle: 'Validée', couleur: 'vert', terminal: true },
-  REJETEE: { libelle: 'Rejetée', couleur: 'rouge', terminal: true },
-  ABANDONNEE: { libelle: 'Abandonnée', couleur: 'gris', terminal: true },
+  BROUILLON: { libelle: 'Brouillon (non déposé)', couleur: 'gris', terminal: false, action: 'deposer' },
+  RECEIVED: { libelle: 'Reçue par le guichet', couleur: 'bleu', terminal: false, action: 'attendre' },
+  ERROR: { libelle: 'Erreur de contrôle', couleur: 'rouge', terminal: false, action: 'corriger' },
+  SIGNATURE_PENDING: { libelle: 'À signer', couleur: 'orange', terminal: false, action: 'signer' },
+  SIGNED: { libelle: 'Signée', couleur: 'bleu', terminal: false, action: 'attendre' },
+  PAYMENT_PENDING: { libelle: 'À payer', couleur: 'orange', terminal: false, action: 'payer' },
+  PAYMENT_VALIDATION_PENDING: { libelle: 'Paiement en cours', couleur: 'bleu', terminal: false, action: 'attendre' },
+  PAID: { libelle: 'Payée', couleur: 'bleu', terminal: false, action: 'attendre' },
+  VALIDATION_PENDING: { libelle: 'En cours de validation', couleur: 'bleu', terminal: false, action: 'attendre' },
+  AMENDMENT_PENDING: { libelle: 'Régularisation demandée', couleur: 'rouge', terminal: false, action: 'regulariser' },
+  AMENDMENT_SIGNATURE_PENDING: { libelle: 'Régularisation à signer', couleur: 'orange', terminal: false, action: 'signer' },
+  AMENDMENT_PAYMENT_PENDING: { libelle: 'Régularisation à payer', couleur: 'orange', terminal: false, action: 'payer' },
+  AMENDED: { libelle: 'Régularisée, en attente de validation', couleur: 'bleu', terminal: false, action: 'attendre' },
+  EXPIRED: { libelle: 'Expirée (délai de régularisation dépassé)', couleur: 'rouge', terminal: false, action: 'regulariser' },
+  VALIDATED: { libelle: 'Validée', couleur: 'vert', terminal: true, action: null },
+  REJECTED: { libelle: 'Rejetée', couleur: 'rouge', terminal: true, action: null },
 };
 
-const ALIAS_STATUTS = {
-  DRAFT: 'BROUILLON', BROUILLON: 'BROUILLON',
-  TO_SIGN: 'A_SIGNER', A_SIGNER: 'A_SIGNER',
-  SIGNED: 'SIGNEE', SIGNEE: 'SIGNEE', SIGNE: 'SIGNEE',
-  TO_PAY: 'A_PAYER', A_PAYER: 'A_PAYER',
-  SUBMITTED: 'DEPOSEE', DEPOSEE: 'DEPOSEE', DEPOSE: 'DEPOSEE',
-  IN_PROGRESS: 'EN_COURS', EN_COURS: 'EN_COURS', EN_COURS_DE_TRAITEMENT: 'EN_COURS',
-  REGULARIZATION: 'REGULARISATION', REGULARISATION: 'REGULARISATION', A_REGULARISER: 'REGULARISATION',
-  VALIDATED: 'VALIDEE', VALIDEE: 'VALIDEE', VALIDE: 'VALIDEE',
-  REJECTED: 'REJETEE', REJETEE: 'REJETEE', REJETE: 'REJETEE',
-  ABANDONED: 'ABANDONNEE', ABANDONNEE: 'ABANDONNEE',
-};
-
-/** Projette un statut brut de l'INPI sur le vocabulaire interne. */
+/** Normalise un statut reçu de l'INPI (inconnu → conservé tel quel). */
 function normaliserStatut(brut) {
-  if (!brut) return 'DEPOSEE';
+  if (!brut) return 'RECEIVED';
   const k = String(brut).toUpperCase().replace(/[\s-]/g, '_');
-  return ALIAS_STATUTS[k] || (STATUTS[k] ? k : 'EN_COURS');
+  return STATUTS[k] ? k : 'RECEIVED';
+}
+
+function statut(code) {
+  return STATUTS[code] || { libelle: code, couleur: 'gris', terminal: false, action: null };
 }
 
 module.exports = {
-  FORMES_JURIDIQUES, formeJuridique, codeFormeDepuisLibelle,
-  ROLES, roleDepuisFonction,
-  TYPES_FORMALITE, TYPES_PIECE,
-  STATUTS, normaliserStatut,
+  formeJuridique, formesCreation, codeFormeDepuisLibelle,
+  role, roleDepuisFonction, rolePrincipal,
+  piece, PIECES,
+  EVENEMENTS, enumeration, libelleEnum,
+  TYPES_FORMALITE, TYPES_PERSONNE, ROLE_ETABLISSEMENT, STATUT_BLOC,
+  STATUTS, statut, normaliserStatut,
 };

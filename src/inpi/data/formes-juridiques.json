@@ -1,0 +1,2701 @@
+{
+ "_source": "b66ac36d-inpi_liste-formes-juridiques-code-et-valideurs_2026.xlsx",
+ "valeurs": {
+  "3110": {
+   "libelle": "Représentation ou agence commerciale d'état ou organisme public étranger immatriculé au RCS",
+   "famille": "Représentation ou agence commerciale d'état ou organisme public étranger immatriculé au RCS",
+   "categorie": "Formes juridiques étrangères",
+   "codeInsee": "3110",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "3120": {
+   "libelle": "Société commerciale étrangère immatriculée au RCS",
+   "famille": "Société commerciale étrangère immatriculée au RCS",
+   "categorie": "Formes juridiques étrangères",
+   "codeInsee": "3120",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "3220": {
+   "libelle": "Société étrangère non immatriculée au RCS",
+   "famille": "Société étrangère non immatriculée au RCS",
+   "categorie": "Formes juridiques étrangères",
+   "codeInsee": "3220",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5800": {
+   "libelle": "Société européenne",
+   "famille": "Société européenne",
+   "categorie": "Formes juridiques étrangères",
+   "codeInsee": "5800",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "4110": {
+   "libelle": "Établissement public national à caractère industriel ou commercial doté d'un comptable public",
+   "famille": "Établissements publics industriels et commerciaux",
+   "categorie": "Groupement ou EPIC",
+   "codeInsee": "4110",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "4120": {
+   "libelle": "Établissement public national à caractère industriel ou commercial non doté d'un comptable public",
+   "famille": "Établissements publics industriels et commerciaux",
+   "categorie": "Groupement ou EPIC",
+   "codeInsee": "4120",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "4140": {
+   "libelle": "Établissement public local à caractère industriel ou commercial",
+   "famille": "Établissements publics industriels et commerciaux",
+   "categorie": "Groupement ou EPIC",
+   "codeInsee": "4140",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "4150": {
+   "libelle": "Régie d'une collectivité locale à caractère industriel ou commercial",
+   "famille": "Établissements publics industriels et commerciaux",
+   "categorie": "Groupement ou EPIC",
+   "codeInsee": "4150",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6220": {
+   "libelle": "GIE, Groupement d'intérêt économique",
+   "famille": "GIE, Groupement d'intérêt économique",
+   "categorie": "Groupement ou EPIC",
+   "codeInsee": "6220",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6210": {
+   "libelle": "GEIE, Groupement européen d'intérêt économique",
+   "famille": "GEIE, Groupement européen d'intérêt économique",
+   "categorie": "Groupement ou EPIC",
+   "codeInsee": "6210",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5191": {
+   "libelle": "Société de caution mutuelle",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5191",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5192": {
+   "libelle": "Société coopérative de banque populaire",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5192",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5193": {
+   "libelle": "Caisse de crédit maritime mutuel",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5193",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5194": {
+   "libelle": "Caisse (fédérale) de crédit mutuel",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5194",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5196": {
+   "libelle": "Caisse d'épargne et de prévoyance à forme coopérative",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5196",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6412": {
+   "libelle": "Société d'assurances mutuelles",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6411",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6413": {
+   "libelle": "Société de groupe d'assurance mutuelle",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6411",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6414": {
+   "libelle": "Société de réassurance mutuelle",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6411",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6595": {
+   "libelle": "Caisse locale de crédit mutuel",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6595",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6596": {
+   "libelle": "Caisse de crédit agricole mutuel",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6596",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6579": {
+   "libelle": "Société coopérative de crédit à capital variable et responsabilité statutairement limitée",
+   "famille": "Forme coopérative spécifique",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6595",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5532": {
+   "libelle": "Société anonyme d'intérêt collectif agricole à conseil d'administration (SICA)",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5532",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5543": {
+   "libelle": "Société anonyme coopérative de construction à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5543",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5547": {
+   "libelle": "Société anonyme coopérative de production de HLM à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5547",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5551": {
+   "libelle": "Société anonyme coopérative de consommation à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5551",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5552": {
+   "libelle": "Société anonyme coopérative de commerçants-détaillants à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5552",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5553": {
+   "libelle": "Société anonyme coopérative artisanale à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5553",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5554": {
+   "libelle": "Société anonyme coopérative (d'intérêt) maritime à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5554",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5555": {
+   "libelle": "Société anonyme coopérative de transport à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5555",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5558": {
+   "libelle": "Société anonyme coopérative de production à conseil d'administration (SCOP)",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5558",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5559": {
+   "libelle": "Union de sociétés coopératives à forme anonyme et à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5559",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5557": {
+   "libelle": "Société anonyme coopérative ouvrière de production à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5558",
+   "unipersonnelle": false,
+   "creation": false
+  },
+  "5561": {
+   "libelle": "Société anonyme coopérative maritime à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5554",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5562": {
+   "libelle": "Société anonyme coopérative d'entreprises de transport routier à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5555",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5563": {
+   "libelle": "Union de sociétés coopératives maritimes à forme anonyme et à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5559",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5564": {
+   "libelle": "Société anonyme coopérative d'intérêt collectif d'HLM à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5565": {
+   "libelle": "Société anonyme coopérative d'intérêt collectif à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5566": {
+   "libelle": "Société anonyme coopérative de travailleurs à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5567": {
+   "libelle": "Société anonyme coopérative de banque à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5568": {
+   "libelle": "Union d'économie sociale - Société coopérative à forme anonyme et conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5569": {
+   "libelle": "Société anonyme coopérative d'intérêt collectif pour l'accession à la propriété à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5580": {
+   "libelle": "Société anonyme coopérative d'activité et d'emploi à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5581": {
+   "libelle": "Société anonyme coopérative d'entreprises à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5582": {
+   "libelle": "Société anonyme coopérative et participative à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5583": {
+   "libelle": "Société coopérative européenne à forme anonyme et à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5584": {
+   "libelle": "Société anonyme coopérative d'habitants à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5586": {
+   "libelle": "Société anonyme coopérative de coordination à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5587": {
+   "libelle": "Société anonyme coopérative d'attribution d'immeuble en jouissance à temps partagé à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5560": {
+   "libelle": "Autre société anonyme coopérative à conseil d'administration",
+   "famille": "SA coopérative à conseil d'administration",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5632": {
+   "libelle": "Société anonyme d'intérêt collectif agricole à directoire (SICA)",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5632",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5640": {
+   "libelle": "Société anonyme coopérative de coordination à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5641": {
+   "libelle": "Société anonyme coopérative d'intérêt collectif pour l'accession à la propriété à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5639": {
+   "libelle": "Société anonyme coopérative d'habitants à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5643": {
+   "libelle": "Société anonyme coopérative de construction à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5643",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5645": {
+   "libelle": "Société anonyme coopérative d'attribution d'immeuble en jouissance à temps partagé à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5647": {
+   "libelle": "Société anonyme coopérative de production de HLM à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5647",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5638": {
+   "libelle": "Société anonyme coopérative d'entreprises de transport routier à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5655",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5649": {
+   "libelle": "Société anonyme coopérative maritime à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5654",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5651": {
+   "libelle": "Société anonyme coopérative de consommation à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5651",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5652": {
+   "libelle": "Société anonyme coopérative de commerçants-détaillants à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5652",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5653": {
+   "libelle": "Société anonyme coopérative artisanale à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5653",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5654": {
+   "libelle": "Société anonyme coopérative d'intérêt maritime à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5654",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5655": {
+   "libelle": "Société anonyme coopérative de transport à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5655",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5656": {
+   "libelle": "Union de sociétés coopératives maritimes à forme anonyme et à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5659",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5657": {
+   "libelle": "Société anonyme coopérative ouvrière de production (SCOP) à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5658",
+   "unipersonnelle": false,
+   "creation": false
+  },
+  "5658": {
+   "libelle": "Société anonyme coopérative de production à directoire (SCOP)",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5658",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5659": {
+   "libelle": "Union de sociétés coopératives à forme anonyme et à conseil d'administration",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5659",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5660": {
+   "libelle": "Autre société anonyme coopérative à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5661": {
+   "libelle": "Société anonyme coopérative à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5662": {
+   "libelle": "Société anonyme coopérative d'intérêt collectif (SCIC) à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5663": {
+   "libelle": "Société anonyme coopérative de banque à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5664": {
+   "libelle": "Union d'économie sociale - Société coopérative à forme anonyme et directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5665": {
+   "libelle": "Société anonyme coopérative d'intérêt collectif d'HLM à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5666": {
+   "libelle": "Société anonyme coopérative de travailleurs à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5667": {
+   "libelle": "Société anonyme coopérative d'entreprises à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5668": {
+   "libelle": "Société anonyme coopérative d'activité et d'emploi à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5669": {
+   "libelle": "Société anonyme coopérative et participative à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5671": {
+   "libelle": "Société coopérative européenne à forme anonyme et à directoire",
+   "famille": "SA coopérative à directoire",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5660",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5740": {
+   "libelle": "Société coopérative par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5741": {
+   "libelle": "Société coopérative de production par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5742": {
+   "libelle": "Société coopérative ouvrière de production par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": false
+  },
+  "5743": {
+   "libelle": "Société coopérative d'intérêt collectif par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5744": {
+   "libelle": "Société d'intérêt collectif agricole (SICA) par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5745": {
+   "libelle": "Société coopérative d'activité et d'emploi par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5746": {
+   "libelle": "Société coopérative et participative par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5747": {
+   "libelle": "Union d'économie sociale - Société coopérative par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5748": {
+   "libelle": "Union de sociétés coopératives - société par action simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5749": {
+   "libelle": "Société coopérative de construction par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5750": {
+   "libelle": "Société coopérative de consommation par actions simpflifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5751": {
+   "libelle": "Société coopérative de transport routier par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5752": {
+   "libelle": "Société coopérative d'entreprises de transport routier par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5753": {
+   "libelle": "Société coopérative européenne par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5754": {
+   "libelle": "Société coopérative d'habitants par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5755": {
+   "libelle": "Société coopérative d'attribution d'immeuble en jouissance à temps partagé par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5756": {
+   "libelle": "Société d'investissement pour le développement rural par actions simplifiée",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5757": {
+   "libelle": "Autre SAS coopérative",
+   "famille": "SAS coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6532": {
+   "libelle": "Société civile d'intérêt collectif agricole (SICA)",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6532",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6543": {
+   "libelle": "Société civile coopérative de construction",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6543",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6550": {
+   "libelle": "Union de sociétés coopératives maritimes - société civile",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6551": {
+   "libelle": "Société civile coopérative de consommation",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6551",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6552": {
+   "libelle": "Société civile coopérative d'habitants",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6553": {
+   "libelle": "Société civile coopérative d'attribution d'immeuble en jouissance à temps partagé",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6554": {
+   "libelle": "Société civile coopérative d'intérêt maritime",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6554",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6555": {
+   "libelle": "Union de sociétés coopérative - Société civile",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6556": {
+   "libelle": "Union d'économie sociale - Société civile",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6558": {
+   "libelle": "Société civile coopérative entre médecins",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6558",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6560": {
+   "libelle": "Autre société civile coopérative",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6590": {
+   "libelle": "Société civile coopérative",
+   "famille": "société civile coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6560",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5453": {
+   "libelle": "Société coopérative artisanale à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5453",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5451": {
+   "libelle": "Société coopérative de consommation à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5451",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5443": {
+   "libelle": "Société coopérative de construction à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5443",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5455": {
+   "libelle": "Société coopérative de transport routier à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5455",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5454": {
+   "libelle": "Société coopérative d'intérêt maritime à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5454",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5458": {
+   "libelle": "Société coopérative ouvrière de production (SCOP) à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5458",
+   "unipersonnelle": false,
+   "creation": false
+  },
+  "5432": {
+   "libelle": "Société d'intérêt collectif agricole à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5432",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5459": {
+   "libelle": "Union de sociétés coopératives à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5459",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5438": {
+   "libelle": "Société coopérative de commerçants détaillants à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5439": {
+   "libelle": "Société coopérative de production à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5458",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5450": {
+   "libelle": "Société coopérative d'attribution d'immeuble en jouissance à temps partagé à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5456": {
+   "libelle": "Société coopérative maritime à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5454",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5457": {
+   "libelle": "Société coopérative d'entreprises de transport routier à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5455",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5460": {
+   "libelle": "Autre SARL coopérative",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5461": {
+   "libelle": "Société coopérative à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5462": {
+   "libelle": "Société coopérative d'intérêt collectif à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5463": {
+   "libelle": "Société coopérative d'activité et d'emploi à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5464": {
+   "libelle": "Union d'économie sociale - Société coopérative à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5465": {
+   "libelle": "Société coopérative d'habitants à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5466": {
+   "libelle": "Société coopérative de crédit à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5467": {
+   "libelle": "Société coopérative et participative à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5468": {
+   "libelle": "Société coopérative de travailleurs à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5469": {
+   "libelle": "Union de sociétés coopératives maritimes à responsabilité limitée",
+   "famille": "Société coopérative à responsabilité limitée",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5460",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6316": {
+   "libelle": "CUMA, Coopérative d'utilisation de matériel agricole en commun",
+   "famille": "Société coopérative agricole",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6316",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6317": {
+   "libelle": "Société coopérative agricole",
+   "famille": "Société coopérative agricole",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6317",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6318": {
+   "libelle": "Union de sociétés coopératives agricoles",
+   "famille": "Société coopérative agricole",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6318",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6399": {
+   "libelle": "Autre société coopérative agricole",
+   "famille": "Société coopérative agricole",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "6317",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5307": {
+   "libelle": "Société en commandite simple coopérative",
+   "famille": "Société en commandite coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5307",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5309": {
+   "libelle": "Société en commandite par actions coopérative",
+   "famille": "Société en commandite coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5309",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5305": {
+   "libelle": "Société d'intérêt collectif agricole (SICA) en commandite par actions",
+   "famille": "Société en commandite coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5309",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5203": {
+   "libelle": "Société en nom collectif coopérative",
+   "famille": "Société en nom collectif coopérative",
+   "categorie": "Société à forme coopérative",
+   "codeInsee": "5203",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6511": {
+   "libelle": "Sociétés Interprofessionnelles de Soins Ambulatoires",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6511",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6901": {
+   "libelle": "Autre personne de droit privé inscrite au registre du commerce et des sociétés",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6901",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6587": {
+   "libelle": "Société pluri-professionnelle d'exercice à forme civile",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6588": {
+   "libelle": "Société civile de participation",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6589": {
+   "libelle": "Société civile de moyens",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6589",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6591": {
+   "libelle": "Société civile de portefeuille",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6592": {
+   "libelle": "Société d'épargne forestière",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6593": {
+   "libelle": "Société civile de perception et de répartition des droits d'auteurs",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6594": {
+   "libelle": "Société civile",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6599": {
+   "libelle": "Autre société civile",
+   "famille": "Autre société civile",
+   "categorie": "Société civile",
+   "codeInsee": "6599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6561": {
+   "libelle": "SCP d'avocats",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6561",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6562": {
+   "libelle": "SCP d'avocats aux conseils",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6562",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6563": {
+   "libelle": "SCP d'avoués d'appel",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6563",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6564": {
+   "libelle": "SCP d'huissiers",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6564",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6565": {
+   "libelle": "SCP de notaires",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6565",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6566": {
+   "libelle": "SCP de commissaire-priseur judiciaire",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6566",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6567": {
+   "libelle": "SCP de greffiers de tribunal de commerce",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6567",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6568": {
+   "libelle": "SCP de conseils juridiques",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6568",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6569": {
+   "libelle": "SCP de commissaires aux comptes",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6569",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6571": {
+   "libelle": "SCP de médecins",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6571",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6572": {
+   "libelle": "SCP de dentistes",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6572",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6573": {
+   "libelle": "SCP d'infirmiers",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6573",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6574": {
+   "libelle": "SCP de masseurs-kinésithérapeutes",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6574",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6575": {
+   "libelle": "SCP de directeurs de laboratoire d'analyse médicale",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6575",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6576": {
+   "libelle": "SCP de vétérinaires",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6576",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6577": {
+   "libelle": "SCP de géomètres experts",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6577",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6578": {
+   "libelle": "SCP d'architectes",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6578",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6580": {
+   "libelle": "SCP de commissaires-priseurs",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6566",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6581": {
+   "libelle": "SCP d'administrateurs judiciaires",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6585",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6582": {
+   "libelle": "SCP de mandataires judiciaires à la liquidation des entreprises",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6585",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6583": {
+   "libelle": "SCP de mandataires judiciaires",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6585",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6584": {
+   "libelle": "SCP de conseils en propriété industrielle",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6585",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6585": {
+   "libelle": "Autre société civile professionnelle",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6585",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6586": {
+   "libelle": "SCP de commissaires de justice",
+   "famille": "société civile professionnelle d'exercice libéral",
+   "categorie": "Société civile",
+   "codeInsee": "6585",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6521": {
+   "libelle": "Société civile de placement immobilier",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6521",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6539": {
+   "libelle": "Société civile foncière",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6539",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6540": {
+   "libelle": "Société civile immobilière (SCI)",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6540",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6541": {
+   "libelle": "Société civile immobilière de construction-vente",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6541",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6547": {
+   "libelle": "Société civile de construction-vente",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6541",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6542": {
+   "libelle": "Société civile d'attribution",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6542",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6544": {
+   "libelle": "Société civile immobilière d' accession progressive à la propriété",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6544",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6545": {
+   "libelle": "Société civile d'attribution et d'autopromotion",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6542",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6546": {
+   "libelle": "Société civile d'attribution d'immeuble en jouissance à temps partagé",
+   "famille": "Société immobilière ou foncière",
+   "categorie": "Société civile",
+   "codeInsee": "6542",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5202": {
+   "libelle": "SNC, Société en nom collectif",
+   "famille": "SNC, Société en nom collectif",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5202",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5420": {
+   "libelle": "Autre société à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5499",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5430": {
+   "libelle": "Société d'aménagement foncier et d'équipement rural (SAFER) à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5430",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5442": {
+   "libelle": "Société d'attribution à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5442",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5498": {
+   "libelle": "Société d'attribution d'immeuble en jouissance à temps partagé à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5442",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5497": {
+   "libelle": "Société d'attribution et d'autopromotion à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5442",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5494": {
+   "libelle": "Société de participations d'expertise comptable à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5499",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5489": {
+   "libelle": "Société de participations financières de profession libérale d'avocat à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5493": {
+   "libelle": "Société de participations financières de profession libérale de commissaire de justice à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5488": {
+   "libelle": "Société de participations financières de profession libérale de commissaire-priseur judiciaire à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5487": {
+   "libelle": "Société de participations financières de profession libérale de notaire à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5483": {
+   "libelle": "Société de participations financières de profession libérale de pharmacien d'officine à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5491": {
+   "libelle": "Société de participations financières de profession libérale de vétérinaire à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5492": {
+   "libelle": "Société de participations financières de profession libérale d'expert-comptable à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5490": {
+   "libelle": "Société de participations financières de profession libérale d'huissier de justice à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5482": {
+   "libelle": "Société de participations financières de profession libérale de conseil en propriété industrielle à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5496": {
+   "libelle": "Société de presse à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5499",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5415": {
+   "libelle": "Société d'économie mixte à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5415",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5484": {
+   "libelle": "Société d'exercice libéral de pharmaciens d'officine à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5485",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5486": {
+   "libelle": "Société d'expertise comptable à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5499",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5426": {
+   "libelle": "Société immobilière de gestion à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5426",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5422": {
+   "libelle": "Société immobilière pour le commerce et l'industrie (SICOMI) à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5422",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5431": {
+   "libelle": "Société mixte d'intérêt agricole (SMIA) à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5431",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5410": {
+   "libelle": "Société nationale à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5410",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5495": {
+   "libelle": "Société pluri-professionnelle d'exercice à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5499",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5470": {
+   "libelle": "Société de Participations Financières de Profession Libérale Société à responsabilité limitée (SPFPL SARL)",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5470",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5485": {
+   "libelle": "SELARL, Société d'exercice libéral à responsabilité limitée",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5485",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5499": {
+   "libelle": "SARL, Société à responsabilité limitée (sans autre indication)",
+   "famille": "Société à responsabilité limitée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5499",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5501": {
+   "libelle": "Société anonyme d'expertise comptable à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5502": {
+   "libelle": "Société anonyme de participations d'expertise comptable à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5503": {
+   "libelle": "Société pluri-professionnelle d'exercice à forme anonyme et conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5504": {
+   "libelle": "Société anonyme d’économie mixte à opération unique à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5515",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5505": {
+   "libelle": "Société anonyme à participation ouvrière à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5505",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5506": {
+   "libelle": "Société anonyme d'économie mixte locale à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5515",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5507": {
+   "libelle": "Société de placement à prépondérance immobilière à capital variable (SPPICAV) à forme anonyme et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5508": {
+   "libelle": "Société d’investissement à capital fixe (SICAF) à forme anonyme et à conseil d'aministration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5509": {
+   "libelle": "Société professionnelle de placement à prépondérance immobilière à capital variable (SPPPICAV) à forme anonyme et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5510": {
+   "libelle": "Société anonyme nationale à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5510",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5511": {
+   "libelle": "Société d’investissement professionnelle spécialisée à forme anonyme et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5512": {
+   "libelle": "Société de capital investissement à forme anonyme et à conseil de surveillance",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5513": {
+   "libelle": "Société d’investissement à capital variable d’actionnariat salarié (SICAVAS) à forme anonyme et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5514": {
+   "libelle": "Société de titrisation à forme anonyme et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5515": {
+   "libelle": "Société anonyme d'économie mixte à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5515",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5516": {
+   "libelle": "Société de titrisation supportant des risques d'assurances à forme anonyme et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5517": {
+   "libelle": "Société de financement spécialisé à forme anonyme et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5518": {
+   "libelle": "Société anonyme de presse à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5546": {
+   "libelle": "Société anonyme d'HLM à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5546",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5520": {
+   "libelle": "Fonds à forme sociétale à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5521": {
+   "libelle": "Société anonyme de coordination à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5522": {
+   "libelle": "Société anonyme immobilière pour le commerce et l'industrie à conseil d'administration (SICOMI)",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5522",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5523": {
+   "libelle": "Société anonyme d'attribution et d'autopromotion à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5542",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5524": {
+   "libelle": "Société anonyme d'attribution d'immeubles en jouissance à temps partagé à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5542",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5525": {
+   "libelle": "Société anonyme immobilière d'investissement à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5525",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5526": {
+   "libelle": "Société publique locale à forme anonyme et conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5527": {
+   "libelle": "Société publique locale d'aménagement à forme anonyme et conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5528": {
+   "libelle": "Société publique locale d'aménagement d'intérêt national à forme anonyme et conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5529": {
+   "libelle": "Société anonyme d'investissement pour le développement rural à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5530": {
+   "libelle": "Société anonyme d'aménagement foncier et d'équipement rural à conseil d'administration (SAFER)",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5530",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5531": {
+   "libelle": "Société anonyme mixte d'intérêt agricole à conseil d'administration (SMIA)",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5531",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5533": {
+   "libelle": "Société anonyme à objet sportif et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5534": {
+   "libelle": "Société anonyme sportive professionnelle et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5535": {
+   "libelle": "Autre SA à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5542": {
+   "libelle": "Société anonyme d'attribution à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5542",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5570": {
+   "libelle": "Société de Participations Financières de Profession Libérale Société anonyme à conseil d'administration (SFPL)",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5570",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5585": {
+   "libelle": "Société d'exercice libéral à forme anonyme à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5585",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5519": {
+   "libelle": "Société d’investissement à capital variable (SICAV) à forme anonyme et à conseil d'administration",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5520",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5599": {
+   "libelle": "Société anonyme à conseil d'administration (sans autre indication)",
+   "famille": "Société anonyme à conseil d'administration",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5599",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5605": {
+   "libelle": "Société anonyme à participation ouvrière à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5605",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5610": {
+   "libelle": "Société anonyme nationale à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5610",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5615": {
+   "libelle": "Société anonyme d'économie mixte à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5615",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5620": {
+   "libelle": "Fonds à forme sociétale à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5622": {
+   "libelle": "Société anonyme immobilière pour le commerce et l'industrie à directoire (SICOMI)",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5622",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5625": {
+   "libelle": "Société anonyme immobilière d'investissement à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5625",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5630": {
+   "libelle": "Société anonyme d'aménagement foncier et d'équipement rural à directoire (SAFER)",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5630",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5631": {
+   "libelle": "Société anonyme mixte d'intérêt agricole à directoire (SMIA)",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5631",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5642": {
+   "libelle": "Société anonyme d'attribution à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5642",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5646": {
+   "libelle": "Société anonyme de HLM à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5646",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5670": {
+   "libelle": "Société de Participations Financières de Profession Libérale Société anonyme à Directoire (SPFPL)",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5670",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5672": {
+   "libelle": "Société anonyme d'expertise comptable à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5673": {
+   "libelle": "Société anonyme de participations d'expertise comptable à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5674": {
+   "libelle": "Société pluri-professionnelle d'exercice à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5675": {
+   "libelle": "Société anonyme d'économie mixte locale à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5615",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5676": {
+   "libelle": "Société anonyme d’économie mixte à opération unique à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5615",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5677": {
+   "libelle": "Société de placement à prépondérance immobilière à capital variable (SPPICAV) à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5678": {
+   "libelle": "Société d’investissement à capital fixe (SICAF) à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5679": {
+   "libelle": "Société professionnelle de placement à prépondérance immobilière à capital variable (SPPPICAV) à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5680": {
+   "libelle": "Société d’investissement professionnelle spécialisée à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5681": {
+   "libelle": "Société de capital investissement à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5682": {
+   "libelle": "Société d’investissement à capital variable d’actionnariat salarié (SICAVAS) à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5683": {
+   "libelle": "Société de titrisation à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5684": {
+   "libelle": "Société de titrisation supportant des risques d'assurances à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5697": {
+   "libelle": "Société de financement spécialisé à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5685": {
+   "libelle": "Société d'exercice libéral à forme anonyme à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5685",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5686": {
+   "libelle": "Société anonyme de presse à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5687": {
+   "libelle": "Société anonyme de coordination à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5688": {
+   "libelle": "Société anonyme d'attribution et d'autopromotion à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5642",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5689": {
+   "libelle": "Société anonyme d'attribution d'immeubles en jouissance à temps partagé à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5642",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5690": {
+   "libelle": "Société publique locale à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5691": {
+   "libelle": "Société publique locale d'aménagement à forme anonyme et directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5692": {
+   "libelle": "Société publique locale d'aménagement d'intérêt national à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5693": {
+   "libelle": "Société anonyme d'investissement pour le développement rural à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5694": {
+   "libelle": "Société anonyme à objet sportif et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5695": {
+   "libelle": "Société anonyme sportive professionnelle à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5696": {
+   "libelle": "Autre SA à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5698": {
+   "libelle": "Société d’investissement à capital variable (SICAV) à forme anonyme et à directoire",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5620",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5699": {
+   "libelle": "Société anonyme à directoire (sans autre indication)",
+   "famille": "Société anonyme à directoire",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5699",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5306": {
+   "libelle": "SCS, Société en commandite simple",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5306",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5308": {
+   "libelle": "SCA, Société en commandite par actions",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5308",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5310": {
+   "libelle": "SLP, Société en libre partenariat",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5310",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5316": {
+   "libelle": "SLPS, Société de Libre Partenariat Spécial",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5310",
+   "unipersonnelle": false,
+   "creation": false
+  },
+  "5370": {
+   "libelle": "Société de Participations Financières de Profession Libérale Société en commandite par actions (SPFPL SCA)",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5370",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5385": {
+   "libelle": "Société d'exercice libéral en commandite par actions",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5385",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5311": {
+   "libelle": "Société d'expertise comptable en commandite par actions",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5308",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5312": {
+   "libelle": "Société de participations d'expertise comptable en commandite par actions",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5308",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5313": {
+   "libelle": "Société pluri-professionnelle d'exercice en commandite par actions",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5308",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5314": {
+   "libelle": "Autre forme de société en commandite simple",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5306",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5315": {
+   "libelle": "Autre forme de société en commandite par actions",
+   "famille": "Société en commandite",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5308",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5701": {
+   "libelle": "Société d'investissement à capital variable (SICAV) par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5702": {
+   "libelle": "Société de placement à prépondérance immobilière à capital variable (SPPICAV) par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5703": {
+   "libelle": "Société professionnelle de placement à prépondérance immobilière à capital variable (SPPPICAV) par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5704": {
+   "libelle": "Société d’investissement professionnelle spécialisée par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5705": {
+   "libelle": "Société de capital investissement par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5706": {
+   "libelle": "Société d’investissement à capital variable d’actionnariat salarié (SICAVAS) par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5707": {
+   "libelle": "Société de financement spécialisé à capital variable par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5710": {
+   "libelle": "SAS, société par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5711": {
+   "libelle": "Société d'attribution par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5712": {
+   "libelle": "Société d'attribution  et d'autopromotion par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5713": {
+   "libelle": "Société d'attribution d'immeuble en jouissance à temps partagé par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5714": {
+   "libelle": "Société par actions simplifiée à participation ouvrière",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5770": {
+   "libelle": "Société de Participations Financières de Profession Libérale Société par actions simplifiée (SPFPL SAS)",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5770",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5785": {
+   "libelle": "SELAS, Société d'exercice libéral par action simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5785",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5786": {
+   "libelle": "Société d'exercice libéral de pharmaciens d'officine par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5785",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5788": {
+   "libelle": "Société d'expertise comptable par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5789": {
+   "libelle": "Société de participations financières de profession libérale de notaire par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5770",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5790": {
+   "libelle": "Société de participations financières de profession libérale de vétérinaire par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5770",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5791": {
+   "libelle": "Société de participations financières de profession libérale d'avocat par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5770",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5792": {
+   "libelle": "Société de participations financières de profession libérale de pharmacien d'officine par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5770",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5793": {
+   "libelle": "Société de participations financières de profession libérale d'expert-comptable par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5770",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5794": {
+   "libelle": "Société de participations d'expertise comptable par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5797": {
+   "libelle": "Société de participations financières de profession libérale de conseil en propriété industrielle par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5770",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5795": {
+   "libelle": "Société pluri-professionnelle d'exercice par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5796": {
+   "libelle": "Société mixte d'intérêt agricole (SMIA) par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5799": {
+   "libelle": "Autre forme de société par actions simplifiée",
+   "famille": "Société par actions simplifiée",
+   "categorie": "Société commerciale pluripersonnelle",
+   "codeInsee": "5710",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6598": {
+   "libelle": "EARL, Exploitation agricole à responsabilité limitée pluripersonnelle",
+   "famille": "EARL, Exploitation agricole à responsabilité limitée pluripersonnelle",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6598",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6533": {
+   "libelle": "GAEC, Groupement agricole d'exploitation en commun",
+   "famille": "GAEC, Groupement agricole d'exploitation en commun",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6533",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6535": {
+   "libelle": "GAF, Groupement agricole foncier",
+   "famille": "GAF, Groupement agricole foncier",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6535",
+   "unipersonnelle": false,
+   "creation": false
+  },
+  "6536": {
+   "libelle": "GF, Groupement forestier",
+   "famille": "GF, Groupement forestier",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6536",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6534": {
+   "libelle": "GFA, Groupement foncier agricole",
+   "famille": "GFA, Groupement foncier agricole",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6534",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6538": {
+   "libelle": "GFR, Groupement foncier et rural",
+   "famille": "GFR, Groupement foncier et rural",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6538",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6537": {
+   "libelle": "GP, Groupement pastoral",
+   "famille": "GP, Groupement pastoral",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6537",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6597": {
+   "libelle": "SCEA, Société civile d'exploitation agricole",
+   "famille": "SCEA, Société civile d'exploitation agricole",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6597",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6510": {
+   "libelle": "SCEV, Société civile d'exploitation viticole",
+   "famille": "SCEV, Société civile d'exploitation viticole",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6597",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "6531": {
+   "libelle": "Groupement forestier d'investissement",
+   "famille": "Groupement forestier d'investissement",
+   "categorie": "Société ou groupement agricole",
+   "codeInsee": "6536",
+   "unipersonnelle": false,
+   "creation": true
+  },
+  "5421": {
+   "libelle": "Entreprise unipersonnelle sportive à responsabilité limitée",
+   "famille": "Société commerciale  à responsabilité limitée",
+   "categorie": "Société unipersonnelle (associé unique)",
+   "codeInsee": "5499",
+   "unipersonnelle": true,
+   "creation": true
+  },
+  "8251": {
+   "libelle": "Assurance mutuelle agricole inscrite au RCS",
+   "famille": "Organisme mutualiste",
+   "categorie": "Autre personne morale",
+   "codeInsee": "8250",
+   "unipersonnelle": false,
+   "creation": false
+  }
+ }
+}

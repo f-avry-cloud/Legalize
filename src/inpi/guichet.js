@@ -1,97 +1,273 @@
 'use strict';
 
 /**
- * API Guichet unique « mandataire de dépôt » (écriture + suivi).
+ * API « mandataire de dépôt » du Guichet unique : dépôt, signature, paiement,
+ * suivi, régularisation.
  *
- * Garde-fou volontaire : le dépôt réel n'est effectué que si des identifiants
- * sont configurés ET que INPI_DEPOT_REEL=1. Dans tous les autres cas, la
- * formalité est marquée « déposée (simulation) » — le dossier, le payload et
- * le suivi existent, mais rien n'est transmis à l'INPI. Un dépôt engage la
- * société et déclenche une facturation : il ne doit jamais partir par accident.
+ * Le cycle de vie d'un dépôt côté INPI est le suivant :
+ *   POST → RECEIVED → SIGNATURE_PENDING → (signature) → PAYMENT_PENDING →
+ *   (paiement) → VALIDATION_PENDING → VALIDATED / AMENDMENT_PENDING / REJECTED
+ * Chaque statut porte l'action attendue du mandataire (cf. referentiels.js),
+ * ce qui permet au suivi de dire non pas seulement « où en est-on » mais
+ * « qui doit jouer maintenant ».
+ *
+ * Garde-fous : le dépôt réel exige des identifiants ET INPI_DEPOT_REEL=1 ; le
+ * paiement exige en plus une configuration dédiée. Dans tous les autres cas,
+ * le dossier est traité par le backend simulé (mock.js) — rien ne part.
  */
 
 const { config } = require('./config');
-const { appel, chemin } = require('./client');
-const { normaliserStatut } = require('./referentiels');
+const { appel, telecharger, chemin, ErreurInpi } = require('./client');
+const { normaliserStatut, statut } = require('./referentiels');
 const mock = require('./mock');
 
 function simulationActive() {
-  return config.modeGuichet === 'demo' || !config.depotReelAutorise;
+  return config.modeGuichet === 'simulation' || !config.depotReelAutorise;
 }
 
-/** Projette une formalité brute du Guichet unique sur le modèle interne. */
+function motifSimulation() {
+  if (config.modeGuichet === 'simulation') return 'Aucun identifiant Guichet unique configuré.';
+  return 'Dépôt réel désactivé (INPI_DEPOT_REEL non activé).';
+}
+
+/* ---------------------------------------------------------- normalisation */
+
+/** Montant à payer, renvoyé par l'INPI dans le panier après dépôt. */
+function montantDe(brute) {
+  const panier = Array.isArray(brute?.carts) ? brute.carts[0] : brute?.carts;
+  const total = panier?.total ?? brute?.amount ?? null;
+  return total === null || total === undefined ? null : Number(total);
+}
+
+/** Projette une formalité du Guichet unique sur le modèle interne. */
 function normaliserFormalite(brute, idParDefaut) {
-  const id = brute?.id || brute?.liasse_number || brute?.liasseNumber || idParDefaut;
-  const regularisations = brute?.regularisations || brute?.demandes_regularisation || [];
+  const id = brute?.id ?? idParDefaut ?? null;
+  const code = normaliserStatut(brute?.status);
+  const panier = Array.isArray(brute?.carts) ? brute.carts[0] : brute?.carts;
   return {
-    inpi_id: id ? String(id) : null,
-    numero_liasse: brute?.liasse_number || brute?.liasseNumber || (id ? String(id) : null),
-    statut: normaliserStatut(brute?.status || brute?.statut),
-    statut_brut: brute?.status || brute?.statut || null,
-    statut_date: brute?.status_date || brute?.statusDate || brute?.updated || null,
-    reference_mandataire: brute?.reference_mandataire || brute?.referenceMandataire || null,
-    regularisations: (Array.isArray(regularisations) ? regularisations : [regularisations]).filter(Boolean).map((r) => ({
-      date: r.date || r.created || null,
-      motif: r.motif || r.message || r.commentaire || '',
-      delai_reponse_jours: r.delai_reponse_jours ?? r.delai ?? null,
-    })),
+    inpi_id: id === null ? null : String(id),
+    numero_liasse: brute?.liasseNumber || null,
+    statut: code,
+    statut_brut: brute?.status || null,
+    statut_date: brute?.statusDate || brute?.updated || null,
+    reference_mandataire: brute?.referenceMandataire || null,
+    action_attendue: statut(code).action,
+    montant: montantDe(brute),
+    paiement_date: panier?.paymentDate || null,
+    signature_date: brute?.signedDate || null,
+    num_nat: brute?.numNat || null,
+    regularisations: extraireRegularisations(brute),
     simule: Boolean(brute?._simule),
     brut: brute || null,
   };
 }
 
-/** Dépose une formalité. Retourne toujours un identifiant de suivi. */
-async function deposer(payload) {
+/** Motifs de régularisation, quel que soit l'endroit où l'INPI les place. */
+function extraireRegularisations(brute) {
+  const demandes = []
+    .concat(brute?.regularizationRequests || [])
+    .concat((brute?.validationsRequests || []).flatMap((v) => v.regularizationRequests || []));
+  return demandes.flatMap((d) => (d.regularizationObjects || []).map((o) => ({
+    id: o.id ?? null,
+    type: o.type || null,
+    motif: o.observation || o.fieldName || '',
+    champ: o.fieldName || null,
+    piece: o.fileName || o.attachment?.nomDocument || null,
+    echeance: d.deadline || null,
+    frais: o.regularizationFeeAmount ?? null,
+  })));
+}
+
+/** Régularisations renvoyées par /api/regularization_requests. */
+function normaliserRegularisations(liste) {
+  return (liste || []).flatMap((d) => (d.regularizationObjects || []).map((o) => ({
+    id: o.id ?? null,
+    type: o.type || null,
+    motif: o.observation || '',
+    champ: o.fieldName || null,
+    piece: o.fileName || o.attachment?.nomDocument || null,
+    echeance: d.deadline || null,
+    frais: o.regularizationFeeAmount ?? null,
+    statut_demande: d.status || null,
+  })));
+}
+
+function listeHydra(rep) {
+  if (Array.isArray(rep)) return rep;
+  return rep?.['hydra:member'] || rep?.member || rep?.items || [];
+}
+
+/* ------------------------------------------------------------------ dépôt */
+
+/**
+ * Dépose une formalité.
+ * @param {{endpoint: string, methode: string, corps: object}} requete produite par payload.js
+ */
+async function deposer(requete) {
   if (simulationActive()) {
-    const id = mock.liasseSimulee();
-    return {
-      ...normaliserFormalite({ id, status: 'DEPOSEE', _simule: true }, id),
-      simule: true,
-      motif_simulation: config.modeGuichet === 'demo'
-        ? 'Aucun identifiant Guichet unique configuré.'
-        : 'Dépôt réel désactivé (INPI_DEPOT_REEL non activé).',
-    };
+    const simulee = mock.deposerSimule(requete);
+    return { ...normaliserFormalite(simulee, simulee.id), simule: true, motif_simulation: motifSimulation() };
   }
   const rep = await appel('guichet', {
-    methode: 'POST',
-    chemin: config.guichet.paths.formalites,
-    corps: payload,
+    methode: requete.methode || 'POST',
+    chemin: config.guichet.paths[requete.endpoint],
+    corps: requete.corps,
   });
   return normaliserFormalite(rep);
 }
 
-/** État courant d'une formalité déposée (statut + régularisations). */
-async function statut(id) {
-  if (!id) return null;
-  if (String(id).startsWith('DEMO-')) return normaliserFormalite(mock.statutSimule(id), id);
-  const rep = await appel('guichet', { chemin: chemin(config.guichet.paths.formalite, { id }) });
+/** Mise à jour d'un dépôt avant signature, ou réponse à une régularisation. */
+async function mettreAJour(id, corps, service = 'formalites') {
+  if (String(id).startsWith('SIM-')) return normaliserFormalite(mock.statutSimule(id), id);
+  const modele = service === 'comptes_annuels' ? config.guichet.paths.compteAnnuel : config.guichet.paths.formalite;
+  const rep = await appel('guichet', { methode: 'PUT', chemin: chemin(modele, { id }), corps });
   return normaliserFormalite(rep, id);
 }
 
-/**
- * Liste les formalités du compte mandataire.
- * @param {object} filtres { status, siren, updated, reference_mandataire }
- */
-async function lister(filtres = {}) {
-  if (config.modeGuichet === 'demo') return [];
-  const rep = await appel('guichet', { chemin: config.guichet.paths.formalites, params: filtres });
-  const liste = Array.isArray(rep) ? rep : (rep?.['hydra:member'] || rep?.items || []);
-  return liste.map((f) => normaliserFormalite(f));
-}
+/* ------------------------------------------------------------------ suivi */
 
-/** Demandes de régularisation en attente de réponse. */
-async function regularisations() {
-  if (config.modeGuichet === 'demo') return [];
-  try {
-    const rep = await appel('guichet', { chemin: config.guichet.paths.regularisations });
-    const liste = Array.isArray(rep) ? rep : (rep?.['hydra:member'] || rep?.items || []);
-    return liste;
-  } catch (e) {
-    // Route absente selon la version du contrat d'interface : on retombe sur
-    // le filtrage par statut, qui est toujours disponible.
-    if (e.status !== 404) throw e;
-    return (await lister({ status: 'REGULARISATION' })).flatMap((f) => f.regularisations.map((r) => ({ ...r, formalite: f.inpi_id })));
+/** État courant d'un dépôt (statut, montant, régularisations). */
+async function lire(id, service = 'formalites') {
+  if (!id) return null;
+  if (String(id).startsWith('SIM-')) return normaliserFormalite(mock.statutSimule(id), id);
+  const modele = service === 'comptes_annuels' ? config.guichet.paths.compteAnnuel : config.guichet.paths.formalite;
+  const rep = await appel('guichet', { chemin: chemin(modele, { id }) });
+  const formalite = normaliserFormalite(rep, id);
+  // Les motifs de régularisation ne sont pas toujours inclus dans le détail :
+  // on va les chercher explicitement dès que le statut l'exige.
+  if (!formalite.regularisations.length && String(formalite.statut).startsWith('AMENDMENT')) {
+    try {
+      formalite.regularisations = await regularisations(id, service);
+    } catch (e) {
+      if (e.status !== 404) throw e;
+    }
   }
+  return formalite;
 }
 
-module.exports = { deposer, statut, lister, regularisations, normaliserFormalite, simulationActive };
+/**
+ * Liste les dépôts du compte mandataire.
+ * @param {object} filtres { status, typeFormalite, siren, referenceClientMandataire, page, itemsPerPage }
+ */
+async function lister(filtres = {}, service = 'formalites') {
+  if (config.modeGuichet === 'simulation') return [];
+  const modele = service === 'comptes_annuels' ? config.guichet.paths.comptesAnnuels : config.guichet.paths.formalites;
+  const rep = await appel('guichet', {
+    chemin: modele,
+    params: { itemsPerPage: 50, 'order[statusDate]': 'desc', ...filtres },
+  });
+  return listeHydra(rep).map((f) => normaliserFormalite(f));
+}
+
+/** Demandes de régularisation d'un dépôt (ou toutes, sans identifiant). */
+async function regularisations(id, service = 'formalites') {
+  if (config.modeGuichet === 'simulation') {
+    return id && String(id).startsWith('SIM-') ? (mock.statutSimule(id).regularisations || []) : [];
+  }
+  const params = {};
+  if (id) {
+    params[service === 'comptes_annuels'
+      ? 'annualAccountValidationRequest.annualAccount'
+      : 'validationRequest.formality'] = id;
+  }
+  const rep = await appel('guichet', { chemin: config.guichet.paths.regularisations, params });
+  return normaliserRegularisations(listeHydra(rep));
+}
+
+/** Historique des changements de statut, tel que l'INPI le conserve. */
+async function historique(id) {
+  if (String(id).startsWith('SIM-')) return [];
+  const rep = await appel('guichet', { chemin: chemin(config.guichet.paths.historiqueStatuts, { id }) });
+  return listeHydra(rep).map((h) => ({
+    statut: normaliserStatut(h.status),
+    date: h.created || h.updated || null,
+  }));
+}
+
+/* -------------------------------------------------------------- signature */
+
+/**
+ * Signature du dépôt.
+ *  - création : signature simple, un simple POST suffit ;
+ *  - modification / cessation / comptes annuels : signature électronique
+ *    avancée — le document de synthèse (PJ_99) doit être téléchargé, signé
+ *    hors ligne avec un certificat qualifié, redéposé en PJ_115, puis son
+ *    identifiant transmis ici.
+ */
+async function signer(id, { documentSigneId = null, service = 'formalites' } = {}) {
+  if (String(id).startsWith('SIM-')) return mock.signerSimule(id);
+  const ressource = service === 'comptes_annuels' ? 'annual_accounts' : 'formalities';
+  const corps = { [service === 'comptes_annuels' ? 'annualAccount' : 'formality']: `/api/${ressource}/${id}` };
+  if (documentSigneId) corps.signedDocument = `/api/attachments/${documentSigneId}`;
+  const rep = await appel('guichet', { methode: 'POST', chemin: config.guichet.paths.signatures, corps });
+  return { signature_id: rep?.id ?? null, date: rep?.created || null, brut: rep };
+}
+
+/** Document de synthèse (PJ_99) à signer, au format PDF. */
+async function synthese(id) {
+  if (String(id).startsWith('SIM-')) return mock.syntheseSimulee(id);
+  return telecharger('guichet', { chemin: chemin(config.guichet.paths.synthese, { id }), accept: 'application/pdf' });
+}
+
+/* --------------------------------------------------------------- paiement */
+
+/**
+ * Paiement des taxes. Jamais automatique par défaut : il faut activer
+ * INPI_PAIEMENT_AUTO et fournir les identifiants du compte client (CCL).
+ */
+async function payer(id, { service = 'formalites' } = {}) {
+  const p = config.paiement;
+  if (!p.actif || !p.login || !p.password) {
+    throw new ErreurInpi(
+      'Paiement non configuré : activer INPI_PAIEMENT_AUTO et renseigner les identifiants du compte client INPI.',
+      { status: 409, api: 'guichet' },
+    );
+  }
+  if (String(id).startsWith('SIM-')) return mock.payerSimule(id);
+  const ressource = service === 'comptes_annuels' ? 'annual_accounts' : 'formalities';
+  const rep = await appel('guichet', {
+    methode: 'POST',
+    chemin: config.guichet.paths.paiement,
+    corps: {
+      login: p.login,
+      password: p.password,
+      paymentType: p.type,
+      [service === 'comptes_annuels' ? 'annualAccount' : 'formality']: `/api/${ressource}/${id}`,
+    },
+  });
+  return { ok: true, brut: rep };
+}
+
+/* ----------------------------------------------------------- pièces jointes */
+
+/** Ajoute une pièce à un dépôt existant (PDF en base64, 10 Mo maximum). */
+async function ajouterPiece(id, { code, nom, base64, path = null }) {
+  if (String(id).startsWith('SIM-')) return { id: `SIM-PJ-${Date.now()}`, simule: true };
+  const rep = await appel('guichet', {
+    methode: 'POST',
+    chemin: chemin(config.guichet.paths.piecesFormalite, { id }),
+    corps: {
+      nomDocument: nom,
+      typeDocument: code,
+      langueDocument: 'Français',
+      documentExtension: 'pdf',
+      documentBase64: base64,
+      ...(path ? { path } : {}),
+    },
+  });
+  return { id: rep?.id ?? null, brut: rep };
+}
+
+async function listerPieces(id) {
+  if (String(id).startsWith('SIM-')) return [];
+  const rep = await appel('guichet', { chemin: chemin(config.guichet.paths.piecesFormalite, { id }) });
+  return listeHydra(rep).map((p) => ({
+    id: p.id, nom: p.nomDocument, code: p.typeDocument, taille: p.size ?? null, date: p.created || null,
+  }));
+}
+
+module.exports = {
+  deposer, mettreAJour, lire, lister, regularisations, historique,
+  signer, synthese, payer, ajouterPiece, listerPieces,
+  normaliserFormalite, simulationActive, motifSimulation,
+};

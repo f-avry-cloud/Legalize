@@ -54,9 +54,10 @@ npm run dev               # serveur avec rechargement (node --watch)
 
 6. **Formalités INPI (guichet unique)** — ouverture d'un dossier à partir du
    seul SIREN (état civil rapatrié du RNE, zéro ressaisie), questionnaire
-   réduit au strict delta, contrôles bloquants avant dépôt, dépôt au guichet
-   unique et suivi automatique des statuts, régularisations et délais légaux.
-   Détail : [Formalités INPI](#formalités-inpi-guichet-unique--rne).
+   réduit au strict delta, contrôles bloquants avant dépôt, puis dépôt,
+   signature, paiement et suivi des statuts, régularisations et délais légaux.
+   Référentiels et payloads conformes au contrat d'interface de l'API
+   mandataire. Détail : [Formalités INPI](#formalités-inpi-guichet-unique--rne).
 
 ## Architecture
 
@@ -69,11 +70,13 @@ src/docx.js             Construction .docx (OOXML) + extraction de texte (.docx/
 src/routes.js           API REST
 src/services/generation.js   Génération en un clic (contexte de fusion + docxtemplater)
 src/services/compare.js      Comparaison de versions (diff mot à mot)
-src/inpi/               Connecteur INPI : config, client HTTP, RNE, guichet unique,
-                        catalogue des formalités, contrôles, payload, référentiels, mode démo
+src/inpi/               Connecteur INPI : config, client HTTP (jeton de session), RNE,
+                        guichet unique, catalogue, contrôles, payload, mode simulation
+src/inpi/data/          Référentiels officiels INPI convertis en JSON (générés)
 src/services/formalites.js   Cycle de vie d'un dossier de formalité
 src/routes-formalites.js     API /api/inpi/* et /api/formalites/*
-scripts/                seed, build-templates, smoke-test, schéma et tests des formalités
+scripts/                seed, build-templates, smoke-test, schéma, référentiels INPI
+                        et tests des formalités
 public/                 Interface web (vanilla JS, sans build)
 ```
 
@@ -106,51 +109,112 @@ d'environnement : `PORT`, `SUPABASE_URL`, `SUPABASE_KEY`.
 ## Formalités INPI (guichet unique / RNE)
 
 Le module remplace la saisie sur le portail du guichet unique par un parcours
-en trois écrans (`#/formalites`).
+en trois écrans (`#/formalites`). Il est aligné sur le **contrat d'interface de
+l'API mandataire de dépôt** et sur le **dictionnaire de données mandataire**
+publiés par l'INPI.
+
+### Authentification — pas de clé d'API
+
+L'INPI ne délivre aucune clé d'API statique. L'application se connecte avec
+**l'identifiant (e-mail) et le mot de passe** du compte, récupère un **jeton JWT
+de session** et le replace dans l'en-tête `Authorization` de chaque appel
+suivant :
+
+| API | Compte | Connexion |
+| --- | --- | --- |
+| RNE (lecture, pré-remplissage) | [data.inpi.fr](https://data.inpi.fr) | `POST /api/sso/login` |
+| Guichet unique (dépôt, suivi) | e-procédures INPI, habilitation mandataire | `POST /api/user/login/sso` |
+
+Le jeton est mis en cache jusqu'à son expiration (lue dans le JWT lui-même),
+renouvelé automatiquement sur rejet 401/403, et accepté aussi bien en cookie
+`BEARER` qu'en en-tête `Authorization` — les deux sont envoyés. Les mots de
+passe ne servent qu'à la connexion : ils ne sont ni journalisés, ni exposés au
+frontend (l'interface n'affiche que l'identifiant masqué).
+
+`POST /api/inpi/test-connexion` vérifie qu'un couple identifiant / mot de passe
+ouvre bien une session, sans rien déposer.
+
+> Les environnements de démonstration et de production de l'INPI exigent des
+> comptes **distincts**, et l'accès aux API suppose d'avoir accepté les
+> conditions particulières d'utilisation lors d'une première connexion à
+> l'interface web — sinon la connexion est rejetée.
 
 ### Le parcours
 
 1. **Un SIREN suffit.** La fiche entreprise est rapatriée de l'API RNE
    (dénomination, forme, capital, siège, objet, dirigeants en fonction) et
-   figée comme instantané du dossier. Rien de ce que l'INPI connaît déjà n'est
-   ressaisi. Le même appel permet de créer une fiche société du cabinet
-   (`POST /api/inpi/importer-societe`).
-2. **Le questionnaire ne demande que le delta.** Huit formalités couvertes :
-   création, transfert de siège, changement de dirigeant, changement de
-   dénomination, modification du capital, modification de l'objet, cessation /
-   dissolution, dépôt des comptes annuels. Les champs sans objet sont masqués
-   selon les réponses (une cessation de fonctions ne demande pas l'identité du
-   nouveau dirigeant).
+   figée comme instantané du dossier. Ce même instantané sert de
+   `previousFormality.content` lors d'un dépôt de modification : le format du
+   RNE est déjà celui du guichet unique.
+2. **Le questionnaire ne demande que le delta.** Huit formalités : création
+   (01M), transfert de siège (11M), changement de dirigeant (35M), changement
+   de dénomination (10M), modification du capital (15M), modification de
+   l'objet (12M), cessation / dissolution (22M, 40M, 42M) et dépôt des comptes
+   annuels. Les champs sans objet sont masqués selon les réponses.
 3. **Les contrôles tournent avant le dépôt, pas après le rejet.** Complétude,
-   cohérence (capital qui baisse sur une « augmentation », approbation
-   antérieure à la clôture, dirigeant mineur, changement de ressort…), pièces
-   justificatives exigibles compte tenu des réponses, et délai légal calculé
-   sur la date pivot. Le bouton de dépôt reste verrouillé tant qu'un point
-   bloquant subsiste.
-4. **Le suivi se construit tout seul.** Statut, numéro de liasse, demandes de
-   régularisation et journal horodaté de chaque action. Le tableau de bord
-   remonte ce qui bloque (régularisations), ce qui presse (échéances dépassées)
-   et ce qui dort (brouillons).
+   cohérence métier, codes de référentiel (forme juridique, rôle, type de
+   voie), pièces exigibles compte tenu des réponses, format PDF et limite de
+   10 Mo, délai légal — et, pour une modification, la présence d'au moins un
+   indicateur d'évènement `…Triggered`, faute de quoi le guichet rejetterait
+   le dépôt. Le bouton de dépôt reste verrouillé tant qu'un point bloquant
+   subsiste.
+4. **Le cycle du guichet est suivi de bout en bout** : dépôt → signature →
+   paiement → validation, avec les régularisations et leurs délais. À chaque
+   instant le dossier affiche **l'action attendue et de qui** ; le tableau de
+   bord classe d'abord ce qui attend une action de notre côté.
 
-Le JSON transmis à l'INPI est consultable dans le dossier : aucune boîte noire.
+Le JSON transmis est consultable dans le dossier, avec l'endpoint visé :
+`/api/formalities` (création, cessation), `/api/formality_updates`
+(modification) ou `/api/annual_accounts` (comptes annuels).
+
+### Signature et paiement
+
+- **Création** : signature simple, un appel suffit.
+- **Modification, cessation, comptes annuels** : signature électronique
+  avancée. L'application propose le téléchargement du document de synthèse
+  (PJ_99) ; il doit être signé hors ligne avec un certificat qualifié, redéposé
+  en PJ_115, puis son identifiant transmis à l'API. L'application refuse de
+  signer sans lui plutôt que de produire un appel qui échouerait.
+- **Paiement** : jamais automatique. Il faut activer `INPI_PAIEMENT_AUTO` et
+  fournir les identifiants du compte client INPI ; sinon le montant des taxes
+  est affiché et le règlement se fait depuis le portail.
+
+### Référentiels
+
+Aucune table de codes n'est saisie à la main. Les formes juridiques, les codes
+rôle, les 167 types de pièces justificatives (PJ_xx), les évènements et les
+énumérations proviennent des fichiers officiels de l'INPI et sont convertis en
+JSON dans `src/inpi/data/` :
+
+```bash
+pip install openpyxl
+python3 scripts/build-referentiels-inpi.py \
+  --dictionnaire inpi_dictionnaire-donnees-mandataire_<date>.xlsx \
+  --formes inpi_liste-formes-juridiques-code-et-valideurs_<annee>.xlsx
+```
+
+Régénérer ces fichiers suffit à suivre une mise à jour du contrat d'interface.
+Un code absent du référentiel est signalé par les contrôles, jamais deviné.
 
 ### Configuration
 
-Sans identifiants, l'application tourne en **mode démo** : parcours complet,
-données RNE simulées, dépôt simulé, rien n'est transmis à l'INPI.
+Sans identifiants, l'application tourne en **mode simulation** : parcours
+complet, données RNE simulées, cycle de dépôt reproduit (statuts, signature,
+paiement, régularisation), et rien n'est transmis à l'INPI.
 
 | Variable | Rôle |
 | --- | --- |
-| `INPI_RNE_USERNAME` / `INPI_RNE_PASSWORD` | Compte [data.inpi.fr](https://data.inpi.fr) — lecture RNE (pré-remplissage) |
-| `INPI_GU_USERNAME` / `INPI_GU_PASSWORD` | Compte e-procédures INPI habilité mandataire — dépôt et suivi |
+| `INPI_RNE_USERNAME` / `INPI_RNE_PASSWORD` | Compte data.inpi.fr — lecture RNE |
+| `INPI_GU_USERNAME` / `INPI_GU_PASSWORD` | Compte e-procédures habilité mandataire |
+| `INPI_GU_ENV` | `production` (défaut) ou `demonstration` (bac à sable INPI, compte dédié) |
 | `INPI_DEPOT_REEL` | `1` pour autoriser le dépôt réel (défaut : simulation, même avec identifiants) |
-| `INPI_RNE_URL` / `INPI_GU_URL` | Bascule vers la pré-production INPI |
-| `INPI_RNE_PATH_*` / `INPI_GU_PATH_*` | Chemins d'API, paramétrables sans toucher au code |
-| `INPI_MODE` | `demo` ou `live` pour forcer le mode |
-| `INPI_TIMEOUT_MS` | Délai maximal par appel (défaut 20 s) |
+| `INPI_PAIEMENT_AUTO`, `INPI_PAIEMENT_LOGIN`, `INPI_PAIEMENT_PASSWORD`, `INPI_PAIEMENT_TYPE` | Règlement des taxes par API (compte client INPI) |
+| `INPI_RNE_URL` / `INPI_GU_URL` | Surcharge des hôtes |
+| `INPI_MODE` | `simulation` ou `reel` pour forcer le mode |
+| `INPI_TIMEOUT_MS` | Délai maximal par appel (défaut 30 s) |
 
-Garde-fou volontaire : un dépôt engage la société et déclenche une
-facturation. Il faut **à la fois** des identifiants et `INPI_DEPOT_REEL=1`
+Un dépôt engage la société, déclenche une facturation et n'est plus annulable
+après signature : il faut **à la fois** des identifiants et `INPI_DEPOT_REEL=1`
 pour que quoi que ce soit parte à l'INPI.
 
 Créer les tables une fois dans le projet Supabase :
@@ -159,30 +223,17 @@ Créer les tables une fois dans le projet Supabase :
 # SQL editor Supabase → coller scripts/schema-formalites.sql
 ```
 
-### À vérifier avant le premier dépôt réel
-
-Deux points dépendent des annexes de la documentation technique INPI et sont
-isolés pour être confirmés d'un seul endroit :
-
-- `src/inpi/referentiels.js` — tables de codes (catégories juridiques INSEE,
-  codes « rôle » des dirigeants). Un code absent de la table est signalé en
-  contrôle, jamais deviné silencieusement.
-- `src/inpi/config.js` — chemins des routes du contrat d'interface « API
-  mandataire de dépôt », surchargeables par variables d'environnement.
-
-Documentation de référence : [accès aux API du guichet
-unique](https://www.inpi.fr/ressources/formalites-dentreprises/acces-aux-api-guichet-unique),
-[accès à l'API formalité /
-RNE](https://www.inpi.fr/ressources/formalites-dentreprises/acces-lapi-formalite-rne).
-
 ### Tests
 
 ```bash
-npm run test:formalites   # logique pure : SIREN, normalisation, contrôles, délais, payloads
+npm run test:formalites   # référentiels, contrôles, délais, payloads des 8 formalités
 npm run test:api          # parcours complet des routes sur une base en mémoire
 ```
 
-Aucun des deux n'a besoin du réseau ni de Supabase.
+Aucun des deux n'a besoin du réseau ni de Supabase. Ce qui ne peut pas être
+testé hors ligne — la réponse réelle du guichet unique à un premier dépôt —
+se vérifie sur l'environnement de démonstration de l'INPI (`INPI_GU_ENV=demonstration`,
+compte de démo dédié) avant tout passage en production.
 
 ## Hors périmètre MVP (conforme au cahier des charges)
 
