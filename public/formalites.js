@@ -59,6 +59,7 @@ async function formalitesDashboard() {
   $main.innerHTML = `
     <div class="page-head"><h1>Formalités</h1>
       <div>
+        <button id="btn-test-inpi">Tester la connexion INPI</button>
         <button id="btn-sync">Synchroniser avec l'INPI</button>
         <a class="btn btn-primary" href="#/formalites/new">Nouvelle formalité</a>
       </div>
@@ -88,6 +89,13 @@ async function formalitesDashboard() {
       <h2>Tous les dossiers</h2>
       ${listeFormalites(d.recentes, 'Aucun dossier. Ouvrez la première formalité.')}
     </div>`;
+
+  document.getElementById('btn-test-inpi').onclick = async (e) => {
+    e.target.disabled = true;
+    try {
+      testConnexionDialog(await api('POST', '/inpi/test-connexion', {}));
+    } catch (err) { toast(err.message, true); } finally { e.target.disabled = false; }
+  };
 
   document.getElementById('btn-sync').onclick = async (e) => {
     e.target.disabled = true;
@@ -615,6 +623,42 @@ function controlesHtml(c) {
     ${echeance}
     ${bloc('Pour mémoire', c.infos, 'info')}
     ${c.pret ? '<div class="alerte alerte-ok"><strong>Dossier complet</strong> — prêt pour le dépôt.</div>' : ''}`;
+}
+
+/* ================================================ diagnostic des accès INPI */
+
+/**
+ * Restitue le diagnostic : pour chaque API, la connexion (identifiant et mot
+ * de passe → jeton de session) puis une lecture réelle. Aucun dépôt n'est
+ * effectué.
+ */
+function testConnexionDialog(d) {
+  const etape = (titre, r) => {
+    if (!r) return '';
+    return `<li class="${r.ok ? 'ok' : 'ko'}"><span class="puce">${r.ok ? '✓' : '✗'}</span>
+      <span><strong>${esc(titre)}</strong> ${esc(r.message)}
+      ${r.cause ? `<em>${esc(r.cause)}</em>` : ''}</span></li>`;
+  };
+  const bloc = (a) => `<div class="diag">
+      <h4>${esc(a.libelle)}</h4>
+      <div class="sub">${esc(a.hote)}${a.compte ? ` · compte ${esc(a.compte)}` : ''}</div>
+      <ul class="diag-etapes">${etape('Connexion —', a.connexion)}${etape('Lecture —', a.lecture)}</ul>
+    </div>`;
+
+  openDialog(`<h3>Connexion aux API de l'INPI</h3>
+    <p class="muted mb">Mode RNE : ${esc(d.etat.rne.mode)} · guichet unique : ${esc(d.etat.guichet.mode)}
+      (environnement ${esc(d.etat.guichet.environnement)}) ·
+      dépôt réel ${d.etat.guichet.depotReelAutorise ? 'autorisé' : 'désactivé'}.</p>
+    ${bloc(d.rne)}
+    ${bloc(d.guichet)}
+    <div class="alerte alerte-${d.ok ? 'ok' : 'alerte'}">
+      ${d.ok
+    ? '<strong>Les deux accès fonctionnent.</strong> Aucune formalité n’a été déposée : le test est en lecture seule.'
+    : '<strong>Au moins un accès est en échec.</strong> Les identifiants se règlent par variables d’environnement (INPI_RNE_* et INPI_GU_*), et un redéploiement est nécessaire pour les prendre en compte.'}
+    </div>
+    <div class="dialog-actions"><button type="button" data-fermer>Fermer</button></div>`,
+  null,
+  (dlg) => { dlg.querySelector('[data-fermer]').onclick = () => dlg.close(); });
 }
 
 /* ================================================================ routage */

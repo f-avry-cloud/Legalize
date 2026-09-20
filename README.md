@@ -131,8 +131,33 @@ renouvelé automatiquement sur rejet 401/403, et accepté aussi bien en cookie
 passe ne servent qu'à la connexion : ils ne sont ni journalisés, ni exposés au
 frontend (l'interface n'affiche que l'identifiant masqué).
 
-`POST /api/inpi/test-connexion` vérifie qu'un couple identifiant / mot de passe
-ouvre bien une session, sans rien déposer.
+### Tester les accès
+
+Trois façons, toutes en **lecture seule** — aucune ne dépose quoi que ce soit :
+
+```bash
+npm run inpi:test                              # diagnostic des deux API
+node scripts/inpi-connexion.js --siren 552100554   # avec un SIREN de contrôle
+```
+
+- **Bouton « Tester la connexion INPI »** sur l'écran Formalités : même
+  diagnostic, depuis l'application déployée — c'est là que vivent réellement
+  les variables d'environnement.
+- **`POST /api/inpi/test-connexion`** (corps `{}` pour les deux API, ou
+  `{"api":"rne"}` / `{"api":"guichet"}`).
+
+Chaque API est vérifiée en deux temps, parce qu'ils échouent pour des raisons
+différentes : d'abord la **connexion** (l'identifiant et le mot de passe
+ouvrent-ils une session ?), puis une **lecture réelle** (le compte a-t-il
+vraiment accès aux données ?) — un compte peut s'authentifier sans porter
+l'habilitation « mandataire de dépôt ». Les échecs sont traduits en cause
+probable plutôt qu'en code HTTP : mot de passe erroné, compte du mauvais
+environnement, CPU non acceptées, habilitation manquante, ou requête
+interceptée par un proxy avant d'atteindre l'INPI.
+
+> Les identifiants se règlent par variables d'environnement. Sur Vercel, un
+> **redéploiement est nécessaire** pour qu'une variable modifiée soit prise en
+> compte.
 
 > Les environnements de démonstration et de production de l'INPI exigent des
 > comptes **distincts**, et l'accès aux API suppose d'avoir accepté les

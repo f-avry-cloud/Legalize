@@ -10,7 +10,8 @@
     "build:templates": "node scripts/build-templates.js",
     "test": "node scripts/smoke-test.js",
     "test:formalites": "node scripts/test-formalites.js",
-    "test:api": "node scripts/test-api-formalites.js"
+    "test:api": "node scripts/test-api-formalites.js",
+    "inpi:test": "node scripts/inpi-connexion.js"
   },
   "engines": {
     "node": ">=20"

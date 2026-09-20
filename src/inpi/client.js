@@ -110,8 +110,31 @@ async function requete(cible, { methode = 'GET', chemin, params, corps, token, b
   return { donnees, reponse };
 }
 
+/**
+ * Une erreur renvoyée par un intermédiaire réseau (proxy d'entreprise,
+ * pare-feu, passerelle) se présente comme une erreur de l'API alors qu'elle
+ * n'a jamais atteint l'INPI. La confondre avec un refus d'habilitation
+ * enverrait chercher le problème au mauvais endroit.
+ */
+function erreurIntermediaire(reponse, donnees, texte) {
+  if (donnees) return null; // un corps JSON exploitable vient bien de l'API
+  if (reponse.status === 407) return texte || 'authentification du proxy requise';
+  const signature = /allowlist|egress|proxy|firewall|pare-feu|blocked by|not permitted by/i;
+  if ((reponse.status === 403 || reponse.status === 502 || reponse.status === 503)
+    && texte && signature.test(texte)) return texte.trim().slice(0, 200);
+  return null;
+}
+
 /** Message d'erreur lisible à partir des formats d'erreur du Guichet unique. */
 function erreurDeReponse(cible, reponse, donnees, texte) {
+  const intermediaire = erreurIntermediaire(reponse, donnees, texte);
+  if (intermediaire) {
+    return new ErreurInpi(
+      `Accès réseau bloqué avant d'atteindre l'INPI (${cible}) : ${intermediaire}`,
+      { status: 504, api: cible, detail: donnees, code: 'RESEAU_INTERMEDIAIRE' },
+    );
+  }
+
   const detail = donnees?.message
     || donnees?.detail
     || donnees?.['hydra:description']

@@ -19,7 +19,7 @@ const guichet = require('./inpi/guichet');
 const { etat } = require('./inpi/config');
 const { catalogue } = require('./inpi/catalogue');
 const { formesCreation, enumeration } = require('./inpi/referentiels');
-const { verifierConnexion } = require('./inpi/client');
+const { diagnostiquer, diagnostiquerTout } = require('./inpi/diagnostic');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -36,17 +36,17 @@ router.get('/inpi/etat', (req, res) => {
 });
 
 /**
- * Vérifie que l'identifiant et le mot de passe ouvrent bien une session.
- * L'INPI ne délivrant pas de clé d'API, c'est le seul moyen de contrôler la
- * configuration sans rien déposer.
+ * Teste les accès INPI : connexion (identifiant + mot de passe → jeton de
+ * session) puis lecture réelle sur chaque API. L'INPI ne délivrant pas de clé
+ * d'API, c'est le seul moyen de vérifier une configuration — et il ne dépose
+ * rien. Sans paramètre, les deux API sont testées.
  */
 router.post('/inpi/test-connexion', async (req, res) => {
-  const cible = req.body?.api === 'rne' ? 'rne' : 'guichet';
-  try {
-    res.json(await verifierConnexion(cible));
-  } catch (e) {
-    res.status(e.status === 401 ? 401 : 502).json({ ok: false, api: cible, error: e.message });
+  const { api, siren } = req.body || {};
+  if (api === 'rne' || api === 'guichet') {
+    return res.json(await diagnostiquer(api, { siren }));
   }
+  return res.json(await diagnostiquerTout({ siren }));
 });
 
 router.get('/inpi/recherche', async (req, res) => {
