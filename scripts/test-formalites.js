@@ -300,6 +300,7 @@ test('aucune clé vide dans le payload', () => {
 
 console.log('\nConformité au dictionnaire officiel');
 const { DICTIONNAIRE } = require('../src/inpi/referentiels');
+const { verifier: verifierConformite } = require('../src/inpi/conformite');
 
 const PROPRIETES_INPI = new Set();
 for (const classe of Object.values(DICTIONNAIRE)) {
@@ -324,20 +325,44 @@ test('le dictionnaire couvre les 85 classes et 140 énumérations', () => {
   assert.ok(PROPRIETES_INPI.size > 800);
 });
 
+// Le dictionnaire mandataire décrit les formalités, pas le dépôt de comptes
+// annuels, qui relève d'une autre ressource de l'API. Ce dernier reste donc
+// hors de portée de cette vérification.
+const AVEC_DICTIONNAIRE = catalogue().filter((f) => f.service === 'formalites');
+
+function payloadDe(f) {
+  const contenu = { ...dossierComplet, type: f.code, service: f.service };
+  const requete = construirePayload(contenu);
+  return requete.corps?.content || requete.corps?.newFormality?.content || null;
+}
+
+test('toutes les formalités produisent un payload', () => {
+  assert.ok(AVEC_DICTIONNAIRE.length >= 7);
+  for (const f of AVEC_DICTIONNAIRE) assert.ok(payloadDe(f), `${f.code} sans contenu`);
+});
+
 // Un nom de propriété inventé est refusé par l'INPI sans que rien ne le
 // signale côté application : on le détecte ici plutôt qu'au dépôt.
 test('aucune propriété émise hors dictionnaire INPI', () => {
   const inconnues = new Set();
-  for (const f of catalogue()) {
-    let requete;
-    try {
-      requete = construirePayload({ ...dossierComplet, type: f.cle, service: f.service });
-    } catch { continue; }
-    for (const nom of proprietesEmises(requete.corps?.content)) {
-      if (!PROPRIETES_INPI.has(nom)) inconnues.add(`${f.cle} : ${nom}`);
+  for (const f of AVEC_DICTIONNAIRE) {
+    for (const nom of proprietesEmises(payloadDe(f))) {
+      if (!PROPRIETES_INPI.has(nom)) inconnues.add(`${f.code} : ${nom}`);
     }
   }
   assert.deepStrictEqual([...inconnues], []);
+});
+
+// Le guichet unique rejette tout le dépôt sur un seul type qui ne colle pas
+// (« doit correspondre à "string" ("int" fourni) ») : on le voit ici d'abord.
+test('aucun type en désaccord avec le dictionnaire INPI', () => {
+  const ecarts = [];
+  for (const f of AVEC_DICTIONNAIRE) {
+    for (const e of verifierConformite(payloadDe(f))) {
+      ecarts.push(`${f.code} — ${e.chemin} : ${e.probleme}${e.attendu ? ` (attendu ${e.attendu}, reçu ${e.recu})` : ''}`);
+    }
+  }
+  assert.deepStrictEqual(ecarts, []);
 });
 
 console.log('\nGuichet unique (simulation du cycle réel)');

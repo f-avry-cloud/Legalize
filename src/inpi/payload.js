@@ -110,7 +110,8 @@ function beneficiairesInpi(liste) {
   const beneficiaires = (liste || [])
     .filter((b) => b.personne?.nom)
     .map((b, i) => ({
-      beneficiaireId: i + 1,
+      // Le dictionnaire déclare cet identifiant en chaîne, pas en entier.
+      beneficiaireId: String(i + 1),
       beneficiaire: { descriptionPersonne: descriptionPersonne(b.personne) },
       modalite: {
         modalitesDeControle: b.modalite_controle ? [b.modalite_controle] : undefined,
@@ -324,7 +325,9 @@ const CONTENUS = {
     const dateEffet = dateInpi(r.date_effet || r.date_decision);
     return {
       personneMorale: {
-        adresseEntreprise: { adresse, datePriseEffetAdresse: dateEffet },
+        // La date de prise d'effet appartient au bloc adresse lui-même, et non
+        // à la rubrique qui le contient.
+        adresseEntreprise: { adresse: { ...adresse, datePriseEffetAdresse: dateEffet } },
         etablissementPrincipal: {
           // Indicateur d'évènement 11M « transfert de l'entreprise ».
           is11PMFTriggered: true,

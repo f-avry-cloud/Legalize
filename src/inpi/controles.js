@@ -151,6 +151,19 @@ function controler(dossier, maintenant = new Date()) {
     }
   }
 
+  /* --- conformité du payload au dictionnaire officiel ---
+     Le guichet unique rejette tout le dépôt sur une seule propriété mal
+     typée, et son message arrive après l'envoi. On le vérifie avant. */
+  if (dossier.payload && dossier.service !== 'comptes_annuels') {
+    const { verifier } = require('./conformite');
+    const contenu = dossier.payload.corps?.content || dossier.payload.corps?.newFormality?.content;
+    for (const e of verifier(contenu)) {
+      bloq(e.attendu
+        ? `Type inattendu pour « ${e.chemin} » : l’INPI attend « ${e.attendu} », la formalité transmet « ${e.recu} ».`
+        : `Propriété « ${e.chemin} » inconnue du dictionnaire INPI : le dépôt serait rejeté.`);
+    }
+  }
+
   /* --- délai légal ---
      Restitué comme bloc dédié (`echeance`) plutôt que noyé dans les alertes :
      l'état (ok / imminent / dépassé) y est directement exploitable. */
