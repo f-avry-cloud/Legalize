@@ -298,6 +298,48 @@ test('aucune clé vide dans le payload', () => {
   assert.strictEqual(JSON.stringify(construirePayload(dossierComplet)).match(/:(null|"")/g), null);
 });
 
+console.log('\nConformité au dictionnaire officiel');
+const { DICTIONNAIRE } = require('../src/inpi/referentiels');
+
+const PROPRIETES_INPI = new Set();
+for (const classe of Object.values(DICTIONNAIRE)) {
+  for (const nom of Object.keys(classe.proprietes)) PROPRIETES_INPI.add(nom);
+}
+
+function proprietesEmises(objet, vues = new Set()) {
+  for (const [cle, valeur] of Object.entries(objet || {})) {
+    if (valeur === undefined) continue;
+    vues.add(cle);
+    if (Array.isArray(valeur)) {
+      valeur.forEach((v) => { if (v && typeof v === 'object') proprietesEmises(v, vues); });
+    } else if (valeur && typeof valeur === 'object') {
+      proprietesEmises(valeur, vues);
+    }
+  }
+  return vues;
+}
+
+test('le dictionnaire couvre les 85 classes et 140 énumérations', () => {
+  assert.ok(Object.keys(DICTIONNAIRE).length >= 85);
+  assert.ok(PROPRIETES_INPI.size > 800);
+});
+
+// Un nom de propriété inventé est refusé par l'INPI sans que rien ne le
+// signale côté application : on le détecte ici plutôt qu'au dépôt.
+test('aucune propriété émise hors dictionnaire INPI', () => {
+  const inconnues = new Set();
+  for (const f of catalogue()) {
+    let requete;
+    try {
+      requete = construirePayload({ ...dossierComplet, type: f.cle, service: f.service });
+    } catch { continue; }
+    for (const nom of proprietesEmises(requete.corps?.content)) {
+      if (!PROPRIETES_INPI.has(nom)) inconnues.add(`${f.cle} : ${nom}`);
+    }
+  }
+  assert.deepStrictEqual([...inconnues], []);
+});
+
 console.log('\nGuichet unique (simulation du cycle réel)');
 test('dépôt puis cycle signature / paiement / validation', () => {
   const depot = mock.deposerSimule({ endpoint: 'formalites', corps: { companyName: 'ACME' } });

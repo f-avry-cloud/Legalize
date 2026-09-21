@@ -415,6 +415,21 @@ function fichePreviewHtml(f) {
 
 /* ================================================== dossier : questionnaire */
 
+/** Un champ de liste porte un nom indexé : `associes[0].nom`. */
+function champIndexe(sous, nomListe, rang) {
+  return { ...sous, name: `${nomListe}[${rang}].${sous.name}` };
+}
+
+function ligneListeHtml(champ, valeur, rang, contexte) {
+  const v = valeur || {};
+  return `<div class="ligne-liste" data-rang="${rang}">
+    <div class="ligne-liste-corps">
+      ${champ.champs.map((sous) => champHtml(champIndexe(sous, champ.name, rang), v[sous.name], contexte)).join('')}
+    </div>
+    <button type="button" class="btn-ghost retirer-ligne" title="Retirer">Retirer</button>
+  </div>`;
+}
+
 function champHtml(champ, valeur, contexte) {
   const id = `champ-${champ.name}`;
   const aide = champ.aide ? `<em class="aide">${esc(champ.aide)}</em>` : '';
@@ -443,6 +458,14 @@ function champHtml(champ, valeur, contexte) {
           <option value="">—</option>
           ${options.map((o) => `<option value="${esc(o.value)}" ${String(courant) === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
         </select>${aide}</label>`;
+    }
+    case 'section':
+      return `<h3 class="section-form">${label}</h3>${champ.aide ? `<p class="muted mb">${esc(champ.aide)}</p>` : ''}`;
+    case 'liste': {
+      const lignes = Array.isArray(valeur) && valeur.length ? valeur : [{}];
+      return `<fieldset class="list-field liste-repetable" data-liste="${champ.name}"><legend>${label}</legend>
+        <div class="lignes-liste">${lignes.map((v, i) => ligneListeHtml(champ, v, i, contexte)).join('')}</div>
+        <button type="button" class="btn-ghost ajouter-ligne">+ Ajouter</button>${aide}</fieldset>`;
     }
     case 'adresse': {
       const a = valeur || {};
@@ -494,10 +517,48 @@ function champHtml(champ, valeur, contexte) {
   }
 }
 
+/** Pose une valeur sur un chemin pointé : poser(o, 'adresse.voie', 'x'). */
+function poser(objet, chemin, valeur) {
+  const parts = chemin.split('.');
+  let courant = objet;
+  while (parts.length > 1) {
+    const cle = parts.shift();
+    courant[cle] = courant[cle] || {};
+    courant = courant[cle];
+  }
+  courant[parts[0]] = valeur;
+}
+
+/**
+ * Reconstitue un tableau depuis les champs indexés `nom[rang].chemin`.
+ * Les lignes entièrement vides sont écartées : une liste répétable affiche
+ * toujours une ligne, même quand l'utilisateur n'a rien à y mettre.
+ */
+function collecterListe(form, champ) {
+  const parRang = new Map();
+  const motif = new RegExp(`^${champ.name.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\[(\\d+)\\]\\.(.+)$`);
+  form.querySelectorAll(`[name^="${champ.name}["]`).forEach((input) => {
+    const m = input.name.match(motif);
+    if (!m) return;
+    const [, rang, chemin] = m;
+    if (!parRang.has(rang)) parRang.set(rang, {});
+    poser(parRang.get(rang), chemin, input.type === 'checkbox' ? input.checked : input.value);
+  });
+  const vide = (o) => Object.values(o).every((v) => (
+    v === '' || v === false || v === null || v === undefined
+      || (typeof v === 'object' && vide(v))));
+  return [...parRang.values()].filter((ligne) => !vide(ligne));
+}
+
 /** Reconstitue l'objet de réponses depuis le formulaire (clés pointées). */
 function collecterReponses(form, champs) {
   const r = {};
   for (const champ of champs) {
+    if (champ.type === 'section') continue;
+    if (champ.type === 'liste') {
+      r[champ.name] = collecterListe(form, champ);
+      continue;
+    }
     if (champ.type === 'checkbox') {
       r[champ.name] = form.querySelector(`[name="${champ.name}"]`)?.checked || false;
       continue;
@@ -643,6 +704,38 @@ async function formaliteDetail(id) {
   // Un champ « pilote » (nature, sens, affectation) réorganise le
   // questionnaire : on enregistre et on redessine immédiatement.
   form.querySelectorAll('select[data-pilote]').forEach((s) => s.addEventListener('change', () => form.requestSubmit()));
+
+  // Listes répétables : on clone la première ligne plutôt que de redessiner
+  // tout le questionnaire, pour ne pas perdre la saisie en cours.
+  form.addEventListener('click', (e) => {
+    const ajout = e.target.closest('.ajouter-ligne');
+    if (ajout) {
+      const bloc = ajout.closest('.liste-repetable');
+      const lignes = bloc.querySelector('.lignes-liste');
+      const modele = lignes.firstElementChild;
+      if (!modele) return;
+      const rang = lignes.children.length;
+      const copie = modele.cloneNode(true);
+      copie.dataset.rang = String(rang);
+      copie.querySelectorAll('[name]').forEach((champ) => {
+        champ.name = champ.name.replace(/\[\d+\]/, `[${rang}]`);
+        if (champ.id) champ.id = `${champ.id}-${rang}`;
+        if (champ.type === 'checkbox') champ.checked = false;
+        else if (champ.tagName === 'SELECT') champ.selectedIndex = 0;
+        else champ.value = '';
+      });
+      lignes.appendChild(copie);
+      return;
+    }
+    const retrait = e.target.closest('.retirer-ligne');
+    if (retrait) {
+      const lignes = retrait.closest('.lignes-liste');
+      if (lignes.children.length > 1) retrait.closest('.ligne-liste').remove();
+      else lignes.querySelectorAll('[name]').forEach((c) => {
+        if (c.type === 'checkbox') c.checked = false; else c.value = '';
+      });
+    }
+  });
 
   /* --- pièces --- */
   const $fichier = document.getElementById('input-fichier');

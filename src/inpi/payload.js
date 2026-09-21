@@ -77,29 +77,94 @@ function adresseInpi(a) {
   };
 }
 
+/** RubriqueEtablissement + son unique BlocDescriptionActivite. */
+function etablissementInpi(o) {
+  if (!o.adresse && !o.activite) return undefined;
+  return {
+    descriptionEtablissement: {
+      rolePourEntreprise: o.role,
+      indicateurEtablissementPrincipal: Boolean(o.principal),
+    },
+    adresse: o.adresse,
+    effectifSalarie: o.salaries,
+    activites: o.activite ? [{
+      indicateurPrincipal: Boolean(o.principal),
+      rolePrincipalPourEntreprise: Boolean(o.principal),
+      indicateurPremiereActivite: true,
+      descriptionDetaillee: o.activite,
+      dateDebut: dateInpi(o.dateDebut),
+      formeExercice: o.formeExercice || 'COMMERCIALE',
+      precisionActivite: o.precision || undefined,
+      exerciceActivite: o.exercice || undefined,
+      activiteReguliere: o.regularite || undefined,
+      origine: o.origine || undefined,
+    }] : undefined,
+  };
+}
+
+/**
+ * PMRubriqueBeneficiaireEffectif. La modalité de contrôle est obligatoire :
+ * à défaut de choix, l'INPI retient le représentant légal (code « 0 »).
+ */
+function beneficiairesInpi(liste) {
+  const beneficiaires = (liste || [])
+    .filter((b) => b.personne?.nom)
+    .map((b, i) => ({
+      beneficiaireId: i + 1,
+      beneficiaire: { descriptionPersonne: descriptionPersonne(b.personne) },
+      modalite: {
+        modalitesDeControle: b.modalite_controle ? [b.modalite_controle] : undefined,
+        detentionPartTotale: nombre(b.pourcentage_capital),
+        detentionVoteTotal: nombre(b.pourcentage_votes),
+      },
+      statutPourLaFormalite: STATUT_BLOC.ADJONCTION,
+    }));
+  return beneficiaires.length ? beneficiaires : undefined;
+}
+
+/** BlocOptionFiscale : régime des bénéfices, TVA, chiffre d'affaires prévisionnel. */
+function optionsFiscalesInpi(r) {
+  const o = {
+    regimeImpositionBenefices: r.regime_benefices || undefined,
+    regimeImpositionTVA: r.regime_tva || undefined,
+    periodiciteEtOptionsParticulieresTVA: r.periodicite_tva || undefined,
+    dateClotureExerciceComptable: dateInpi(r.date_cloture_comptable),
+    chiffreAffairePrevisionnelVente: nombre(r.ca_previsionnel_vente),
+    chiffreAffairePrevisionnelService: nombre(r.ca_previsionnel_service),
+  };
+  const rempli = Object.values(o).some((v) => v !== undefined && v !== null);
+  return rempli ? { ...o, deviseChiffreAffaire: 'EUR' } : undefined;
+}
+
 /** BlocPouvoir d'une personne physique (dirigeant, liquidateur…). */
+/** BlocDescriptionPersonneIndividu : commun aux pouvoirs et aux bénéficiaires effectifs. */
+function descriptionPersonne(personne, role) {
+  if (!personne) return undefined;
+  const prenoms = Array.isArray(personne.prenoms) ? personne.prenoms
+    : String(personne.prenoms || personne.prenom || '').split(/[\s,]+/).filter(Boolean);
+  return {
+    role: role || undefined,
+    nom: personne.nom || undefined,
+    nomUsage: personne.nom_usage || undefined,
+    prenoms: prenoms.length ? prenoms : undefined,
+    genre: personne.genre || undefined,
+    dateDeNaissance: dateInpi(personne.date_naissance),
+    lieuDeNaissance: personne.lieu_naissance || undefined,
+    paysNaissance: personne.pays_naissance || 'France',
+    nationalite: personne.nationalite || 'Française',
+  };
+}
+
 function pouvoirIndividu(personne, { fonction, codeForme, statut, representantLegal = true, triggers } = {}) {
   if (!personne) return undefined;
   const r = roleDepuisFonction(fonction || personne.fonction) || rolePrincipal(codeForme);
-  const prenoms = Array.isArray(personne.prenoms) ? personne.prenoms
-    : String(personne.prenoms || personne.prenom || '').split(/[\s,]+/).filter(Boolean);
   return {
     typeDePersonne: 'INDIVIDU',
     roleEntreprise: r ? r.code : undefined,
     isRepresentantLegal: representantLegal,
     statutPourLaFormalite: statut || undefined,
     individu: {
-      descriptionPersonne: {
-        role: r ? r.code : undefined,
-        nom: personne.nom || undefined,
-        nomUsage: personne.nom_usage || undefined,
-        prenoms: prenoms.length ? prenoms : undefined,
-        genre: personne.genre || undefined,
-        dateDeNaissance: dateInpi(personne.date_naissance),
-        lieuDeNaissance: personne.lieu_naissance || undefined,
-        paysNaissance: personne.pays_naissance || 'France',
-        nationalite: personne.nationalite || 'Française',
-      },
+      descriptionPersonne: descriptionPersonne(personne, r ? r.code : undefined),
       adresseDomicile: adresseInpi(personne.adresse),
     },
     ...(triggers || {}),
@@ -171,17 +236,36 @@ const CONTENUS = {
   creation_societe(r) {
     const codeForme = r.forme_juridique_code || codeFormeDepuisLibelle(r.forme_juridique);
     const adresse = adresseInpi(r.adresse_siege);
+    const salaries = Boolean(r.emploi_salaries);
+
+    const dirigeants = (r.dirigeants || []).map((d) => d.personne).filter(Boolean);
+    // Rétrocompatibilité : les dossiers ouverts avant la refonte du
+    // questionnaire portent un dirigeant unique et non une liste.
+    if (!dirigeants.length && r.dirigeant) dirigeants.push(r.dirigeant);
+
+    const pouvoirs = dirigeants.map((d) => pouvoirIndividu(d, {
+      fonction: d.fonction, codeForme, statut: STATUT_BLOC.ADJONCTION,
+    })).filter(Boolean);
+    for (const a of r.associes || []) {
+      const pouvoir = pouvoirIndividu(a.personne, {
+        fonction: a.personne?.fonction, codeForme, statut: STATUT_BLOC.ADJONCTION,
+        representantLegal: false,
+      });
+      if (pouvoir) pouvoirs.push(pouvoir);
+    }
+
     return {
-      succursaleOuFiliale: 'AVEC_ETABLISSEMENT',
+      succursaleOuFiliale: r.succursale_ou_filiale || 'AVEC_ETABLISSEMENT',
       formeExerciceActivitePrincipale: r.forme_exercice || 'COMMERCIALE',
       natureCreation: {
         dateCreation: dateInpi(r.date_debut_activite),
         formeJuridique: codeForme || undefined,
-        societeEtrangere: false,
-        etablieEnFrance: true,
-        microEntreprise: false,
-        entrepriseAgricole: false,
-        salarieEnFrance: false,
+        societeEtrangere: Boolean(r.societe_etrangere),
+        etablieEnFrance: !r.societe_etrangere,
+        microEntreprise: Boolean(r.micro_entreprise),
+        entrepriseAgricole: Boolean(r.entreprise_agricole),
+        salarieEnFrance: salaries,
+        presenceSalarie: salaries,
         eirl: false,
       },
       personneMorale: {
@@ -203,25 +287,34 @@ const CONTENUS = {
           },
         },
         adresseEntreprise: { adresse },
-        composition: {
-          pouvoirs: [pouvoirIndividu(r.dirigeant, {
-            fonction: r.dirigeant?.fonction, codeForme, statut: STATUT_BLOC.ADJONCTION,
-          })],
-        },
-        etablissementPrincipal: {
-          descriptionEtablissement: {
-            rolePourEntreprise: ROLE_ETABLISSEMENT.SIEGE_ET_PRINCIPAL,
-            indicateurEtablissementPrincipal: true,
-          },
+        composition: { pouvoirs },
+        beneficiairesEffectifs: beneficiairesInpi(r.beneficiaires_effectifs),
+        etablissementPrincipal: etablissementInpi({
           adresse,
-          activites: [{
-            indicateurPrincipal: true,
-            rolePrincipalPourEntreprise: true,
-            descriptionDetaillee: r.activite_principale,
-            dateDebut: dateInpi(r.date_debut_activite),
-            formeExercice: r.forme_exercice || 'COMMERCIALE',
-          }],
-        },
+          role: r.role_etablissement || ROLE_ETABLISSEMENT.SIEGE_ET_PRINCIPAL,
+          principal: true,
+          activite: r.activite_principale,
+          dateDebut: r.date_debut_activite,
+          formeExercice: r.forme_exercice,
+          precision: r.precision_activite,
+          exercice: r.exercice_activite,
+          regularite: r.activite_reguliere,
+          origine: r.origine_activite,
+          salaries: salaries ? {
+            presenceSalarie: true,
+            nombreSalarie: nombre(r.effectif_salarie),
+            dateEffetDebutEmploiSalarie: dateInpi(r.date_premiere_embauche),
+          } : undefined,
+        }),
+        autresEtablissements: (r.autres_etablissements || []).map((e) => etablissementInpi({
+          adresse: adresseInpi(e.adresse),
+          role: e.role || ROLE_ETABLISSEMENT.PRINCIPAL,
+          principal: false,
+          activite: e.activite,
+          dateDebut: e.date_debut,
+          formeExercice: r.forme_exercice,
+        })),
+        optionsFiscales: optionsFiscalesInpi(r),
       },
     };
   },
