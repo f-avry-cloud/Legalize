@@ -150,6 +150,11 @@ function fermerMenu() {
 }
 
 function initCoque() {
+  // Version affichée dans le menu : un coup d'œil suffit à voir si l'onglet
+  // exécute encore une ancienne version.
+  const $v = document.getElementById('version-app');
+  if ($v && VERSION_CHARGEE) $v.textContent = `version ${VERSION_CHARGEE}`;
+
   const sidebar = document.getElementById('sidebar');
   const scrim = document.getElementById('scrim');
   document.getElementById('nav-open')?.addEventListener('click', () => {

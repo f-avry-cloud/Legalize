@@ -681,3 +681,4 @@ dialog h3 { font-weight: 800; font-size: 25px; margin-bottom: 20px; letter-spaci
   animation: toast-entree .4s var(--rebond);
 }
 @media (max-width: 520px) { .maj-dispo { left: 16px; right: 16px; translate: none; border-radius: var(--r-sm); } }
+.version-app { font-family: ui-monospace, monospace; font-size: 9.5px; opacity: .55; margin-top: 4px !important; }

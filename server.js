@@ -18,6 +18,21 @@ app.use((req, res, next) => {
   initPromise.then(() => next(), () => next());
 });
 
+/**
+ * Chaque déploiement garde une URL propre et immuable, figée sur son code pour
+ * toujours. Un onglet ouvert sur une de ces URL continue d'afficher une
+ * ancienne version quoi qu'on déploie, et aucun rechargement n'y change rien.
+ * On renvoie donc ces URL vers l'adresse canonique de l'application.
+ */
+const HOTE_CANONIQUE = process.env.APP_HOST || 'legalize-rho.vercel.app';
+app.use((req, res, next) => {
+  const hote = req.headers.host;
+  if (process.env.VERCEL_URL && hote === process.env.VERCEL_URL && hote !== HOTE_CANONIQUE) {
+    return res.redirect(307, `https://${HOTE_CANONIQUE}${req.originalUrl}`);
+  }
+  return next();
+});
+
 app.use(express.json({ limit: '5mb' }));
 
 // La page d'accueil est servie par l'application (gabarit public/app.html) et
