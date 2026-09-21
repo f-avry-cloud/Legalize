@@ -160,6 +160,15 @@ router.post('/formalites/:id/payer', async (req, res) => {
   res.json(await formalites.payer(Number(req.params.id)));
 });
 
+/**
+ * Voie « certificat qualifié » : dépôt du document de synthèse signé hors
+ * ligne, qui vaut signature de la formalité.
+ */
+router.post('/formalites/:id/document-signe', upload.single('fichier'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ « fichier »)' });
+  res.json(await formalites.deposerDocumentSigne(Number(req.params.id), req.file));
+});
+
 /** Document de synthèse à signer (PDF produit par le guichet unique). */
 router.get('/formalites/:id/synthese', async (req, res) => {
   const { formalite, buffer } = await formalites.synthese(Number(req.params.id));

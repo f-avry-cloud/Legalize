@@ -349,6 +349,33 @@ async function payer(id) {
   return synchroniser(id);
 }
 
+/**
+ * Dépose le document de synthèse signé hors ligne (PJ_115) puis déclenche la
+ * signature. Voie du certificat qualifié : le PDF doit porter une signature
+ * PAdES dont l'autorité figure sur la liste de confiance eIDAS, sans quoi
+ * l'INPI le refuse.
+ */
+async function deposerDocumentSigne(id, fichier) {
+  const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
+  if (!formalite.inpi_id) { const e = new Error('Dossier non déposé.'); e.status = 409; throw e; }
+  if (!/\.pdf$/i.test(fichier.originalname)) {
+    const e = new Error('Le document de synthèse signé doit être un PDF.'); e.status = 400; throw e;
+  }
+
+  const piece = await guichet.ajouterPiece(formalite.inpi_id, {
+    code: 'PJ_115',
+    nom: fichier.originalname,
+    base64: fichier.buffer.toString('base64'),
+  });
+  await journal(id, 'signature', `Document de synthèse signé déposé (PJ_115 — ${fichier.originalname}).`);
+
+  const signature = await guichet.signer(formalite.inpi_id, {
+    documentSigneId: piece.id, service: formalite.service,
+  });
+  await journal(id, 'signature', `Signature transmise au guichet unique${signature.simule ? ' (simulation)' : ''}.`);
+  return synchroniser(id);
+}
+
 /** Document de synthèse à signer (PDF). */
 async function synthese(id) {
   const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
@@ -504,6 +531,6 @@ async function importerSociete(sirenBrut, { groupe_id = null } = {}) {
 
 module.exports = {
   creer, lire, lister, enregistrerReponses, ajouterPiece, supprimerPiece, telechargerPiece,
-  deposer, signer, payer, synthese, synchroniser, synchroniserToutes,
+  deposer, signer, payer, synthese, deposerDocumentSigne, synchroniser, synchroniserToutes,
   tableauDeBord, supprimer, importerSociete,
 };

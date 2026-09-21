@@ -103,6 +103,7 @@ async function formalitesDashboard() {
       const r = await api('POST', '/formalites/synchroniser');
       toast(`${r.synchronisees} dossier(s) interrogé(s), ${r.changements} changement(s) de statut.`);
       render();
+      majPastilleFormalites();
     } catch (err) { toast(err.message, true); e.target.disabled = false; }
   };
 }
@@ -466,10 +467,10 @@ async function formaliteDetail(id) {
       <div>
         <div class="card">
           <h2>${depose ? 'Où en est le dossier' : 'Contrôles avant dépôt'}</h2>
-          ${depose ? cycleHtml(f, def) : controlesHtml(f.controles)}
+          ${depose ? cycleHtml(f, def, etat) : controlesHtml(f.controles)}
           ${!depose && f.apercu.length ? `<h2 class="mt">Récapitulatif</h2>
             <dl class="recap">${f.apercu.map((a) => `<div><dt>${esc(a.label)}</dt><dd>${esc(valeurLisible(a.valeur))}</dd></div>`).join('')}</dl>` : ''}
-          <div class="dialog-actions">${actionHtml(f)}</div>
+          <div class="dialog-actions">${actionHtml(f, def)}</div>
           ${!depose && !f.controles.pret ? '<p class="muted">Le dépôt se débloque dès que les points bloquants sont levés.</p>' : ''}
         </div>
 
@@ -550,59 +551,157 @@ async function formaliteDetail(id) {
           toast('Taxes réglées.');
         }
         render();
+        majPastilleFormalites();
       } catch (e) { toast(e.message, true); $action.disabled = false; render(); }
     };
   }
-  const $sync = document.getElementById('btn-sync-un');
-  if ($sync) {
-    $sync.onclick = async () => {
-      $sync.disabled = true;
-      try { await api('POST', `/formalites/${id}/synchroniser`); render(); } catch (e) { toast(e.message, true); $sync.disabled = false; }
+  for (const cle of ['btn-sync-un', 'btn-signe-fait']) {
+    const $b = document.getElementById(cle);
+    if (!$b) continue;
+    $b.onclick = async () => {
+      $b.disabled = true;
+      try {
+        const r = await api('POST', `/formalites/${id}/synchroniser`);
+        if (cle === 'btn-signe-fait' && r.statut === 'SIGNATURE_PENDING') {
+          toast('Le guichet unique attend toujours la signature.', true);
+        }
+        render();
+      } catch (e) { toast(e.message, true); $b.disabled = false; }
+    };
+  }
+
+  /* --- signature : copie de la liasse et dépôt du document signé --- */
+  const $copier = document.getElementById('btn-copier-liasse');
+  if ($copier) {
+    $copier.onclick = async () => {
+      const valeur = document.getElementById('liasse-valeur').textContent.trim();
+      try {
+        await navigator.clipboard.writeText(valeur);
+        $copier.textContent = 'Copié';
+        setTimeout(() => { $copier.textContent = 'Copier'; }, 1800);
+      } catch (e) { toast('Copie impossible : sélectionnez le numéro manuellement.', true); }
+    };
+  }
+
+  const $docSigne = document.getElementById('input-doc-signe');
+  const $btnDocSigne = document.getElementById('btn-doc-signe');
+  if ($btnDocSigne && $docSigne) {
+    $btnDocSigne.onclick = () => $docSigne.click();
+    $docSigne.onchange = async () => {
+      if (!$docSigne.files[0]) return;
+      $btnDocSigne.disabled = true;
+      $btnDocSigne.textContent = 'Dépôt en cours…';
+      const fd = new FormData();
+      fd.append('fichier', $docSigne.files[0]);
+      try {
+        await api('POST', `/formalites/${id}/document-signe`, fd, true);
+        toast('Document signé déposé — la formalité est signée.');
+        render();
+      } catch (e) {
+        toast(e.message, true);
+        $btnDocSigne.disabled = false;
+        $btnDocSigne.textContent = 'Déposer le document signé (PJ_115)';
+      }
     };
   }
 }
 
 /** Bouton correspondant à l'action que le guichet unique attend de nous. */
-function actionHtml(f) {
+function actionHtml(f, def) {
   const depose = Boolean(f.inpi_id);
   const action = f.action_attendue;
   const boutons = [];
-  if (action && action !== 'attendre' && ACTIONS[action]?.libelle && action !== 'regulariser') {
+  // La signature avancée a son propre panneau : pas de bouton direct, qui
+  // échouerait faute de document signé.
+  const signatureDeleguee = action === 'signer' && def?.signature !== 'simple';
+  if (action && action !== 'attendre' && action !== 'regulariser' && !signatureDeleguee && ACTIONS[action]?.libelle) {
     boutons.push(`<button class="${ACTIONS[action].classe}" id="btn-action" data-action="${action}"
       ${action === 'deposer' && !f.controles.pret ? 'disabled' : ''}>${esc(ACTIONS[action].libelle)}</button>`);
   }
-  if (depose) boutons.push('<button id="btn-sync-un">Actualiser le statut</button>');
+  if (depose && !signatureDeleguee) boutons.push('<button id="btn-sync-un">Actualiser le statut</button>');
   return boutons.join(' ');
 }
 
 /** Avancement du dossier dans le cycle du guichet unique. */
-function cycleHtml(f, def) {
+function cycleHtml(f, def, etat) {
   const etapes = [
-    { cle: 'depot', libelle: 'Dépôt', fait: Boolean(f.inpi_id), date: f.created_at },
-    { cle: 'signature', libelle: 'Signature', fait: Boolean(f.signature_date), date: f.signature_date },
-    { cle: 'paiement', libelle: 'Paiement', fait: Boolean(f.paiement_date), date: f.paiement_date },
+    { cle: 'deposer', libelle: 'Dépôt', fait: Boolean(f.inpi_id), date: f.created_at },
+    { cle: 'signer', libelle: 'Signature', fait: Boolean(f.signature_date), date: f.signature_date },
+    { cle: 'payer', libelle: 'Paiement', fait: Boolean(f.paiement_date), date: f.paiement_date },
     { cle: 'validation', libelle: 'Validation', fait: f.statut === 'VALIDATED', date: f.statut === 'VALIDATED' ? f.statut_date : null },
   ];
+
   const attente = f.action_attendue && f.action_attendue !== 'attendre'
-    ? `<div class="alerte alerte-alerte"><strong>Action attendue de notre côté :</strong> ${esc(ACTIONS[f.action_attendue]?.libelle || f.action_attendue)}.
-       ${f.action_attendue === 'signer' && def?.signature === 'avancee'
-    ? `<div class="sub">Signature électronique avancée requise : <a href="${API_ROOT}/formalites/${f.id}/synthese" target="_blank">télécharger le document de synthèse</a>,
-       le signer avec un certificat qualifié, puis le redéposer en PJ_115.</div>` : ''}
-       ${f.action_attendue === 'payer' && f.montant ? `<div class="sub">Montant des taxes : ${eur.format(f.montant)}.</div>` : ''}
+    ? `<div class="alerte alerte-alerte"><strong>Action attendue de notre côté :</strong>
+        ${esc(ACTIONS[f.action_attendue]?.libelle || f.action_attendue)}.
+        ${f.action_attendue === 'payer' && f.montant ? `<div class="sub">Montant des taxes : ${eur.format(f.montant)}.</div>` : ''}
        </div>`
     : `<div class="alerte alerte-info"><strong>En attente côté INPI.</strong> ${esc(f.statut_libelle)}.</div>`;
 
   return `${attente}
     <ol class="cycle">${etapes.map((e) => `
-      <li class="${e.fait ? 'fait' : ''}"><span class="puce">${e.fait ? '✓' : '·'}</span>
+      <li class="${e.fait ? 'fait' : (f.action_attendue === e.cle ? 'courant' : '')}">
+        <span class="puce">${e.fait ? '✓' : (f.action_attendue === e.cle ? '●' : '·')}</span>
         ${esc(e.libelle)}${e.date ? `<span class="quand">${fmtDate(e.date)}</span>` : ''}</li>`).join('')}
     </ol>
+    ${f.action_attendue === 'signer' ? signatureHtml(f, def, etat) : ''}
     <dl class="recap mt">
       <div><dt>Liasse</dt><dd>${esc(f.numero_liasse || '—')}</dd></div>
       <div><dt>Statut INPI</dt><dd>${esc(f.statut_inpi || f.statut)}</dd></div>
       <div><dt>Taxes</dt><dd>${f.montant != null ? eur.format(f.montant) : '—'}</dd></div>
       <div><dt>N° national</dt><dd>${esc(f.num_nat || '—')}</dd></div>
     </dl>`;
+}
+
+/**
+ * Écran de signature. Deux voies, la gratuite mise en avant :
+ *  - FranceConnect+ (Identité Numérique La Poste) sur le portail de l'INPI :
+ *    la formalité a été déposée par API, le signataire s'y connecte et signe ;
+ *  - certificat qualifié : synthèse téléchargée, signée hors ligne, redéposée
+ *    en PJ_115, ce qui vaut signature.
+ * Une création se signe d'un simple clic et n'affiche pas ce panneau.
+ */
+function signatureHtml(f, def, etat) {
+  if (def?.signature === 'simple') return '';
+  const portail = etat?.guichet?.portailUrl || 'https://procedures.inpi.fr';
+  return `<div class="signature">
+    <div class="voie-principale">
+      <div class="voie-tete">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16c3 0 4-9 7-9s3 9 6 9c2 0 3-1.6 5-2.6"/><path d="M4 20h16"/></svg>
+        <div>
+          <h4>Signature gratuite via FranceConnect+</h4>
+          <p class="muted">Le dossier est déposé. Le signataire se connecte au guichet unique avec
+            son identité numérique (La Poste) et signe : aucun certificat à acheter.</p>
+        </div>
+      </div>
+      <div class="liasse-copie">
+        <span class="etiquette">N° de liasse</span>
+        <code id="liasse-valeur">${esc(f.numero_liasse || '—')}</code>
+        <button class="btn-sm btn-ghost" id="btn-copier-liasse" type="button">Copier</button>
+      </div>
+      <div class="voie-actions">
+        <a class="btn-gold" href="${esc(portail)}" target="_blank" rel="noopener noreferrer">
+          Ouvrir le guichet unique
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+        </a>
+        <button id="btn-signe-fait" type="button">J'ai signé — actualiser le statut</button>
+      </div>
+    </div>
+
+    <details class="voie-secondaire">
+      <summary>Ou signer avec un certificat électronique qualifié</summary>
+      <ol class="etapes-signature">
+        <li><a href="${API_ROOT}/formalites/${f.id}/synthese" target="_blank" rel="noopener">Télécharger le document de synthèse</a> (PJ_99).</li>
+        <li>Le signer avec un certificat qualifié eIDAS (signature PAdES).</li>
+        <li>Le redéposer ci-dessous : le dépôt vaut signature.</li>
+      </ol>
+      <div class="voie-actions">
+        <button id="btn-doc-signe" type="button">Déposer le document signé (PJ_115)</button>
+        <input type="file" id="input-doc-signe" hidden accept="application/pdf,.pdf">
+      </div>
+      <p class="muted">L'INPI refuse le document si l'autorité de certification n'est pas reconnue par eIDAS.</p>
+    </details>
+  </div>`;
 }
 
 /** Les dates ISO du récapitulatif sont affichées au format français. */

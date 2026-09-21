@@ -58,11 +58,19 @@ const HOTES_GU = {
   production: 'https://guichet-unique.inpi.fr',
 };
 
+// Portail e-procédures : c'est là que le signataire se connecte via
+// FranceConnect+ pour signer gratuitement une formalité déposée par API.
+const PORTAILS = {
+  demonstration: 'https://procedures-demo.inpi.fr',
+  production: 'https://procedures.inpi.fr',
+};
+
 const environnementGu = env.INPI_GU_ENV === 'demonstration' ? 'demonstration' : 'production';
 
 const guichet = {
   environnement: environnementGu,
   baseUrl: env.INPI_GU_URL || HOTES_GU[environnementGu],
+  portailUrl: env.INPI_PORTAIL_URL || PORTAILS[environnementGu],
   username: env.INPI_GU_USERNAME || '',
   password: env.INPI_GU_PASSWORD || '',
   // Chemins du contrat d'interface (annexe « Liste des endpoint »).
@@ -127,6 +135,7 @@ function etat() {
       mode: config.modeGuichet,
       environnement: guichet.environnement,
       baseUrl: guichet.baseUrl,
+      portailUrl: guichet.portailUrl,
       compte: guichet.username ? masquer(guichet.username) : null,
       depotReelAutorise: config.depotReelAutorise,
       paiementAuto: config.paiement.actif,
@@ -140,4 +149,4 @@ function masquer(identifiant) {
   return apres ? `${avant.slice(0, 1)}***@${apres}` : `${avant.slice(0, 2)}***`;
 }
 
-module.exports = { config, etat, HOTES_GU };
+module.exports = { config, etat, HOTES_GU, PORTAILS };

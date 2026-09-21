@@ -40,10 +40,11 @@ let toastTimer;
 function toast(msg, isError) {
   const el = document.getElementById('toast');
   el.textContent = msg;
+  el.hidden = true;                       // relance l'animation d'entrée
   el.className = `toast${isError ? ' error' : ''}`;
-  el.hidden = false;
+  requestAnimationFrame(() => { el.hidden = false; });
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, 3500);
+  toastTimer = setTimeout(() => { el.hidden = true; }, isError ? 6000 : 3500);
 }
 
 const STATUT_DOC = {
@@ -76,23 +77,113 @@ const routes = [
   { re: /^\/factures$/, view: facturesList, nav: 'factures' },
 ];
 
+/** Squelette affiché pendant le chargement : la page garde sa forme. */
+const SQUELETTE = `<div class="skeleton">
+  <div class="sk titre"></div>
+  <div class="grid cols-4">
+    <div class="sk carte"></div><div class="sk carte"></div>
+    <div class="sk carte"></div><div class="sk carte"></div>
+  </div>
+  <div class="sk carte" style="height:220px"></div>
+</div>`;
+
+function vueVide(message, icone = 'inbox') {
+  const chemins = {
+    inbox: '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5 5h14l2 8v6H3v-6z"/>',
+    alerte: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 4.2 2.6 17.6A2 2 0 0 0 4.3 20.6h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/>',
+  };
+  return `<div class="empty"><svg viewBox="0 0 24 24" aria-hidden="true">${chemins[icone]}</svg>
+    <span>${esc(message)}</span></div>`;
+}
+
 async function render() {
   const hash = location.hash.replace(/^#/, '') || '/';
   const route = routes.find((r) => r.re.test(hash));
   document.querySelectorAll('#nav a').forEach((a) => {
     a.classList.toggle('active', a.dataset.route === (route?.nav || ''));
   });
-  if (!route) { $main.innerHTML = '<div class="empty">Page introuvable</div>'; return; }
+  fermerMenu();
+  if (!route) { $main.innerHTML = vueVide('Page introuvable', 'alerte'); return; }
   const params = hash.match(route.re).slice(1);
-  $main.innerHTML = '<div class="empty">Chargement…</div>';
+  $main.innerHTML = SQUELETTE;
   try {
     await route.view(...params);
+    animerVue();
+    animerCompteurs();
   } catch (e) {
-    $main.innerHTML = `<div class="empty">Erreur : ${esc(e.message)}</div>`;
+    $main.innerHTML = `<div class="alerte alerte-bloquant"><strong>Erreur</strong> ${esc(e.message)}</div>`;
   }
 }
+
+/** Réamorce l'animation d'entrée à chaque changement de vue. */
+function animerVue() {
+  $main.classList.remove('vue');
+  void $main.offsetWidth;
+  $main.classList.add('vue');
+}
+
+/** Les compteurs du tableau de bord montent jusqu'à leur valeur. */
+function animerCompteurs() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  $main.querySelectorAll('.stat').forEach((el) => {
+    const cible = Number(String(el.textContent).replace(/\s/g, ''));
+    if (!Number.isFinite(cible) || cible === 0) return;
+    const duree = 620;
+    const debut = performance.now();
+    const pas = (t) => {
+      const p = Math.min(1, (t - debut) / duree);
+      el.textContent = Math.round(cible * (1 - (1 - p) ** 3));
+      if (p < 1) requestAnimationFrame(pas);
+    };
+    el.textContent = '0';
+    requestAnimationFrame(pas);
+  });
+}
+
+/* ---------------------------------------------------------- coque de l'app */
+
+function fermerMenu() {
+  document.getElementById('sidebar')?.classList.remove('ouvert');
+  const scrim = document.getElementById('scrim');
+  if (scrim) scrim.hidden = true;
+}
+
+function initCoque() {
+  const sidebar = document.getElementById('sidebar');
+  const scrim = document.getElementById('scrim');
+  document.getElementById('nav-open')?.addEventListener('click', () => {
+    sidebar.classList.add('ouvert');
+    scrim.hidden = false;
+  });
+  document.getElementById('nav-close')?.addEventListener('click', fermerMenu);
+  scrim?.addEventListener('click', fermerMenu);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fermerMenu(); });
+
+  document.getElementById('theme-toggle')?.addEventListener('click', () => {
+    const suivant = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = suivant;
+    try { localStorage.setItem('legalize-theme', suivant); } catch (e) { /* stockage indisponible */ }
+  });
+}
+
+/** Pastille du menu : nombre de formalités en attente d'une action de notre côté. */
+async function majPastilleFormalites() {
+  const pastille = document.getElementById('nav-badge-formalites');
+  if (!pastille) return;
+  try {
+    const d = await api('GET', '/formalites/dashboard');
+    const n = d.compteurs?.a_traiter || 0;
+    pastille.textContent = n;
+    pastille.hidden = n === 0;
+  } catch (e) { pastille.hidden = true; }
+}
+
 window.addEventListener('hashchange', render);
-window.addEventListener('DOMContentLoaded', render);
+window.addEventListener('DOMContentLoaded', () => {
+  initCoque();
+  render();
+  majPastilleFormalites();
+});
 
 /* ================================================================ tableau de bord */
 

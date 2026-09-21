@@ -77,7 +77,8 @@ src/services/formalites.js   Cycle de vie d'un dossier de formalité
 src/routes-formalites.js     API /api/inpi/* et /api/formalites/*
 scripts/                seed, build-templates, smoke-test, schéma, référentiels INPI
                         et tests des formalités
-public/                 Interface web (vanilla JS, sans build)
+public/                 Interface web (vanilla JS, sans build) : système de design
+                        en variables CSS, thème clair/sombre, responsive
 ```
 
 Le schéma Postgres (tables `societes`, `groupes`, `operations`, `documents`,
@@ -195,11 +196,15 @@ Le JSON transmis est consultable dans le dossier, avec l'endpoint visé :
 ### Signature et paiement
 
 - **Création** : signature simple, un appel suffit.
-- **Modification, cessation, comptes annuels** : signature électronique
-  avancée. L'application propose le téléchargement du document de synthèse
-  (PJ_99) ; il doit être signé hors ligne avec un certificat qualifié, redéposé
-  en PJ_115, puis son identifiant transmis à l'API. L'application refuse de
-  signer sans lui plutôt que de produire un appel qui échouerait.
+- **Modification, cessation, comptes annuels** : deux voies, présentées dans
+  l'écran de signature du dossier.
+  - *Gratuite (par défaut)* — la formalité est déposée par API, puis le
+    signataire se connecte au guichet unique via FranceConnect+ (identité
+    numérique La Poste) et signe. L'écran affiche le numéro de liasse à copier,
+    le lien vers le portail, et un bouton qui réinterroge le statut.
+  - *Certificat qualifié* — télécharger le document de synthèse (PJ_99), le
+    signer hors ligne avec un certificat eIDAS, puis le redéposer depuis
+    l'application : le dépôt en PJ_115 vaut signature.
 - **Paiement** : jamais automatique. Il faut activer `INPI_PAIEMENT_AUTO` et
   fournir les identifiants du compte client INPI ; sinon le montant des taxes
   est affiché et le règlement se fait depuis le portail.
@@ -232,6 +237,7 @@ paiement, régularisation), et rien n'est transmis à l'INPI.
 | `INPI_RNE_USERNAME` / `INPI_RNE_PASSWORD` | Compte data.inpi.fr — lecture RNE |
 | `INPI_GU_USERNAME` / `INPI_GU_PASSWORD` | Compte e-procédures habilité mandataire |
 | `INPI_GU_ENV` | `production` (défaut) ou `demonstration` (bac à sable INPI, compte dédié) |
+| `INPI_PORTAIL_URL` | Portail e-procédures pour la signature FranceConnect+ (déduit de `INPI_GU_ENV`) |
 | `INPI_DEPOT_REEL` | `1` pour autoriser le dépôt réel (défaut : simulation, même avec identifiants) |
 | `INPI_PAIEMENT_AUTO`, `INPI_PAIEMENT_LOGIN`, `INPI_PAIEMENT_PASSWORD`, `INPI_PAIEMENT_TYPE` | Règlement des taxes par API (compte client INPI) |
 | `INPI_RNE_URL` / `INPI_GU_URL` | Surcharge des hôtes |
