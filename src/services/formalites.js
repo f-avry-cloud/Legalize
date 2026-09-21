@@ -25,6 +25,29 @@ const { construirePayload } = require('../inpi/payload');
 const { versFicheSociete, nettoyerSiren, formaterSiren } = require('../inpi/normalize');
 const { statut: statutInfo } = require('../inpi/referentiels');
 
+/**
+ * Un dossier importé du compte INPI n'a pas de type au sens du catalogue :
+ * l'API ne renvoie que la lettre du contrat d'interface (C, M, R…). On le
+ * stocke tel quel, préfixé, et on lui donne un libellé lisible.
+ */
+const TYPES_IMPORTES = {
+  inpi_C: 'Création (importée de l’INPI)',
+  inpi_M: 'Modification (importée de l’INPI)',
+  inpi_R: 'Cessation (importée de l’INPI)',
+  inpi_Y: 'Correction (importée de l’INPI)',
+  inpi_Z: 'Complétion (importée de l’INPI)',
+  inpi_B: 'Dépôt de comptes (importé de l’INPI)',
+  inpi: 'Formalité importée de l’INPI',
+};
+
+function estImporte(formalite) {
+  return formalite?.origine === 'inpi';
+}
+
+function libelleType(code) {
+  return definition(code)?.libelle || TYPES_IMPORTES[code] || code;
+}
+
 /* ------------------------------------------------------------- utilitaires */
 
 /** Transforme les échecs d'infrastructure en messages actionnables. */
@@ -183,7 +206,10 @@ async function lire(id) {
   ]);
 
   const dossier = dossierDe(formalite, pieces);
-  const payload = construireSansEchec(dossier);
+  const importe = estImporte(formalite);
+  // Un dossier importé n'a ni questionnaire ni payload : il reflète ce que
+  // l'INPI détient, il ne se rejoue pas depuis l'application.
+  const payload = importe ? null : construireSansEchec(dossier);
   const def = definition(formalite.type);
   const info = statutInfo(formalite.statut);
 
@@ -198,12 +224,14 @@ async function lire(id) {
     pieces,
     pieces_exigees: piecesExigees(formalite.type, formalite.reponses),
     evenements,
-    controles: controler({ ...dossier, payload }),
-    apercu: def?.apercu ? def.apercu(formalite.reponses || {}, formalite.fiche || {})
+    importe,
+    controles: importe ? null : controler({ ...dossier, payload }),
+    apercu: (!importe && def?.apercu) ? def.apercu(formalite.reponses || {}, formalite.fiche || {})
       .filter(([, v]) => v !== undefined && v !== null && v !== '')
       .map(([label, valeur]) => ({ label, valeur: String(valeur) })) : [],
     payload: payload ? payload.corps : null,
     payload_endpoint: payload ? payload.endpoint : null,
+    type_libelle: libelleType(formalite.type),
     statut_libelle: info.libelle,
     statut_couleur: info.couleur,
     action_attendue: formalite.statut === 'BROUILLON' ? 'deposer' : info.action,
@@ -459,7 +487,8 @@ async function lister(filtres = {}) {
       statut_libelle: info.libelle,
       statut_couleur: info.couleur,
       action_attendue: f.statut === 'BROUILLON' ? 'deposer' : info.action,
-      type_libelle: definition(f.type)?.libelle || f.type,
+      type_libelle: libelleType(f.type),
+      importe: estImporte(f),
       en_retard: Boolean(f.echeance && f.echeance < aujourdhui && !info.terminal),
       nb_regularisations: Array.isArray(f.regularisations) ? f.regularisations.length : 0,
     };
@@ -507,6 +536,88 @@ async function supprimer(id) {
   return { ok: true };
 }
 
+/* ------------------------------------------- import du compte mandataire */
+
+/**
+ * Rapatrie les formalités déjà présentes sur le compte INPI — celles déposées
+ * avant la mise en service de l'application, ou depuis l'interface web du
+ * guichet unique. Sans cela, l'application ne montre que ce qu'elle a
+ * elle-même déposé, ce qui donne une vue partielle du cabinet.
+ *
+ * Les dossiers importés sont des miroirs en lecture seule : statut, liasse,
+ * dates et montant. Ceux que l'application a déposés sont reconnus par leur
+ * identifiant INPI et mis à jour plutôt que dupliqués.
+ */
+async function importerDepuisInpi({ services = ['formalites', 'comptes_annuels'] } = {}) {
+  const connus = await db(supabase.from('formalites').select('id, inpi_id, statut').not('inpi_id', 'is', null));
+  const parInpiId = new Map(connus.map((f) => [String(f.inpi_id), f]));
+
+  const bilan = { importees: 0, actualisees: 0, inchangees: 0, erreurs: [] };
+
+  for (const service of services) {
+    let distantes = [];
+    try {
+      distantes = await guichet.listerTout({ service });
+    } catch (e) {
+      bilan.erreurs.push(`${service} : ${e.message}`);
+      continue;
+    }
+
+    for (const d of distantes) {
+      if (!d.inpi_id) continue;
+      const existante = parInpiId.get(String(d.inpi_id));
+
+      const champs = {
+        statut: d.statut,
+        statut_inpi: d.statut_brut,
+        statut_date: d.statut_date || null,
+        action_attendue: d.action_attendue,
+        numero_liasse: d.numero_liasse,
+        montant: d.montant,
+        num_nat: d.num_nat,
+        signature_date: d.signature_date,
+        paiement_date: d.paiement_date,
+        regularisations: d.regularisations || [],
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existante) {
+        if (existante.statut === d.statut) { bilan.inchangees += 1; continue; }
+        await db(supabase.from('formalites').update(champs).eq('id', existante.id).select());
+        await journal(existante.id, 'statut',
+          `Statut actualisé depuis le compte INPI : ${statutInfo(existante.statut).libelle} → ${statutInfo(d.statut).libelle}.`);
+        bilan.actualisees += 1;
+        continue;
+      }
+
+      const societe = d.siren
+        ? (await db(supabase.from('societes').select('id').eq('siren', formaterSiren(d.siren))))[0]
+        : null;
+
+      const creee = await db(supabase.from('formalites').insert({
+        ...champs,
+        origine: 'inpi',
+        service: service === 'comptes_annuels' ? 'comptes_annuels' : 'formalites',
+        type: service === 'comptes_annuels' ? 'inpi_B' : `inpi_${d.type_formalite || ''}`.replace(/_$/, ''),
+        libelle: d.nom_dossier || d.company_name || `Liasse ${d.numero_liasse || d.inpi_id}`,
+        reference: d.reference_mandataire || null,
+        siren: nettoyerSiren(d.siren) || null,
+        societe_id: societe?.id || null,
+        inpi_id: String(d.inpi_id),
+        fiche: { source: 'INPI', denomination: d.company_name || '', forme_juridique_code: d.forme_juridique || '' },
+        reponses: {},
+        simule: false,
+      }).select().single());
+
+      await journal(creee.id, 'creation',
+        `Dossier importé du compte INPI — liasse ${d.numero_liasse || d.inpi_id}, statut ${statutInfo(d.statut).libelle}.`);
+      parInpiId.set(String(d.inpi_id), creee);
+      bilan.importees += 1;
+    }
+  }
+  return bilan;
+}
+
 /* -------------------------------------- passerelle avec la fiche société */
 
 /** Crée (ou met à jour) une fiche société à partir du seul SIREN. */
@@ -532,5 +643,5 @@ async function importerSociete(sirenBrut, { groupe_id = null } = {}) {
 module.exports = {
   creer, lire, lister, enregistrerReponses, ajouterPiece, supprimerPiece, telechargerPiece,
   deposer, signer, payer, synthese, deposerDocumentSigne, synchroniser, synchroniserToutes,
-  tableauDeBord, supprimer, importerSociete,
+  tableauDeBord, supprimer, importerSociete, importerDepuisInpi,
 };

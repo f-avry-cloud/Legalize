@@ -11,6 +11,7 @@ create table if not exists formalites (
   societe_id    bigint references societes(id) on delete set null,
   operation_id  bigint references operations(id) on delete set null,
   type          text not null,
+  origine       text not null default 'locale',      -- locale | inpi (importée du compte mandataire)
   service       text not null default 'formalites',  -- formalites | comptes_annuels
   libelle       text not null default '',
   reference     text,                       -- référence mandataire (notre côté)
@@ -39,6 +40,10 @@ create index if not exists formalites_statut_idx   on formalites (statut);
 create index if not exists formalites_societe_idx  on formalites (societe_id);
 create index if not exists formalites_echeance_idx on formalites (echeance);
 create index if not exists formalites_action_idx   on formalites (action_attendue);
+create index if not exists formalites_inpi_id_idx  on formalites (inpi_id);
+
+-- Migration d'une base existante (la colonne a été ajoutée après coup) :
+alter table formalites add column if not exists origine text not null default 'locale';
 
 create table if not exists formalite_pieces (
   id           bigint generated always as identity primary key,

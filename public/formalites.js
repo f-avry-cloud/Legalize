@@ -78,6 +78,7 @@ async function formalitesDashboard() {
     <div class="page-head"><h1>Formalités</h1>
       <div>
         <button id="btn-test-inpi">Tester la connexion INPI</button>
+        <button id="btn-importer">Importer depuis l'INPI</button>
         <button id="btn-sync">Synchroniser</button>
         <a class="btn btn-primary" href="#/formalites/new">Nouvelle formalité</a>
       </div>
@@ -111,6 +112,24 @@ async function formalitesDashboard() {
     try {
       testConnexionDialog(await api('POST', '/inpi/test-connexion', {}));
     } catch (err) { toast(err.message, true); } finally { e.target.disabled = false; }
+  };
+
+  document.getElementById('btn-importer').onclick = async (e) => {
+    e.target.disabled = true;
+    e.target.textContent = 'Import en cours…';
+    try {
+      const r = await api('POST', '/formalites/importer');
+      toast(r.erreurs?.length
+        ? `${r.importees} importée(s), ${r.actualisees} actualisée(s). Erreurs : ${r.erreurs.join(' ; ')}`
+        : `${r.importees} formalité(s) importée(s), ${r.actualisees} actualisée(s), ${r.inchangees} déjà à jour.`,
+      Boolean(r.erreurs?.length));
+      render();
+      majPastilleFormalites();
+    } catch (err) {
+      toast(err.message, true);
+      e.target.disabled = false;
+      e.target.textContent = "Importer depuis l'INPI";
+    }
   };
 
   document.getElementById('btn-sync').onclick = async (e) => {
@@ -159,6 +178,7 @@ function carteDossierHtml(f, rang) {
       ${f.nb_regularisations ? '<span class="badge a_faire">à régulariser</span>' : ''}
       ${f.echeance ? `<span class="${f.en_retard ? 'echeance-retard' : ''}">${f.en_retard ? 'dépassée' : 'avant'} ${fmtDate(f.echeance)}</span>` : ''}
       ${f.simule ? '<span class="badge brouillon">simulation</span>' : ''}
+      ${f.importe ? '<span class="badge non_applicable">importée</span>' : ''}
     </div>
   </article>`;
 }
@@ -434,6 +454,7 @@ function collecterReponses(form, champs) {
 
 async function formaliteDetail(id) {
   const [f, etat] = await Promise.all([api('GET', `/formalites/${id}`), getEtatInpi()]);
+  if (f.importe) return detailImporte(f, etat);
   const def = f.definition;
   const champs = (def?.champs || []).filter((c) => !c.depend || c.depend.valeurs.includes(f.reponses[c.depend.name]));
   const terminal = ['VALIDATED', 'REJECTED'].includes(f.statut);
@@ -635,6 +656,66 @@ async function formaliteDetail(id) {
       }
     };
   }
+}
+
+/**
+ * Dossier importé du compte INPI : miroir en lecture seule. L'application n'a
+ * pas le questionnaire d'origine — la formalité a pu être déposée avant sa
+ * mise en service, ou depuis l'interface web — donc elle n'affiche que ce que
+ * l'INPI détient, et renvoie au portail pour le détail complet.
+ */
+function detailImporte(f, etat) {
+  const portail = etat?.guichet?.portailUrl || 'https://procedures.inpi.fr';
+  $main.innerHTML = `
+    <div class="page-head">
+      <div>
+        <div class="crumb"><a href="#/formalites">Formalités</a> › importée</div>
+        <h1>${esc(f.type_libelle || 'Formalité')}</h1>
+        <div class="muted">${esc(f.libelle || '')}${f.siren ? ` · ${esc(f.siren)}` : ''}</div>
+      </div>
+      <div>${badgeStatut(f)}<span class="badge non_applicable">importée</span></div>
+    </div>
+
+    <div class="alerte alerte-info">
+      <strong>Dossier repris du compte INPI.</strong> Il n'a pas été déposé depuis cette application :
+      son questionnaire et ses pièces restent sur le guichet unique. Le suivi ci-dessous est actualisé
+      à chaque synchronisation.
+    </div>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <h2>Suivi</h2>
+        <dl class="recap">
+          <div><dt>Liasse</dt><dd>${esc(f.numero_liasse || '—')}</dd></div>
+          <div><dt>Statut INPI</dt><dd>${esc(f.statut_inpi || f.statut)}</dd></div>
+          <div><dt>Dernier changement</dt><dd>${fmtDate(f.statut_date)}</dd></div>
+          <div><dt>Taxes</dt><dd>${f.montant != null ? eur.format(f.montant) : '—'}</dd></div>
+          <div><dt>N° national</dt><dd>${esc(f.num_nat || '—')}</dd></div>
+          <div><dt>Référence mandataire</dt><dd>${esc(f.reference || '—')}</dd></div>
+          <div><dt>Signée le</dt><dd>${f.signature_date ? fmtDate(f.signature_date) : '—'}</dd></div>
+          <div><dt>Payée le</dt><dd>${f.paiement_date ? fmtDate(f.paiement_date) : '—'}</dd></div>
+        </dl>
+        ${f.regularisations?.length ? `<div class="alerte alerte-bloquant mt">
+          <strong>Régularisation demandée.</strong>
+          <ul>${f.regularisations.map((r) => `<li>${esc(r.motif)}</li>`).join('')}</ul></div>` : ''}
+        <div class="dialog-actions">
+          <a class="btn" href="${esc(portail)}" target="_blank" rel="noopener noreferrer">Ouvrir sur le guichet unique</a>
+          <button id="btn-sync-un">Actualiser le statut</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Journal du dossier</h2>
+        <ul class="journal">${f.evenements.map((e) => `
+          <li><span class="quand">${fmtDate(e.created_at)}</span> ${esc(e.message)}</li>`).join('')}</ul>
+      </div>
+    </div>`;
+
+  const $sync = document.getElementById('btn-sync-un');
+  $sync.onclick = async () => {
+    $sync.disabled = true;
+    try { await api('POST', `/formalites/${f.id}/synchroniser`); render(); } catch (e) { toast(e.message, true); $sync.disabled = false; }
+  };
 }
 
 /** Bouton correspondant à l'action que le guichet unique attend de nous. */

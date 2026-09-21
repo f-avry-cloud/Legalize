@@ -186,8 +186,14 @@ interceptée par un proxy avant d'atteindre l'INPI.
    subsiste.
 4. **Le cycle du guichet est suivi de bout en bout** : dépôt → signature →
    paiement → validation, avec les régularisations et leurs délais. À chaque
-   instant le dossier affiche **l'action attendue et de qui** ; le tableau de
-   bord classe d'abord ce qui attend une action de notre côté.
+   instant le dossier affiche **l'action attendue et de qui** ; le pipeline
+   range les dossiers par étape, de « brouillon » à « terminée ».
+5. **Le compte INPI existant est repris** — « Importer depuis l'INPI »
+   rapatrie les formalités déposées avant la mise en service, ou depuis
+   l'interface web du guichet unique. Ces dossiers sont des miroirs en lecture
+   seule (statut, liasse, montant, régularisations), rattachés automatiquement
+   à la société du cabinet quand le SIREN correspond. Un dossier déjà connu
+   est actualisé, jamais dupliqué.
 
 Le JSON transmis est consultable dans le dossier, avec l'endpoint visé :
 `/api/formalities` (création, cessation), `/api/formality_updates`

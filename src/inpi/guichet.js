@@ -44,17 +44,24 @@ function normaliserFormalite(brute, idParDefaut) {
   const id = brute?.id ?? idParDefaut ?? null;
   const code = normaliserStatut(brute?.status);
   const panier = Array.isArray(brute?.carts) ? brute.carts[0] : brute?.carts;
+  // L'appel léger (`groups[]=formality:read:no-content`) renvoie les mêmes
+  // champs en snake_case : on accepte les deux graphies.
   return {
     inpi_id: id === null ? null : String(id),
-    numero_liasse: brute?.liasseNumber || null,
+    numero_liasse: brute?.liasseNumber || brute?.liasse_number || null,
+    siren: brute?.siren || null,
+    company_name: brute?.companyName || brute?.company_name || null,
+    nom_dossier: brute?.nomDossier || brute?.nom_dossier || null,
+    type_formalite: brute?.typeFormalite || brute?.type_formalite || null,
+    forme_juridique: brute?.formeJuridique || brute?.forme_juridique || null,
     statut: code,
     statut_brut: brute?.status || null,
-    statut_date: brute?.statusDate || brute?.updated || null,
-    reference_mandataire: brute?.referenceMandataire || null,
+    statut_date: brute?.statusDate || brute?.status_date || brute?.updated || null,
+    reference_mandataire: brute?.referenceMandataire || brute?.reference_mandataire || null,
     action_attendue: statut(code).action,
     montant: montantDe(brute),
     paiement_date: panier?.paymentDate || null,
-    signature_date: brute?.signedDate || null,
+    signature_date: brute?.signedDate || brute?.signed_date || null,
     num_nat: brute?.numNat || null,
     regularisations: extraireRegularisations(brute),
     simule: Boolean(brute?._simule),
@@ -258,6 +265,29 @@ async function ajouterPiece(id, { code, nom, base64, path = null }) {
   return { id: rep?.id ?? null, brut: rep };
 }
 
+/**
+ * Parcourt toutes les pages de la liste du compte mandataire.
+ * L'appel léger suffit pour un inventaire : il ne rapatrie pas le `content`,
+ * qui pèse lourd et n'a pas d'intérêt ici.
+ * @param {number} maxPages garde-fou : un compte ancien peut compter des
+ *   milliers de dossiers, on ne veut pas boucler indéfiniment.
+ */
+async function listerTout({ service = 'formalites', itemsPerPage = 100, maxPages = 30, ...filtres } = {}) {
+  if (config.modeGuichet === 'simulation') return [];
+  const tout = [];
+  for (let page = 1; page <= maxPages; page += 1) {
+    const lot = await lister({
+      page,
+      itemsPerPage,
+      'groups[]': 'formality:read:no-content',
+      ...filtres,
+    }, service);
+    tout.push(...lot);
+    if (lot.length < itemsPerPage) break;
+  }
+  return tout;
+}
+
 async function listerPieces(id) {
   if (String(id).startsWith('SIM-')) return [];
   const rep = await appel('guichet', { chemin: chemin(config.guichet.paths.piecesFormalite, { id }) });
@@ -267,7 +297,7 @@ async function listerPieces(id) {
 }
 
 module.exports = {
-  deposer, mettreAJour, lire, lister, regularisations, historique,
+  deposer, mettreAJour, lire, lister, listerTout, regularisations, historique,
   signer, synthese, payer, ajouterPiece, listerPieces,
   normaliserFormalite, simulationActive, motifSimulation,
 };

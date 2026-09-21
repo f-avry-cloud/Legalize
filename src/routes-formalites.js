@@ -85,6 +85,15 @@ router.get('/formalites/dashboard', async (req, res) => {
   res.json(await formalites.tableauDeBord());
 });
 
+/**
+ * Inventaire : rapatrie les formalités déjà présentes sur le compte INPI,
+ * y compris celles déposées avant la mise en service ou depuis l'interface
+ * web du guichet unique.
+ */
+router.post('/formalites/importer', async (req, res) => {
+  res.json(await formalites.importerDepuisInpi());
+});
+
 /** Synchronisation globale des dossiers en cours auprès de l'INPI. */
 router.post('/formalites/synchroniser', async (req, res) => {
   res.json(await formalites.synchroniserToutes());

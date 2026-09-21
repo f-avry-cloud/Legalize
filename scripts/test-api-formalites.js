@@ -12,6 +12,31 @@
 
 const { tables } = require('./fake-supa');
 
+/**
+ * Le compte INPI simulé ne renvoie rien : pour éprouver l'import, on substitue
+ * la liste distante par deux formalités déjà validées côté INPI, comme celles
+ * déposées avant la mise en service de l'application.
+ */
+const guichet = require('../src/inpi/guichet');
+const FORMALITES_DISTANTES = [
+  {
+    inpi_id: '900001', numero_liasse: 'A2024-000900001', siren: '552100554',
+    company_name: 'HORIZON HOLDING', nom_dossier: 'Transfert 2024', type_formalite: 'M',
+    statut: 'VALIDATED', statut_brut: 'VALIDATED', statut_date: '2024-07-02T10:00:00Z',
+    action_attendue: null, montant: 195.71, num_nat: 'NN-900001',
+    signature_date: '2024-06-30T09:00:00Z', paiement_date: '2024-06-30T09:05:00Z', regularisations: [],
+  },
+  {
+    inpi_id: '900002', numero_liasse: 'A2025-000900002', siren: '552100554',
+    company_name: 'HORIZON HOLDING', nom_dossier: null, type_formalite: 'C',
+    statut: 'AMENDMENT_PENDING', statut_brut: 'AMENDMENT_PENDING', statut_date: '2025-02-11T10:00:00Z',
+    action_attendue: 'regulariser', montant: null, num_nat: null,
+    signature_date: null, paiement_date: null,
+    regularisations: [{ id: 7, type: 'ADDITIONAL_INFORMATION', motif: 'Adresse du siège à corriger' }],
+  },
+];
+guichet.listerTout = async ({ service } = {}) => (service === 'comptes_annuels' ? [] : FORMALITES_DISTANTES);
+
 /* ------------------------------------------------------------ scénario */
 
 const app = require('../src/routes');
@@ -129,6 +154,33 @@ function verifier(nom, condition, detail) {
 
   const suppression = await appel('DELETE', `/formalites/${id}`);
   verifier('un dossier déposé n’est pas supprimable', suppression.statut === 409, suppression.corps);
+
+  console.log('\nImport des formalités déjà présentes sur le compte INPI');
+
+  const avant = (await appel('GET', '/formalites')).corps.length;
+  const imp = await appel('POST', '/formalites/importer');
+  verifier('import : deux dossiers repris', imp.corps.importees === 2, imp.corps);
+
+  const apres = (await appel('GET', '/formalites')).corps;
+  verifier('les dossiers importés apparaissent dans la liste', apres.length === avant + 2, { avant, apres: apres.length });
+
+  const valide = apres.find((f) => f.numero_liasse === 'A2024-000900001');
+  verifier('statut et libellé repris du compte INPI',
+    valide && valide.statut === 'VALIDATED' && valide.importe === true && /import/i.test(valide.type_libelle),
+    valide && { statut: valide.statut, type: valide.type_libelle, importe: valide.importe });
+  verifier('rattachement à la société du cabinet par le SIREN', Boolean(valide && valide.societe_id), valide?.societe_id);
+
+  const detail = await appel('GET', `/formalites/${valide.id}`);
+  verifier('dossier importé en lecture seule (ni contrôles ni payload)',
+    detail.corps.importe === true && detail.corps.controles === null && detail.corps.payload === null,
+    { controles: detail.corps.controles, payload: detail.corps.payload });
+
+  const regul = apres.find((f) => f.numero_liasse === 'A2025-000900002');
+  verifier('régularisation en attente remontée', regul && regul.nb_regularisations === 1, regul?.nb_regularisations);
+
+  const imp2 = await appel('POST', '/formalites/importer');
+  verifier('un second import ne duplique rien',
+    imp2.corps.importees === 0 && imp2.corps.inchangees === 2, imp2.corps);
 
   const importSociete = await appel('POST', '/inpi/importer-societe', { siren: '901234567' });
   verifier('import d’une société depuis le seul SIREN', importSociete.statut === 201 && importSociete.corps.societe.denomination, importSociete.corps);
