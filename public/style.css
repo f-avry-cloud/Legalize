@@ -736,3 +736,131 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
 }
 .ligne-liste .retirer-ligne:hover { opacity: 1; }
 .liste-repetable .ajouter-ligne { margin-top: 12px; }
+
+/* --- Questionnaire progressif ----------------------------------------- */
+
+.barre-progression {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.barre-progression .jauge {
+  flex: 1 1 160px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--bord);
+  overflow: hidden;
+}
+.barre-progression .jauge span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--grad);
+  transition: width .35s ease;
+}
+.barre-progression .compteur { font-size: .82rem; color: var(--texte2); white-space: nowrap; }
+.bascule-requis {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .82rem;
+  color: var(--texte2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sommaire-sections {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  scrollbar-width: thin;
+}
+.onglet-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border: 1px solid var(--bord);
+  border-radius: 999px;
+  background: var(--fond2);
+  color: var(--texte2);
+  font-size: .82rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.onglet-section:hover { border-color: var(--a2); color: var(--texte); }
+.onglet-section .etat {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bord);
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+}
+.onglet-section .etat.complet { background: var(--ok, #2e9e6b); color: #fff; }
+
+.champ-bloc { position: relative; }
+.champ-bloc.champ-requis { padding-left: 12px; border-left: 2px solid var(--a2); }
+.champ-bloc.champ-requis::after {
+  content: 'Obligatoire';
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a2) 18%, transparent);
+  color: var(--a2);
+  font-size: .68rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.champ-bloc.champ-requis.rempli { border-left-color: var(--ok, #2e9e6b); }
+.champ-bloc.champ-requis.rempli::after {
+  content: 'Complété';
+  background: color-mix(in srgb, var(--ok, #2e9e6b) 18%, transparent);
+  color: var(--ok, #2e9e6b);
+}
+
+#form-reponses.requis-seuls .champ-bloc:not(.champ-requis):not(.bloc-section) { display: none; }
+
+.champ-bloc.surligne, .card.surligne {
+  animation: surlignage 1.6s ease;
+  border-radius: 14px;
+}
+@keyframes surlignage {
+  0%, 100% { box-shadow: none; }
+  15%, 70% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--a2) 45%, transparent); }
+}
+
+.liste-controles { list-style: none; padding: 0; margin: 6px 0 0; }
+.liste-controles li { margin: 0 0 4px; }
+.lien-controle {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lien-controle:hover .fleche-controle { opacity: 1; }
+.fleche-controle {
+  margin-left: auto;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: .7rem;
+  opacity: .45;
+  white-space: nowrap;
+  transition: opacity .2s;
+}

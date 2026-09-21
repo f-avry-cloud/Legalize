@@ -51,13 +51,18 @@ function controler(dossier, maintenant = new Date()) {
   const bloquants = [];
   const alertes = [];
   const infos = [];
+  // Chaque constat porte le champ qu'il vise : c'est ce qui permet à
+  // l'écran de renvoyer l'utilisateur sur l'encart à corriger.
+  const bloq = (message, champ) => bloquants.push({ message, champ: champ || null });
+  const alerte = (message, champ) => alertes.push({ message, champ: champ || null });
+  const info = (message, champ) => infos.push({ message, champ: champ || null });
   const pousser = (a) => {
-    const cible = a.niveau === 'bloquant' ? bloquants : (a.niveau === 'info' ? infos : alertes);
-    cible.push(a.message);
+    const cible = a.niveau === 'bloquant' ? bloq : (a.niveau === 'info' ? info : alerte);
+    cible(a.message, a.champ);
   };
 
   if (!def) {
-    return { bloquants: ['Type de formalité inconnu.'], alertes: [], infos: [], pieces_manquantes: [], echeance: null, pret: false };
+    return { bloquants: [{ message: 'Type de formalité inconnu.', champ: null }], alertes: [], infos: [], pieces_manquantes: [], echeance: null, pret: false };
   }
 
   const reponses = dossier.reponses || {};
@@ -65,50 +70,50 @@ function controler(dossier, maintenant = new Date()) {
 
   /* --- identification de l'entreprise --- */
   if (!def.sansSiren) {
-    if (!dossier.siren) bloquants.push('SIREN de l’entreprise absent.');
-    else if (!sirenValide(dossier.siren)) bloquants.push(`SIREN invalide (clé de contrôle) : ${formaterSiren(dossier.siren)}.`);
-    if (fiche?.radiee) alertes.push('L’entreprise est radiée au RNE : vérifier la recevabilité de la formalité.');
+    if (!dossier.siren) bloq('SIREN de l’entreprise absent.');
+    else if (!sirenValide(dossier.siren)) bloq(`SIREN invalide (clé de contrôle) : ${formaterSiren(dossier.siren)}.`);
+    if (fiche?.radiee) alerte('L’entreprise est radiée au RNE : vérifier la recevabilité de la formalité.');
   }
 
   /* --- champs du questionnaire --- */
   for (const champ of champsActifs(dossier.type, reponses)) {
     if (champ.required && estVide(reponses[champ.name])) {
-      bloquants.push(`Champ obligatoire non renseigné : « ${champ.label} ».`);
+      bloq(`Champ obligatoire non renseigné : « ${champ.label} ».`, champ.name);
     }
     if (champ.type === 'adresse' && !estVide(reponses[champ.name])) {
       const a = reponses[champ.name];
       if (!a.codePostal || !/^\d{5}$/.test(String(a.codePostal))) {
-        bloquants.push(`Code postal invalide pour « ${champ.label} ».`);
+        bloq(`Code postal invalide pour « ${champ.label} ».`, champ.name);
       }
-      if (!a.commune) bloquants.push(`Commune manquante pour « ${champ.label} ».`);
-      if (!a.voie) alertes.push(`Libellé de voie manquant pour « ${champ.label} ».`);
+      if (!a.commune) bloq(`Commune manquante pour « ${champ.label} ».`, champ.name);
+      if (!a.voie) alerte(`Libellé de voie manquant pour « ${champ.label} ».`, champ.name);
       // Le type de voie est un code du référentiel INPI (RUE, AV, BD…).
       if (a.typeVoie && !enumeration('typeVoie')[String(a.typeVoie).toUpperCase()]) {
-        alertes.push(`Type de voie « ${a.typeVoie} » absent du référentiel INPI pour « ${champ.label} » : utiliser un code officiel (RUE, AV, BD…).`);
+        alerte(`Type de voie « ${a.typeVoie} » absent du référentiel INPI pour « ${champ.label} » : utiliser un code officiel (RUE, AV, BD…).`, champ.name);
       }
     }
     if (champ.type === 'personne' && !estVide(reponses[champ.name])) {
       const p = reponses[champ.name];
-      if (!p.nom) bloquants.push(`Nom manquant pour « ${champ.label} ».`);
-      if (!p.date_naissance) bloquants.push(`Date de naissance manquante pour « ${champ.label} » (exigée par le RNE).`);
-      if (!p.nationalite) alertes.push(`Nationalité manquante pour « ${champ.label} ».`);
-      if (!p.adresse?.codePostal) alertes.push(`Adresse personnelle incomplète pour « ${champ.label} ».`);
+      if (!p.nom) bloq(`Nom manquant pour « ${champ.label} ».`, champ.name);
+      if (!p.date_naissance) bloq(`Date de naissance manquante pour « ${champ.label} » (exigée par le RNE).`, champ.name);
+      if (!p.nationalite) alerte(`Nationalité manquante pour « ${champ.label} ».`, champ.name);
+      if (!p.adresse?.codePostal) alerte(`Adresse personnelle incomplète pour « ${champ.label} ».`, champ.name);
     }
     if (champ.type === 'date' && reponses[champ.name]) {
       const d = new Date(reponses[champ.name]);
-      if (Number.isNaN(d.getTime())) bloquants.push(`Date illisible pour « ${champ.label} ».`);
-      else if (d - maintenant > 365 * JOUR_MS) alertes.push(`« ${champ.label} » est à plus d’un an : vérifier la saisie.`);
+      if (Number.isNaN(d.getTime())) bloq(`Date illisible pour « ${champ.label} ».`, champ.name);
+      else if (d - maintenant > 365 * JOUR_MS) alerte(`« ${champ.label} » est à plus d’un an : vérifier la saisie.`, champ.name);
     }
   }
 
   /* --- codes de référentiel --- */
   const codeForme = reponses.forme_juridique_code || fiche?.forme_juridique_code;
   if (codeForme && !formeJuridique(codeForme)) {
-    alertes.push(`Forme juridique ${codeForme} absente du référentiel local : le code transmis à l’INPI doit être vérifié.`);
+    alerte(`Forme juridique ${codeForme} absente du référentiel local : le code transmis à l’INPI doit être vérifié.`);
   }
   const fonction = reponses.fonction || reponses.dirigeant?.fonction;
   if (fonction && !roleDepuisFonction(fonction)) {
-    alertes.push(`Fonction « ${fonction} » non reconnue : le code rôle transmis à l’INPI doit être vérifié.`);
+    alerte(`Fonction « ${fonction} » non reconnue : le code rôle transmis à l’INPI doit être vérifié.`);
   }
 
   /* --- contrôles propres à la formalité --- */
@@ -120,18 +125,18 @@ function controler(dossier, maintenant = new Date()) {
   const fournies = new Set((dossier.pieces || []).map((p) => p.code));
   const exigees = piecesExigees(dossier.type, reponses);
   const piecesManquantes = exigees.filter((p) => p.obligatoire && !fournies.has(p.code));
-  for (const p of piecesManquantes) bloquants.push(`Pièce obligatoire manquante : ${p.libelle}.`);
+  for (const p of piecesManquantes) bloq(`Pièce obligatoire manquante : ${p.libelle}.`, '_pieces');
   for (const p of exigees.filter((x) => !x.obligatoire && !fournies.has(x.code))) {
-    infos.push(`Pièce facultative non jointe : ${p.libelle}${p.aide ? ` — ${p.aide}` : ''}`);
+    info(`Pièce facultative non jointe : ${p.libelle}${p.aide ? ` — ${p.aide}` : ''}`, '_pieces');
   }
   // Le Guichet unique n'accepte que des PDF de moins de 10 Mo.
   for (const p of dossier.pieces || []) {
     const nom = p.nom || p.filename || p.code;
     if (!/\.pdf$/i.test(nom)) {
-      bloquants.push(`La pièce « ${nom} » doit être au format PDF (seul format accepté par le guichet unique).`);
+      bloq(`La pièce « ${nom} » doit être au format PDF (seul format accepté par le guichet unique).`, '_pieces');
     }
     if (p.taille && p.taille > config.pieceMaxOctets) {
-      bloquants.push(`La pièce « ${nom} » dépasse 10 Mo (${Math.round(p.taille / 1048576)} Mo).`);
+      bloq(`La pièce « ${nom} » dépasse 10 Mo (${Math.round(p.taille / 1048576)} Mo).`, '_pieces');
     }
   }
 
@@ -142,7 +147,7 @@ function controler(dossier, maintenant = new Date()) {
     const { indicateursEvenement } = require('./payload');
     const contenu = dossier.payload.corps?.newFormality?.content;
     if (contenu && indicateursEvenement(contenu).length === 0) {
-      bloquants.push('Aucun indicateur d’évènement dans la formalité de modification : le guichet unique la rejetterait.');
+      bloq('Aucun indicateur d’évènement dans la formalité de modification : le guichet unique la rejetterait.');
     }
   }
 

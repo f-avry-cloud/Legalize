@@ -430,7 +430,30 @@ function ligneListeHtml(champ, valeur, rang, contexte) {
   </div>`;
 }
 
+/** Vrai si la valeur saisie ne compte pas comme renseignée. */
+function champVide(valeur) {
+  if (valeur === undefined || valeur === null || valeur === '') return true;
+  if (Array.isArray(valeur)) return valeur.length === 0;
+  if (typeof valeur === 'object') return Object.values(valeur).every(champVide);
+  return false;
+}
+
+/**
+ * Enveloppe chaque champ : c'est elle qui porte le caractère obligatoire,
+ * l'état rempli et l'ancre vers laquelle un contrôle peut renvoyer.
+ */
 function champHtml(champ, valeur, contexte) {
+  const corps = champCorps(champ, valeur, contexte);
+  if (champ.type === 'section') {
+    return `<div class="champ-bloc bloc-section" data-section="${esc(champ.name)}">${corps}</div>`;
+  }
+  const classes = ['champ-bloc'];
+  if (champ.required) classes.push('champ-requis');
+  if (champ.required && !champVide(valeur)) classes.push('rempli');
+  return `<div class="${classes.join(' ')}" data-champ="${esc(champ.name)}">${corps}</div>`;
+}
+
+function champCorps(champ, valeur, contexte) {
   const id = `champ-${champ.name}`;
   const aide = champ.aide ? `<em class="aide">${esc(champ.aide)}</em>` : '';
   const requis = champ.required ? ' <span class="requis">*</span>' : '';
@@ -631,6 +654,14 @@ async function formaliteDetail(id) {
         <div class="card">
           <h2>Ce qui change</h2>
           <p class="muted mb">${esc(def?.resume || '')} Seules les informations que l'INPI ne connaît pas encore sont demandées.</p>
+          <div class="barre-progression" id="progression-form">
+            <div class="jauge"><span id="jauge-remplie"></span></div>
+            <span class="compteur" id="compteur-requis"></span>
+            <label class="bascule-requis">
+              <input type="checkbox" id="filtre-requis"> Obligatoires seulement
+            </label>
+          </div>
+          <nav class="sommaire-sections" id="sommaire-sections"></nav>
           <form id="form-reponses">
             ${champs.map((c) => champHtml(c, f.reponses[c.name], {
     formes: etat.formes_juridiques, typesVoie: etat.types_voie, dirigeants: f.fiche?.dirigeants || [],
@@ -641,7 +672,7 @@ async function formaliteDetail(id) {
           </form>
         </div>
 
-        <div class="card mt">
+        <div class="card mt" id="bloc-pieces">
           <h2>Pièces justificatives</h2>
           <p class="muted mb">Codes officiels du guichet unique. Format PDF uniquement, 10 Mo maximum par pièce.</p>
           ${f.pieces_exigees.length ? `<table><tbody>${f.pieces_exigees.map((p) => {
@@ -704,6 +735,27 @@ async function formaliteDetail(id) {
   // Un champ « pilote » (nature, sens, affectation) réorganise le
   // questionnaire : on enregistre et on redessine immédiatement.
   form.querySelectorAll('select[data-pilote]').forEach((s) => s.addEventListener('change', () => form.requestSubmit()));
+
+  brancherProgression(form);
+
+  // « Corriger » depuis un contrôle : on ouvre le filtre si l'encart visé est
+  // masqué, sinon le clic n'aurait aucun effet visible.
+  document.querySelectorAll('.lien-controle').forEach((lien) => {
+    lien.onclick = () => {
+      const cible = lien.dataset.cible;
+      if (cible === '_pieces') {
+        allerA(document.getElementById('bloc-pieces') || document.querySelector('[data-ajout-piece]')?.closest('.card'));
+        return;
+      }
+      const bloc = form.querySelector(`.champ-bloc[data-champ="${cible}"]`);
+      if (!bloc) return;
+      if (bloc.offsetParent === null) {
+        const filtre = document.getElementById('filtre-requis');
+        if (filtre?.checked) { filtre.checked = false; filtre.dispatchEvent(new Event('change')); }
+      }
+      allerA(bloc);
+    };
+  });
 
   // Listes répétables : on clone la première ligne plutôt que de redessiner
   // tout le questionnaire, pour ne pas perdre la saisie en cours.
@@ -1002,8 +1054,16 @@ function valeurLisible(valeur) {
 
 function controlesHtml(c) {
   if (!c) return '';
+  // Chaque constat renvoie sur l'encart fautif : sur un questionnaire de
+  // cinquante champs, retrouver « Commune manquante » à la main est pénible.
+  const item = (c2) => {
+    const message = esc(c2.message || c2);
+    return c2.champ
+      ? `<li><button type="button" class="lien-controle" data-cible="${esc(c2.champ)}">${message}<span class="fleche-controle">Corriger</span></button></li>`
+      : `<li>${message}</li>`;
+  };
   const bloc = (titre, items, classe) => (items.length ? `<div class="alerte alerte-${classe}">
-      <strong>${titre}</strong><ul>${items.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></div>` : '');
+      <strong>${titre}</strong><ul class="liste-controles">${items.map(item).join('')}</ul></div>` : '');
   const echeance = c.echeance ? `<div class="alerte alerte-${c.echeance.etat === 'depasse' ? 'bloquant' : (c.echeance.etat === 'imminent' ? 'alerte' : 'info')}">
       <strong>Délai légal</strong> — dépôt attendu au plus tard le ${fmtDate(c.echeance.limite)}
       (${c.echeance.jours_restants >= 0 ? `${c.echeance.jours_restants} jour(s) restants` : `dépassé de ${Math.abs(c.echeance.jours_restants)} jour(s)`}).
@@ -1058,3 +1118,104 @@ routes.push(
   { re: /^\/formalites\/new$/, view: formaliteNew, nav: 'formalites' },
   { re: /^\/formalites\/(\d+)$/, view: formaliteDetail, nav: 'formalites' },
 );
+
+
+/* ------------------------------------------- questionnaire progressif */
+
+/**
+ * Rattache chaque champ à la section qui le précède, compte les obligatoires
+ * restants, et pilote le filtre « obligatoires seulement ».
+ *
+ * Sur un CERFA de création — onze sections, cinquante-six champs — dérouler
+ * un formulaire d'un seul tenant est décourageant : le sommaire dit où l'on
+ * en est, et chaque contrôle renvoie sur l'encart à corriger.
+ */
+function brancherProgression(form) {
+  const sections = [];
+  let courante = null;
+  for (const bloc of form.querySelectorAll('.champ-bloc')) {
+    if (bloc.classList.contains('bloc-section')) {
+      courante = { titre: bloc.textContent.trim(), noeud: bloc, champs: [] };
+      sections.push(courante);
+      continue;
+    }
+    if (!courante) {
+      courante = { titre: 'Informations', noeud: null, champs: [] };
+      sections.push(courante);
+    }
+    courante.champs.push(bloc);
+    bloc.dataset.section = String(sections.length - 1);
+  }
+
+  const $sommaire = document.getElementById('sommaire-sections');
+  const $jauge = document.getElementById('jauge-remplie');
+  const $compteur = document.getElementById('compteur-requis');
+  const $filtre = document.getElementById('filtre-requis');
+  if (!$sommaire) return;
+
+  $sommaire.innerHTML = sections.map((s, i) => `
+    <button type="button" class="onglet-section" data-section="${i}">
+      <span class="nom">${esc(s.titre)}</span>
+      <span class="etat" data-etat="${i}"></span>
+    </button>`).join('');
+
+  function rafraichir() {
+    let requis = 0;
+    let remplis = 0;
+    sections.forEach((s, i) => {
+      const r = s.champs.filter((c) => c.classList.contains('champ-requis'));
+      const f = r.filter((c) => c.classList.contains('rempli'));
+      requis += r.length;
+      remplis += f.length;
+      const etat = $sommaire.querySelector(`[data-etat="${i}"]`);
+      if (etat) {
+        etat.textContent = r.length ? `${f.length}/${r.length}` : '—';
+        etat.classList.toggle('complet', r.length > 0 && f.length === r.length);
+      }
+      // Une section dont aucun champ n'est visible n'a pas lieu d'être.
+      const visible = s.champs.some((c) => c.offsetParent !== null || !form.classList.contains('requis-seuls'));
+      if (s.noeud) s.noeud.hidden = form.classList.contains('requis-seuls') && !visible;
+    });
+    if ($jauge) $jauge.style.width = requis ? `${Math.round((remplis / requis) * 100)}%` : '100%';
+    if ($compteur) {
+      $compteur.textContent = requis
+        ? `${remplis} sur ${requis} information(s) obligatoire(s)`
+        : 'Aucune information obligatoire';
+    }
+  }
+
+  // Un champ devient « rempli » dès la saisie, sans attendre l'enregistrement.
+  form.addEventListener('input', (e) => {
+    const bloc = e.target.closest('.champ-bloc');
+    if (!bloc) return;
+    const rempli = [...bloc.querySelectorAll('input, select, textarea')]
+      .some((c) => (c.type === 'checkbox' ? c.checked : String(c.value || '').trim() !== ''));
+    bloc.classList.toggle('rempli', rempli);
+    rafraichir();
+  });
+  form.addEventListener('change', () => rafraichir());
+
+  $sommaire.addEventListener('click', (e) => {
+    const onglet = e.target.closest('.onglet-section');
+    if (onglet) allerA(sections[Number(onglet.dataset.section)]?.noeud || sections[0].champs[0]);
+  });
+
+  if ($filtre) {
+    $filtre.addEventListener('change', () => {
+      form.classList.toggle('requis-seuls', $filtre.checked);
+      rafraichir();
+    });
+  }
+
+  rafraichir();
+}
+
+/** Amène un encart à l'écran et le signale brièvement. */
+function allerA(noeud) {
+  if (!noeud) return;
+  noeud.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  noeud.classList.add('surligne');
+  setTimeout(() => noeud.classList.remove('surligne'), 1600);
+  const premier = noeud.querySelector('input, select, textarea');
+  if (premier) setTimeout(() => premier.focus({ preventScroll: true }), 400);
+}

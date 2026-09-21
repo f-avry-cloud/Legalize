@@ -125,7 +125,7 @@ const dossierIncomplet = {
 test('champ obligatoire manquant → bloquant', () => {
   const c = controler(dossierIncomplet);
   assert.ok(!c.pret);
-  assert.ok(c.bloquants.some((m) => /Nouvelle adresse/i.test(m)));
+  assert.ok(c.bloquants.some((x) => /Nouvelle adresse/i.test(x.message)));
 });
 const dossierComplet = {
   type: 'transfert_siege', siren: '552100554', fiche,
@@ -145,21 +145,21 @@ test('dossier complet → prêt', () => {
 });
 test('pièce non PDF → bloquant', () => {
   const c = controler({ ...dossierComplet, pieces: [...dossierComplet.pieces.slice(1), { code: 'PJ_54', nom: 'pv.docx' }] });
-  assert.ok(c.bloquants.some((m) => /format PDF/.test(m)));
+  assert.ok(c.bloquants.some((x) => /format PDF/.test(x.message)));
 });
 test('pièce de plus de 10 Mo → bloquant', () => {
   const c = controler({ ...dossierComplet, pieces: [...dossierComplet.pieces, { code: 'PJ_51', nom: 'gros.pdf', taille: 12 * 1024 * 1024 }] });
-  assert.ok(c.bloquants.some((m) => /10 Mo/.test(m)));
+  assert.ok(c.bloquants.some((x) => /10 Mo/.test(x.message)));
 });
 test('type de voie hors référentiel → alerte', () => {
   const c = controler({
     ...dossierComplet,
     reponses: { ...dossierComplet.reponses, nouvelle_adresse: { ...dossierComplet.reponses.nouvelle_adresse, typeVoie: 'RUELLE' } },
   });
-  assert.ok(c.alertes.some((m) => /référentiel INPI/.test(m)));
+  assert.ok(c.alertes.some((x) => /référentiel INPI/.test(x.message)));
 });
 test('SIREN invalide → bloquant', () => {
-  assert.ok(controler({ ...dossierComplet, siren: '552100555' }).bloquants.some((m) => /SIREN invalide/.test(m)));
+  assert.ok(controler({ ...dossierComplet, siren: '552100555' }).bloquants.some((x) => /SIREN invalide/.test(x.message)));
 });
 test('capital incohérent → bloquant', () => {
   const c = controler({
@@ -167,11 +167,11 @@ test('capital incohérent → bloquant', () => {
     reponses: { date_decision: '2026-09-01', sens: 'augmentation', nouveau_capital: 50000, modalite: 'APPORT_NUMERAIRE' },
     pieces: [{ code: 'PJ_155', nom: 'a.pdf' }, { code: 'PJ_02', nom: 'b.pdf' }, { code: 'PJ_08', nom: 'c.pdf' }, { code: 'PJ_56', nom: 'd.pdf' }],
   });
-  assert.ok(c.bloquants.some((m) => /Augmentation déclarée/.test(m)));
+  assert.ok(c.bloquants.some((x) => /Augmentation déclarée/.test(x.message)));
 });
 test('modification sans indicateur d’évènement → bloquant', () => {
   const c = controler({ ...dossierComplet, payload: { corps: { newFormality: { content: { personneMorale: {} } } } } });
-  assert.ok(c.bloquants.some((m) => /indicateur d’évènement/.test(m)));
+  assert.ok(c.bloquants.some((x) => /indicateur d’évènement/.test(x.message)));
 });
 test('approbation avant clôture → bloquant', () => {
   const c = controler({
@@ -179,7 +179,7 @@ test('approbation avant clôture → bloquant', () => {
     reponses: { exercice_clos: '2025-12-31', date_approbation: '2025-06-30', resultat: 1000, affectation: 'report' },
     pieces: [{ code: 'PJ_232', nom: 'comptes.pdf' }, { code: 'PJ_236', nom: 'pv.pdf' }],
   });
-  assert.ok(c.bloquants.some((m) => /approbation/i.test(m)));
+  assert.ok(c.bloquants.some((x) => /approbation/i.test(x.message)));
 });
 
 console.log('\nDélais légaux');
