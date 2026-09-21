@@ -682,3 +682,22 @@ dialog h3 { font-weight: 800; font-size: 25px; margin-bottom: 20px; letter-spaci
 }
 @media (max-width: 520px) { .maj-dispo { left: 16px; right: 16px; translate: none; border-radius: var(--r-sm); } }
 .version-app { font-family: ui-monospace, monospace; font-size: 9.5px; opacity: .55; margin-top: 4px !important; }
+
+/* ------------------------------------------------- bascule pipeline/liste */
+
+.entete-vue { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.entete-vue h2 { margin-bottom: 0; }
+
+.segments { display: inline-flex; gap: 3px; padding: 3px; border-radius: var(--r-full); background: var(--glass); border: 1px solid var(--line); }
+.segments button {
+  border: none; background: transparent; box-shadow: none; backdrop-filter: none;
+  padding: 7px 15px; font-size: 12.5px; font-weight: 700; color: var(--ink-3); border-radius: var(--r-full);
+}
+.segments button:hover { background: var(--glass-fort); color: var(--ink); transform: none; box-shadow: none; }
+.segments button.actif { background: var(--grad); color: #fff; box-shadow: var(--halo); }
+
+.filtres { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.filtres .field { margin: 0; flex: 0 0 auto; }
+.filtres .field.recherche { flex: 1 1 320px; }
+.filtres .field input, .filtres .field select { margin-top: 0; }
+td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--ink-2); }

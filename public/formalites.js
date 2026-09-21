@@ -92,8 +92,15 @@ async function formalitesDashboard() {
     </div>
 
     <div class="card mt">
-      <h2>Pipeline — ${dossiers.length} dossier(s)</h2>
-      ${pipelineHtml(dossiers)}
+      <div class="entete-vue">
+        <h2>Dossiers — ${dossiers.length}</h2>
+        <div class="segments" role="tablist">
+          <button role="tab" data-vue="pipeline">Pipeline</button>
+          <button role="tab" data-vue="liste">Liste &amp; recherche</button>
+        </div>
+      </div>
+      <div id="vue-pipeline">${pipelineHtml(dossiers)}</div>
+      <div id="vue-liste" hidden>${listeHtml(dossiers)}</div>
     </div>
 
     <div class="card mt">
@@ -113,6 +120,8 @@ async function formalitesDashboard() {
       testConnexionDialog(await api('POST', '/inpi/test-connexion', {}));
     } catch (err) { toast(err.message, true); } finally { e.target.disabled = false; }
   };
+
+  brancherVues(dossiers);
 
   document.getElementById('btn-importer').onclick = async (e) => {
     e.target.disabled = true;
@@ -165,6 +174,81 @@ function pipelineHtml(dossiers) {
       </div>
     </section>`;
   }).join('')}</div>`;
+}
+
+/**
+ * Vue liste : le pipeline montre le travail en cours, la liste sert d'archive.
+ * Un dossier validé il y a deux ans n'a pas sa place dans une colonne — il se
+ * retrouve par recherche.
+ */
+function listeHtml(dossiers) {
+  return `<div class="filtres">
+      <label class="field recherche">
+        <input id="q-dossiers" type="search" placeholder="Rechercher : société, type, référence, liasse, SIREN…" autocomplete="off">
+      </label>
+      <label class="field">
+        <select id="f-statut">
+          <option value="">Tous les statuts</option>
+          <option value="__encours">En cours seulement</option>
+          <option value="VALIDATED">Validées</option>
+          <option value="REJECTED">Rejetées</option>
+          <option value="BROUILLON">Brouillons</option>
+          <option value="AMENDMENT_PENDING">À régulariser</option>
+        </select>
+      </label>
+    </div>
+    <div id="resultats-liste">${lignesListeHtml(dossiers)}</div>`;
+}
+
+function lignesListeHtml(dossiers) {
+  if (!dossiers.length) return '<div class="empty">Aucun dossier ne correspond</div>';
+  return `<table>
+    <thead><tr><th>Dossier</th><th>Société</th><th>Statut</th><th>Liasse</th><th>Échéance</th></tr></thead>
+    <tbody>${dossiers.map((f) => `
+      <tr class="clickable" onclick="location.hash='#/formalites/${f.id}'">
+        <td><strong>${esc(f.type_libelle)}</strong>
+          <div class="sub">${esc(f.reference || '')}${f.importe ? ' · importée' : ''}${f.simule ? ' · simulation' : ''}</div></td>
+        <td>${esc(f.societe_nom || '—')}</td>
+        <td>${badgeStatut(f)}</td>
+        <td class="nowrap"><span class="ref">${esc(f.numero_liasse || '—')}</span></td>
+        <td>${echeanceHtml(f)}</td>
+      </tr>`).join('')}</tbody></table>`;
+}
+
+/** Bascule pipeline / liste, et filtrage de la liste. */
+function brancherVues(dossiers) {
+  const $pipeline = document.getElementById('vue-pipeline');
+  const $liste = document.getElementById('vue-liste');
+  const onglets = document.querySelectorAll('.segments [data-vue]');
+
+  const activer = (vue) => {
+    $pipeline.hidden = vue !== 'pipeline';
+    $liste.hidden = vue !== 'liste';
+    onglets.forEach((o) => o.classList.toggle('actif', o.dataset.vue === vue));
+    try { localStorage.setItem('legalize-vue-formalites', vue); } catch (e) { /* stockage indisponible */ }
+  };
+  onglets.forEach((o) => { o.onclick = () => activer(o.dataset.vue); });
+  let choix = 'pipeline';
+  try { choix = localStorage.getItem('legalize-vue-formalites') || 'pipeline'; } catch (e) { /* idem */ }
+  activer(choix);
+
+  const $q = document.getElementById('q-dossiers');
+  const $statut = document.getElementById('f-statut');
+  const TERMINES = ['VALIDATED', 'REJECTED'];
+  const filtrer = () => {
+    const terme = ($q.value || '').trim().toLowerCase();
+    const statut = $statut.value;
+    const lot = dossiers.filter((f) => {
+      if (statut === '__encours' && TERMINES.includes(f.statut)) return false;
+      if (statut && statut !== '__encours' && f.statut !== statut) return false;
+      if (!terme) return true;
+      return [f.type_libelle, f.societe_nom, f.reference, f.numero_liasse, f.siren, f.libelle]
+        .some((v) => String(v || '').toLowerCase().includes(terme));
+    });
+    document.getElementById('resultats-liste').innerHTML = lignesListeHtml(lot);
+  };
+  $q.addEventListener('input', filtrer);
+  $statut.addEventListener('change', filtrer);
 }
 
 function carteDossierHtml(f, rang) {
