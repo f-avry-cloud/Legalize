@@ -17,6 +17,7 @@
 const { config, etat } = require('./config');
 const { jeton, appel, chemin, ErreurInpi } = require('./client');
 const { normaliserEntreprise } = require('./normalize');
+const guichet = require('./guichet');
 
 const SIREN_TEST_DEFAUT = '552100554';
 
@@ -173,6 +174,22 @@ async function diagnostiquerInventaire() {
       }
       rapport.services.push(essai);
     }
+
+    // Le chemin réellement emprunté par l'inventaire, sans rien enregistrer.
+    const parcours = { service, via: 'listerTout' };
+    try {
+      const lot = await guichet.listerTout({ service });
+      parcours.ok = true;
+      parcours.recus = lot.length;
+      parcours.avec_identifiant = lot.filter((f) => f.inpi_id).length;
+      parcours.echantillon = lot.slice(0, 3).map((f) => ({
+        inpi_id: f.inpi_id, liasse: f.numero_liasse, statut: f.statut, type: f.type_formalite,
+      }));
+    } catch (e) {
+      parcours.ok = false;
+      parcours.erreur = String(e.message || e).slice(0, 400);
+    }
+    rapport.services.push(parcours);
   }
   return rapport;
 }
