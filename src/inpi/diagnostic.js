@@ -127,4 +127,54 @@ async function diagnostiquerTout(options = {}) {
   return { etat: etat(), rne, guichet, ok: rne.ok && guichet.ok };
 }
 
-module.exports = { diagnostiquer, diagnostiquerTout, SIREN_TEST_DEFAUT };
+
+/**
+ * Inventaire brut : ce que le compte INPI renvoie réellement sur les
+ * collections de formalités, sans rien enregistrer. Sert quand « Importer »
+ * ne ramène aucun dossier : on veut savoir si la collection est vide, si
+ * l'INPI filtre, ou si les champs ne portent pas les noms attendus.
+ */
+async function diagnostiquerInventaire() {
+  const rapport = { mode: config.modeGuichet, compte: etat().guichet.compte, services: [] };
+  if (config.modeGuichet === 'simulation') {
+    rapport.note = 'Mode simulation : aucune requête n\'est envoyée à l\'INPI.';
+    return rapport;
+  }
+
+  const collections = [
+    { service: 'formalites', chemin: config.guichet.paths.formalites },
+    { service: 'comptes_annuels', chemin: config.guichet.paths.comptesAnnuels },
+  ];
+
+  for (const { service, chemin: route } of collections) {
+    for (const variante of ['allege', 'complet']) {
+      const params = { itemsPerPage: 5, page: 1 };
+      if (variante === 'allege') params['groups[]'] = 'formality:read:no-content';
+      const essai = { service, variante, chemin: route, params: { ...params } };
+      try {
+        const rep = await appel('guichet', { chemin: route, params });
+        const membres = Array.isArray(rep) ? rep : (rep?.['hydra:member'] || rep?.member || rep?.items || []);
+        essai.ok = true;
+        essai.total_annonce = rep?.['hydra:totalItems'] ?? rep?.totalItems ?? null;
+        essai.recus = membres.length;
+        essai.cles_reponse = rep && !Array.isArray(rep) ? Object.keys(rep).slice(0, 12) : ['(tableau)'];
+        essai.cles_premier = membres[0] ? Object.keys(membres[0]).slice(0, 40) : [];
+        essai.echantillon = membres.slice(0, 3).map((m) => ({
+          id: m.id ?? null,
+          liasse: m.liasseNumber ?? m.liasse_number ?? null,
+          statut: m.status ?? m.statut ?? null,
+          type: m.typeFormalite ?? m.type_formalite ?? null,
+          siren: m.siren ?? null,
+        }));
+      } catch (e) {
+        essai.ok = false;
+        essai.statut_http = e.status ?? null;
+        essai.erreur = String(e.message || e).slice(0, 400);
+      }
+      rapport.services.push(essai);
+    }
+  }
+  return rapport;
+}
+
+module.exports = { diagnostiquer, diagnostiquerTout, diagnostiquerInventaire, SIREN_TEST_DEFAUT };

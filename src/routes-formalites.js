@@ -19,7 +19,7 @@ const guichet = require('./inpi/guichet');
 const { etat } = require('./inpi/config');
 const { catalogue } = require('./inpi/catalogue');
 const { formesCreation, enumeration } = require('./inpi/referentiels');
-const { diagnostiquer, diagnostiquerTout } = require('./inpi/diagnostic');
+const { diagnostiquer, diagnostiquerTout, diagnostiquerInventaire } = require('./inpi/diagnostic');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -47,6 +47,15 @@ router.post('/inpi/test-connexion', async (req, res) => {
     return res.json(await diagnostiquer(api, { siren }));
   }
   return res.json(await diagnostiquerTout({ siren }));
+});
+
+/**
+ * Ce que le compte INPI renvoie vraiment sur ses collections de formalités.
+ * Lecture seule, rien n'est enregistré : c'est l'outil à ouvrir quand
+ * « Importer depuis l'INPI » ne ramène aucun dossier.
+ */
+router.get('/inpi/diagnostic-import', async (req, res) => {
+  res.json(await diagnostiquerInventaire());
 });
 
 router.get('/inpi/recherche', async (req, res) => {
