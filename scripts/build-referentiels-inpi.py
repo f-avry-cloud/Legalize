@@ -29,6 +29,9 @@ except ImportError:  # pragma: no cover
 
 SORTIE = pathlib.Path(__file__).resolve().parent.parent / "src" / "inpi" / "data"
 
+# Onglets du dictionnaire qui ne sont pas des tables code/libellé.
+NON_ENUMERATIONS = {"Types Et Classes", "typeDocument", "events", "role"}
+
 # Énumérations du dictionnaire reprises telles quelles (onglet → nom de sortie).
 ENUMERATIONS = {
     "typeFormalite": "typeFormalite",
@@ -90,8 +93,50 @@ def dictionnaire(chemin):
             enums[nom] = paires(wb[onglet])
         else:
             print(f"  ! onglet absent : {onglet}", file=sys.stderr)
+
+    # Tous les autres onglets à deux colonnes sont eux aussi des énumérations
+    # officielles. Les omettre obligeait à saisir leurs codes à la main, ce qui
+    # est précisément la source d'erreurs que ce script existe pour supprimer.
+    deja = set(ENUMERATIONS.values())
+    for onglet in wb.sheetnames:
+        if onglet in NON_ENUMERATIONS or onglet.startswith("Motifs de rejet"):
+            continue
+        nom = ENUMERATIONS.get(onglet, onglet)
+        if nom in deja:
+            continue
+        table = paires(wb[onglet])
+        if table:
+            enums[nom] = table
+            deja.add(nom)
     ecrire("enumerations", enums, source)
+
+    ecrire("dictionnaire", classes(wb["Types Et Classes"]), source)
     wb.close()
+
+
+def classes(ws):
+    """Onglet « Types Et Classes » : une entête par classe, puis ses propriétés.
+
+    C'est la structure du champ `content` d'une formalité. Sans elle, le
+    formulaire et le payload se construisent de mémoire — et se trompent.
+    """
+    resultat = {}
+    courante = None
+    for ligne in ws.iter_rows(values_only=True):
+        if not ligne or ligne[0] in (None, ""):
+            continue
+        nom = str(ligne[0]).strip()
+        if nom.startswith("App\\"):
+            courante = nom.split("\\")[-1]
+            resultat[courante] = {"classe": nom, "proprietes": {}}
+        elif courante and nom != "Type de la propriété":
+            type_ = str(ligne[1]).strip() if len(ligne) > 1 and ligne[1] else None
+            desc = str(ligne[2]).strip() if len(ligne) > 2 and ligne[2] else None
+            resultat[courante]["proprietes"][nom] = {
+                "type": type_,
+                "description": None if desc in (None, "n/a") else desc,
+            }
+    return resultat
 
 
 def formes_juridiques(chemin):

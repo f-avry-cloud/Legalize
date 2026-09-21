@@ -19,6 +19,7 @@ const ROLES = require('./data/roles.json').valeurs;
 const PIECES = require('./data/pieces-justificatives.json').valeurs;
 const EVENEMENTS = require('./data/evenements.json').valeurs;
 const ENUMS = require('./data/enumerations.json').valeurs;
+const DICTIONNAIRE = require('./data/dictionnaire.json').valeurs;
 
 /* ------------------------------------------------------ formes juridiques */
 
@@ -127,6 +128,20 @@ function piece(code) {
 
 /* ----------------------------------------------------------- énumérations */
 
+/**
+ * Propriétés officielles d'un bloc du CERFA (« Types Et Classes » du
+ * dictionnaire mandataire). Sert à vérifier qu'un champ envoyé existe bien
+ * et à ne plus construire le payload de mémoire.
+ */
+function bloc(nom) {
+  return DICTIONNAIRE[nom]?.proprietes || {};
+}
+
+/** Vrai si la propriété appartient au bloc : garde-fou contre les fautes de frappe. */
+function proprieteConnue(nomBloc, propriete) {
+  return Object.prototype.hasOwnProperty.call(bloc(nomBloc), propriete);
+}
+
 function enumeration(nom) {
   return ENUMS[nom] || {};
 }
@@ -191,6 +206,7 @@ module.exports = {
   role, roleDepuisFonction, rolePrincipal,
   piece, PIECES,
   EVENEMENTS, enumeration, libelleEnum,
+  bloc, proprieteConnue, DICTIONNAIRE,
   TYPES_FORMALITE, TYPES_PERSONNE, ROLE_ETABLISSEMENT, STATUT_BLOC,
   STATUTS, statut, normaliserStatut,
 };
