@@ -53,41 +53,57 @@ function bandeauMode(etat) {
 
 /* ================================================================ suivi */
 
+/**
+ * Colonnes du pipeline : les statuts du guichet unique regroupés par « qui
+ * doit jouer ». La colonne où se trouve un dossier dit tout de suite ce qu'il
+ * attend.
+ */
+const COLONNES = [
+  { titre: 'Brouillons', classe: '', statuts: ['BROUILLON'] },
+  { titre: 'Déposées', classe: '', statuts: ['RECEIVED', 'SIGNED', 'PAID', 'PAYMENT_VALIDATION_PENDING', 'VALIDATION_PENDING', 'AMENDED'] },
+  { titre: 'À signer', classe: 'c-action', statuts: ['SIGNATURE_PENDING', 'AMENDMENT_SIGNATURE_PENDING'] },
+  { titre: 'À payer', classe: 'c-action', statuts: ['PAYMENT_PENDING', 'AMENDMENT_PAYMENT_PENDING'] },
+  { titre: 'À régulariser', classe: 'c-alerte', statuts: ['AMENDMENT_PENDING', 'EXPIRED', 'ERROR'] },
+  { titre: 'Terminées', classe: 'c-ok', statuts: ['VALIDATED', 'REJECTED'] },
+];
+
 async function formalitesDashboard() {
-  const [d, etat] = await Promise.all([api('GET', '/formalites/dashboard'), getEtatInpi()]);
+  const [d, etat, dossiers] = await Promise.all([
+    api('GET', '/formalites/dashboard'),
+    getEtatInpi(),
+    api('GET', '/formalites'),
+  ]);
   const c = d.compteurs;
   $main.innerHTML = `
     <div class="page-head"><h1>Formalités</h1>
       <div>
         <button id="btn-test-inpi">Tester la connexion INPI</button>
-        <button id="btn-sync">Synchroniser avec l'INPI</button>
+        <button id="btn-sync">Synchroniser</button>
         <a class="btn btn-primary" href="#/formalites/new">Nouvelle formalité</a>
       </div>
     </div>
     ${bandeauMode(etat)}
     <div class="grid cols-4">
-      <div class="card"><div class="stat" style="color:${c.a_traiter ? 'var(--gold)' : 'var(--ok)'}">${c.a_traiter}</div><div class="stat-label">En attente de nous</div></div>
+      <div class="card"><div class="stat" style="color:${c.a_traiter ? 'var(--warn)' : 'var(--ok)'}">${c.a_traiter}</div><div class="stat-label">En attente de nous</div></div>
       <div class="card"><div class="stat">${c.a_signer}</div><div class="stat-label">À signer</div></div>
       <div class="card"><div class="stat">${c.a_payer}</div><div class="stat-label">À payer</div></div>
-      <div class="card"><div class="stat" style="color:${c.regularisations || c.en_retard ? 'var(--danger)' : 'var(--ok)'}">${c.regularisations + c.en_retard}</div><div class="stat-label">Régularisations & retards</div></div>
+      <div class="card"><div class="stat" style="color:${c.regularisations + c.en_retard ? 'var(--danger)' : 'var(--ok)'}">${c.regularisations + c.en_retard}</div><div class="stat-label">Régularisations & retards</div></div>
     </div>
-    <div class="grid cols-2 mt">
-      <div class="card">
-        <h2>À traiter — l'INPI attend une action de notre côté</h2>
-        ${listeFormalites(d.a_traiter, 'Rien en attente de notre côté')}
-      </div>
-      <div class="card">
-        <h2>Prochaines échéances légales</h2>
-        ${d.echeances.length ? `<table><tbody>${d.echeances.map((f) => `
-          <tr class="clickable" onclick="location.hash='#/formalites/${f.id}'">
-            <td>${esc(f.type_libelle)}<div class="sub">${esc(f.societe_nom)}</div></td>
-            <td class="right">${echeanceHtml(f)}</td>
-          </tr>`).join('')}</tbody></table>` : '<div class="empty">Aucune échéance en cours</div>'}
-      </div>
-    </div>
+
     <div class="card mt">
-      <h2>Tous les dossiers</h2>
-      ${listeFormalites(d.recentes, 'Aucun dossier. Ouvrez la première formalité.')}
+      <h2>Pipeline — ${dossiers.length} dossier(s)</h2>
+      ${pipelineHtml(dossiers)}
+    </div>
+
+    <div class="card mt">
+      <h2>Prochaines échéances légales</h2>
+      ${d.echeances.length ? `<table><tbody>${d.echeances.map((f) => `
+        <tr class="clickable" onclick="location.hash='#/formalites/${f.id}'">
+          <td><strong>${esc(f.type_libelle)}</strong><div class="sub">${esc(f.societe_nom)}</div></td>
+          <td>${badgeStatut(f)}</td>
+          <td class="right">${echeanceHtml(f)}</td>
+        </tr>`).join('')}</tbody></table>`
+    : '<div class="empty">Aucune échéance en cours</div>'}
     </div>`;
 
   document.getElementById('btn-test-inpi').onclick = async (e) => {
@@ -115,21 +131,36 @@ function echeanceHtml(f) {
     : `<span class="muted">${fmtDate(f.echeance)}</span>`;
 }
 
-function listeFormalites(liste, vide) {
-  if (!liste.length) return `<div class="empty">${esc(vide)}</div>`;
-  return `<table>
-    <thead><tr><th>Dossier</th><th>Société</th><th>Statut</th><th>Action</th><th>Échéance</th></tr></thead>
-    <tbody>${liste.map((f) => `
-      <tr class="clickable" onclick="location.hash='#/formalites/${f.id}'">
-        <td><strong>${esc(f.type_libelle)}</strong>
-          <div class="sub">${esc(f.reference || '')}${f.numero_liasse ? ` · liasse ${esc(f.numero_liasse)}` : ''}${f.simule ? ' · simulation' : ''}</div></td>
-        <td>${esc(f.societe_nom || '—')}</td>
-        <td>${badgeStatut(f)}${f.nb_regularisations ? ' <span class="badge a_faire">à régulariser</span>' : ''}</td>
-        <td>${f.action_attendue && f.action_attendue !== 'attendre'
-    ? `<span class="badge envoye">${esc(ACTIONS[f.action_attendue]?.libelle || f.action_attendue)}</span>`
-    : '<span class="muted">côté INPI</span>'}</td>
-        <td>${echeanceHtml(f)}</td>
-      </tr>`).join('')}</tbody></table>`;
+/** Le pipeline : une colonne par étape, une carte par dossier. */
+function pipelineHtml(dossiers) {
+  if (!dossiers.length) return '<div class="empty">Aucun dossier. Ouvrez la première formalité.</div>';
+  let rang = 0;
+  return `<div class="pipeline">${COLONNES.map((col) => {
+    const lot = dossiers.filter((f) => col.statuts.includes(f.statut));
+    return `<section class="colonne ${col.classe}">
+      <header><span class="pt"></span>${esc(col.titre)}<em>${lot.length}</em></header>
+      <div class="cartes">
+        ${lot.length
+    ? lot.map((f) => { rang += 1; return carteDossierHtml(f, rang); }).join('')
+    : '<div class="vide">—</div>'}
+      </div>
+    </section>`;
+  }).join('')}</div>`;
+}
+
+function carteDossierHtml(f, rang) {
+  return `<article class="carte-dossier ${f.en_retard ? 'retard' : ''}"
+      style="animation-delay:${Math.min(rang * 40, 500)}ms"
+      onclick="location.hash='#/formalites/${f.id}'">
+    <h4>${esc(f.type_libelle)}</h4>
+    <div class="societe">${esc(f.societe_nom || '—')}</div>
+    <div class="pied">
+      <span class="ref">${esc(f.reference || '')}</span>
+      ${f.nb_regularisations ? '<span class="badge a_faire">à régulariser</span>' : ''}
+      ${f.echeance ? `<span class="${f.en_retard ? 'echeance-retard' : ''}">${f.en_retard ? 'dépassée' : 'avant'} ${fmtDate(f.echeance)}</span>` : ''}
+      ${f.simule ? '<span class="badge brouillon">simulation</span>' : ''}
+    </div>
+  </article>`;
 }
 
 /* ================================================== ouverture d'un dossier */

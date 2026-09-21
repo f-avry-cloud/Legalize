@@ -1,27 +1,28 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#0d1b32">
+  <meta name="theme-color" content="#06060e">
   <title>Legalize — Droit des affaires &amp; corporate</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- ?v= : évite qu'un cache navigateur serve l'ancienne feuille de style. -->
+  <link rel="stylesheet" href="style.css?v=3">
   <script>
     // Thème appliqué avant le premier rendu : évite le flash clair au chargement.
     (function () {
       try {
-        var t = localStorage.getItem('legalize-theme');
-        document.documentElement.dataset.theme = t
-          || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        // Sombre par défaut : c'est le thème principal du produit.
+        document.documentElement.dataset.theme = localStorage.getItem('legalize-theme') || 'dark';
       } catch (e) { /* stockage indisponible : on garde le thème clair */ }
     }());
   </script>
 </head>
 <body>
+  <div class="aurore" aria-hidden="true"><span></span><span></span><span></span></div>
   <a class="skip-link" href="#main">Aller au contenu</a>
 
   <aside class="sidebar" id="sidebar">
@@ -29,7 +30,7 @@
       <span class="brand-mark" aria-hidden="true">L</span>
       <div class="brand-text">
         <strong>Legalize</strong>
-        <small>Droit des affaires · Corporate</small>
+        <small>Corporate</small>
       </div>
       <button class="nav-close" id="nav-close" aria-label="Fermer le menu">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -70,7 +71,7 @@
         <svg class="ico-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
         <span class="theme-label">Thème</span>
       </button>
-      <small>MVP — production documentaire &amp; formalités</small>
+      <small>Production documentaire &amp; formalités INPI</small>
     </div>
   </aside>
 
@@ -86,7 +87,7 @@
   <main id="main" tabindex="-1"></main>
   <div id="toast" class="toast" hidden></div>
 
-  <script src="app.js"></script>
-  <script src="formalites.js"></script>
+  <script src="app.js?v=3"></script>
+  <script src="formalites.js?v=3"></script>
 </body>
 </html>
