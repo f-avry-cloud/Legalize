@@ -712,7 +712,7 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
   letter-spacing: .04em;
   text-transform: uppercase;
   color: var(--a2);
-  border-bottom: 1px solid var(--bord);
+  border-bottom: 1px solid var(--line);
 }
 .section-form:first-child { margin-top: 4px; }
 
@@ -721,9 +721,9 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
 .ligne-liste {
   position: relative;
   padding: 14px 14px 10px;
-  border: 1px solid var(--bord);
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--fond2) 60%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
 }
 .ligne-liste + .ligne-liste { margin-top: 0; }
 .ligne-liste .retirer-ligne {
@@ -750,7 +750,7 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
   flex: 1 1 160px;
   height: 7px;
   border-radius: 999px;
-  background: var(--bord);
+  background: var(--line);
   overflow: hidden;
 }
 .barre-progression .jauge span {
@@ -761,13 +761,13 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
   background: var(--grad);
   transition: width .35s ease;
 }
-.barre-progression .compteur { font-size: .82rem; color: var(--texte2); white-space: nowrap; }
+.barre-progression .compteur { font-size: .82rem; color: var(--ink-2); white-space: nowrap; }
 .bascule-requis {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: .82rem;
-  color: var(--texte2);
+  color: var(--ink-2);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -785,24 +785,24 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
   align-items: center;
   gap: 8px;
   padding: 7px 13px;
-  border: 1px solid var(--bord);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--fond2);
-  color: var(--texte2);
+  background: var(--surface-2);
+  color: var(--ink-2);
   font-size: .82rem;
   white-space: nowrap;
   cursor: pointer;
   transition: border-color .2s, color .2s;
 }
-.onglet-section:hover { border-color: var(--a2); color: var(--texte); }
+.onglet-section:hover { border-color: var(--a2); color: var(--ink); }
 .onglet-section .etat {
   padding: 1px 7px;
   border-radius: 999px;
-  background: var(--bord);
+  background: var(--line);
   font-size: .72rem;
   font-variant-numeric: tabular-nums;
 }
-.onglet-section .etat.complet { background: var(--ok, #2e9e6b); color: #fff; }
+.onglet-section .etat.complet { background: var(--ok); color: #fff; }
 
 .champ-bloc { position: relative; }
 .champ-bloc.champ-requis { padding-left: 12px; border-left: 2px solid var(--a2); }
@@ -820,14 +820,16 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
   text-transform: uppercase;
   pointer-events: none;
 }
-.champ-bloc.champ-requis.rempli { border-left-color: var(--ok, #2e9e6b); }
+.champ-bloc.champ-requis.rempli { border-left-color: var(--ok); }
 .champ-bloc.champ-requis.rempli::after {
   content: 'Complété';
-  background: color-mix(in srgb, var(--ok, #2e9e6b) 18%, transparent);
-  color: var(--ok, #2e9e6b);
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  color: var(--ok);
 }
 
-#form-reponses.requis-seuls .champ-bloc:not(.champ-requis):not(.bloc-section) { display: none; }
+/* Le filtre garde les obligations conditionnelles : ce sont justement celles
+   dont l'exigence dépend du dossier, donc celles qu'il ne faut pas manquer. */
+#form-reponses.requis-seuls .champ-bloc:not(.champ-requis):not(.champ-conditionnel):not(.bloc-section) { display: none; }
 
 .champ-bloc.surligne, .card.surligne {
   animation: surlignage 1.6s ease;
@@ -863,4 +865,40 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
   opacity: .45;
   white-space: nowrap;
   transition: opacity .2s;
+}
+
+/* Obligation conditionnelle : le texte de l'INPI, qui seul fait foi. */
+.champ-bloc.champ-conditionnel { padding-left: 12px; border-left: 2px dashed var(--a1); }
+.champ-bloc.champ-conditionnel::after {
+  content: 'Selon le cas';
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--a1) 14%, transparent);
+  color: var(--a1);
+  font-size: .68rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.champ-bloc.champ-conditionnel.rempli { border-left-color: var(--ok); }
+.champ-bloc.champ-conditionnel.rempli::after { content: 'Complété'; background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+
+.obligation-inpi {
+  margin: 4px 0 10px;
+  font-size: .78rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.obligation-inpi span {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: .68rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
 }

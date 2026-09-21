@@ -19,7 +19,7 @@
 const { supabase, q, uploadFile, downloadFile } = require('../supa');
 const rne = require('../inpi/rne');
 const guichet = require('../inpi/guichet');
-const { definition, piecesExigees } = require('../inpi/catalogue');
+const { definition, piecesExigees, champsDecrits } = require('../inpi/catalogue');
 const { controler, echeance } = require('../inpi/controles');
 const { construirePayload } = require('../inpi/payload');
 const { versFicheSociete, nettoyerSiren, formaterSiren } = require('../inpi/normalize');
@@ -218,7 +218,7 @@ async function lire(id) {
     societe_nom: societe?.denomination || formalite.fiche?.denomination || '',
     definition: def ? {
       code: formalite.type, libelle: def.libelle, categorie: def.categorie,
-      resume: def.resume, delai: def.delai, champs: def.champs,
+      resume: def.resume, delai: def.delai, champs: champsDecrits(formalite.type),
       signature: def.signature, evenement: def.evenement, service: def.service,
     } : null,
     pieces,

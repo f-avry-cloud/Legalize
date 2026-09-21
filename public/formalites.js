@@ -448,9 +448,16 @@ function champHtml(champ, valeur, contexte) {
     return `<div class="champ-bloc bloc-section" data-section="${esc(champ.name)}">${corps}</div>`;
   }
   const classes = ['champ-bloc'];
+  // Deux niveaux distincts : ce que nous exigeons, et ce que l'INPI exige.
+  // Le second fait foi, et il est presque toujours conditionnel.
+  const conditionnel = champ.obligation?.conditionnelle && !champ.required;
   if (champ.required) classes.push('champ-requis');
-  if (champ.required && !champVide(valeur)) classes.push('rempli');
-  return `<div class="${classes.join(' ')}" data-champ="${esc(champ.name)}">${corps}</div>`;
+  else if (conditionnel) classes.push('champ-conditionnel');
+  if ((champ.required || conditionnel) && !champVide(valeur)) classes.push('rempli');
+  const officiel = champ.obligation
+    ? `<p class="obligation-inpi"><span>Règle INPI</span> ${esc(champ.obligation.texte)}</p>`
+    : '';
+  return `<div class="${classes.join(' ')}" data-champ="${esc(champ.name)}">${corps}${officiel}</div>`;
 }
 
 function champCorps(champ, valeur, contexte) {

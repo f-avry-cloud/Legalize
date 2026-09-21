@@ -137,6 +137,25 @@ function bloc(nom) {
   return DICTIONNAIRE[nom]?.proprietes || {};
 }
 
+/**
+ * Ce que le dictionnaire dit de l'obligation d'une propriété, sous la forme
+ * `Classe.propriete`. La colonne description porte le texte officiel, presque
+ * toujours conditionnel — « obligatoire si le siège est indiqué comme non
+ * ambulant ». C'est la seule source d'autorité sur ce qui est exigé : le reste
+ * n'est qu'appréciation.
+ *
+ * @returns {{texte: string, conditionnelle: boolean}|null}
+ */
+function obligation(reference) {
+  if (!reference) return null;
+  const [classe, propriete] = String(reference).split('.');
+  const desc = DICTIONNAIRE[classe]?.proprietes?.[propriete]?.description;
+  if (!desc || !/obligatoire/i.test(desc)) return null;
+  if (/n['’ ]est pas obligatoire/i.test(desc)) return null;
+  const texte = desc.replace(/\s*GU_[A-Z0-9]+\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  return { texte, conditionnelle: /\b(si|s['’]il|lorsque|quand|car|pour une|dans le cas)\b/i.test(texte) };
+}
+
 /** Vrai si la propriété appartient au bloc : garde-fou contre les fautes de frappe. */
 function proprieteConnue(nomBloc, propriete) {
   return Object.prototype.hasOwnProperty.call(bloc(nomBloc), propriete);
@@ -206,7 +225,7 @@ module.exports = {
   role, roleDepuisFonction, rolePrincipal,
   piece, PIECES,
   EVENEMENTS, enumeration, libelleEnum,
-  bloc, proprieteConnue, DICTIONNAIRE,
+  bloc, proprieteConnue, obligation, DICTIONNAIRE,
   TYPES_FORMALITE, TYPES_PERSONNE, ROLE_ETABLISSEMENT, STATUT_BLOC,
   STATUTS, statut, normaliserStatut,
 };

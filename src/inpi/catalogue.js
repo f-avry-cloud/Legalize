@@ -22,7 +22,7 @@
  * ne remplacent pas l'analyse du dossier.
  */
 
-const { TYPES_FORMALITE, piece, EVENEMENTS, enumeration } = require('./referentiels');
+const { TYPES_FORMALITE, piece, EVENEMENTS, enumeration, obligation } = require('./referentiels');
 
 const DELAI_MODIFICATION = {
   jours: 30,
@@ -36,7 +36,7 @@ const champDateDecision = {
   aide: 'Date du PV d’assemblée ou de la décision de l’associé unique. Elle déclenche le délai de dépôt.',
 };
 
-const champAdresse = (name, label, aide) => ({ name, label, type: 'adresse', required: true, aide });
+const champAdresse = (name, label, aide, inpi) => ({ name, label, type: 'adresse', required: true, aide, inpi });
 const champPersonne = (name, label, opts = {}) => ({ name, label, type: 'personne', required: true, ...opts });
 
 const nombre = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
@@ -65,44 +65,44 @@ const FORMALITES = {
     },
     champs: [
       { name: '_s1', label: 'Nature de la création', type: 'section' },
-      { name: 'succursale_ou_filiale', label: 'Structure', type: 'select', required: true,
+      { name: 'succursale_ou_filiale', inpi: 'Company.succursaleOuFiliale', label: 'Structure', type: 'select', required: true,
         default: 'AVEC_ETABLISSEMENT', options: optionsEnum('succursaleOuFiliale'),
         aide: 'Une société sans établissement (holding pure, société civile sans local) se déclare « Sans établissement ».' },
-      { name: 'micro_entreprise', label: 'Micro-entreprise', type: 'checkbox' },
-      { name: 'entreprise_agricole', label: 'Entreprise agricole', type: 'checkbox' },
-      { name: 'societe_etrangere', label: 'Société étrangère', type: 'checkbox' },
+      { name: 'micro_entreprise', inpi: 'BlocNatureCreation.microEntreprise', label: 'Micro-entreprise', type: 'checkbox' },
+      { name: 'entreprise_agricole', inpi: 'BlocNatureCreation.entrepriseAgricole', label: 'Entreprise agricole', type: 'checkbox' },
+      { name: 'societe_etrangere', inpi: 'BlocNatureCreation.societeEtrangere', label: 'Société étrangère', type: 'checkbox' },
 
       { name: '_s2', label: 'Identité de la société', type: 'section' },
-      { name: 'forme_juridique_code', label: 'Forme juridique', type: 'select', required: true, source: 'formes' },
-      { name: 'denomination', label: 'Dénomination sociale', type: 'text', required: true },
-      { name: 'sigle', label: 'Sigle', type: 'text' },
-      { name: 'nom_commercial', label: 'Nom commercial', type: 'text' },
-      { name: 'capital', label: 'Capital social (€)', type: 'money', required: true },
-      { name: 'capital_variable', label: 'Capital variable', type: 'checkbox' },
-      { name: 'associe_unique', label: 'Société unipersonnelle (associé unique)', type: 'checkbox' },
-      { name: 'duree', label: 'Durée (années)', type: 'number', default: 99, required: true },
-      { name: 'date_cloture', label: 'Clôture de l’exercice (JJ/MM)', type: 'text', default: '31/12', required: true },
-      { name: 'objet', label: 'Objet social', type: 'textarea', required: true },
+      { name: 'forme_juridique_code', inpi: 'BlocEntrepriseIdentite.formeJuridique', label: 'Forme juridique', type: 'select', required: true, source: 'formes' },
+      { name: 'denomination', inpi: 'BlocEntrepriseIdentite.denomination', label: 'Dénomination sociale', type: 'text', required: true },
+      { name: 'sigle', inpi: 'BlocDetailPersonneMorale.sigle', label: 'Sigle', type: 'text' },
+      { name: 'nom_commercial', inpi: 'BlocEntrepriseIdentite.nomCommercial', label: 'Nom commercial', type: 'text' },
+      { name: 'capital', inpi: 'BlocDetailPersonneMorale.montantCapital', label: 'Capital social (€)', type: 'money', required: true },
+      { name: 'capital_variable', inpi: 'BlocDetailPersonneMorale.capitalVariable', label: 'Capital variable', type: 'checkbox' },
+      { name: 'associe_unique', inpi: 'BlocDetailPersonneMorale.indicateurAssocieUnique', label: 'Société unipersonnelle (associé unique)', type: 'checkbox' },
+      { name: 'duree', inpi: 'BlocDetailPersonneMorale.duree', label: 'Durée (années)', type: 'number', default: 99, required: true },
+      { name: 'date_cloture', inpi: 'BlocDetailPersonneMorale.dateClotureExerciceSocial', label: 'Clôture de l’exercice (JJ/MM)', type: 'text', default: '31/12', required: true },
+      { name: 'objet', inpi: 'BlocDetailPersonneMorale.objet', label: 'Objet social', type: 'textarea', required: true },
       { name: 'date_signature_statuts', label: 'Date de signature des statuts', type: 'date', required: true },
       { name: 'depositaire_fonds', label: 'Banque dépositaire des fonds', type: 'text', required: true },
       { name: 'apports_nature', label: 'Apports en nature', type: 'checkbox',
         aide: 'Déclenche l’exigence du rapport du commissaire aux apports.' },
 
       { name: '_s3', label: 'Siège social', type: 'section' },
-      champAdresse('adresse_siege', 'Adresse du siège social'),
+      champAdresse('adresse_siege', 'Adresse du siège social', undefined, 'RubriqueAdresseEntreprise.adresse'),
 
       { name: '_s4', label: 'Activité et établissement principal', type: 'section' },
-      { name: 'role_etablissement', label: 'Rôle de l’établissement', type: 'select', default: '2',
+      { name: 'role_etablissement', inpi: 'BlocDescriptionEtablissement.rolePourEntreprise', label: 'Rôle de l’établissement', type: 'select', default: '2',
         options: optionsEnum('rolePourEntreprise', ['1', '2', '3']) },
-      { name: 'activite_principale', label: 'Activité principale exercée', type: 'textarea', required: true },
-      { name: 'precision_activite', label: 'Précision sur l’activité', type: 'select',
+      { name: 'activite_principale', inpi: 'BlocDescriptionActivite.descriptionDetaillee', label: 'Activité principale exercée', type: 'textarea', required: true },
+      { name: 'precision_activite', inpi: 'BlocDescriptionActivite.precisionActivite', label: 'Précision sur l’activité', type: 'select',
         options: optionsEnum('precisionActivite') },
-      { name: 'forme_exercice', label: 'Forme d’exercice de l’activité', type: 'select', default: 'COMMERCIALE',
+      { name: 'forme_exercice', inpi: 'Company.formeExerciceActivitePrincipale', label: 'Forme d’exercice de l’activité', type: 'select', default: 'COMMERCIALE',
         options: optionsEnum('formeExerciceActivitePrincipale') },
-      { name: 'exercice_activite', label: 'Exercice', type: 'select', default: 'P', options: optionsEnum('exerciceActivite') },
-      { name: 'activite_reguliere', label: 'Régularité', type: 'select', default: 'R', options: optionsEnum('activiteReguliere') },
-      { name: 'origine_activite', label: 'Origine du fonds', type: 'select', default: '1', options: optionsEnum('typeOrigine') },
-      { name: 'date_debut_activite', label: 'Date de début d’activité', type: 'date', required: true },
+      { name: 'exercice_activite', inpi: 'BlocDescriptionActivite.exerciceActivite', label: 'Exercice', type: 'select', default: 'P', options: optionsEnum('exerciceActivite') },
+      { name: 'activite_reguliere', inpi: 'BlocDescriptionActivite.activiteReguliere', label: 'Régularité', type: 'select', default: 'R', options: optionsEnum('activiteReguliere') },
+      { name: 'origine_activite', inpi: 'BlocDescriptionActivite.origine', label: 'Origine du fonds', type: 'select', default: '1', options: optionsEnum('typeOrigine') },
+      { name: 'date_debut_activite', inpi: 'BlocDescriptionActivite.dateDebut', label: 'Date de début d’activité', type: 'date', required: true },
 
       { name: '_s5', label: 'Autres établissements', type: 'section',
         aide: 'Laisser vide s’il n’y a que le siège.' },
@@ -136,26 +136,26 @@ const FORMALITES = {
       ] },
 
       { name: '_s9', label: 'Options fiscales', type: 'section' },
-      { name: 'regime_benefices', label: 'Régime d’imposition des bénéfices', type: 'select',
+      { name: 'regime_benefices', inpi: 'BlocOptionFiscale.regimeImpositionBenefices', label: 'Régime d’imposition des bénéfices', type: 'select',
         options: optionsEnum('regimeImpositionBenefices') },
-      { name: 'regime_tva', label: 'Régime de TVA', type: 'select', options: optionsEnum('regimeImpositionTVA') },
-      { name: 'periodicite_tva', label: 'Périodicité et options TVA', type: 'select',
+      { name: 'regime_tva', inpi: 'BlocOptionFiscale.regimeImpositionTVA', label: 'Régime de TVA', type: 'select', options: optionsEnum('regimeImpositionTVA') },
+      { name: 'periodicite_tva', inpi: 'BlocOptionFiscale.periodiciteEtOptionsParticulieresTVA', label: 'Périodicité et options TVA', type: 'select',
         options: optionsEnum('periodiciteEtOptionsParticulie') },
-      { name: 'date_cloture_comptable', label: 'Première clôture comptable', type: 'date' },
-      { name: 'ca_previsionnel_vente', label: 'CA prévisionnel — ventes (€)', type: 'money' },
-      { name: 'ca_previsionnel_service', label: 'CA prévisionnel — services (€)', type: 'money' },
+      { name: 'date_cloture_comptable', inpi: 'BlocOptionFiscale.dateClotureExerciceComptable', label: 'Première clôture comptable', type: 'date' },
+      { name: 'ca_previsionnel_vente', inpi: 'BlocOptionFiscale.chiffreAffairePrevisionnelVente', label: 'CA prévisionnel — ventes (€)', type: 'money' },
+      { name: 'ca_previsionnel_service', inpi: 'BlocOptionFiscale.chiffreAffairePrevisionnelService', label: 'CA prévisionnel — services (€)', type: 'money' },
 
       { name: '_s10', label: 'Salariés', type: 'section' },
-      { name: 'emploi_salaries', label: 'La société emploie des salariés', type: 'checkbox' },
-      { name: 'date_premiere_embauche', label: 'Date de la première embauche', type: 'date' },
-      { name: 'effectif_salarie', label: 'Effectif salarié', type: 'number' },
+      { name: 'emploi_salaries', inpi: 'BlocEtablissementSalarie.presenceSalarie', label: 'La société emploie des salariés', type: 'checkbox' },
+      { name: 'date_premiere_embauche', inpi: 'BlocEtablissementSalarie.dateEffetDebutEmploiSalarie', label: 'Date de la première embauche', type: 'date' },
+      { name: 'effectif_salarie', inpi: 'BlocEtablissementSalarie.nombreSalarie', label: 'Effectif salarié', type: 'number' },
 
       { name: '_s11', label: 'Correspondance et publication', type: 'section' },
       { name: 'contact_nom', label: 'Destinataire de la correspondance', type: 'text' },
-      { name: 'contact_email', label: 'Courriel', type: 'text' },
-      { name: 'contact_telephone', label: 'Téléphone', type: 'text' },
-      { name: 'journal_publication', label: 'Journal d’annonces légales', type: 'text' },
-      { name: 'date_publication', label: 'Date de publication', type: 'date' },
+      { name: 'contact_email', inpi: 'BlocContact.mail', label: 'Courriel', type: 'text' },
+      { name: 'contact_telephone', inpi: 'BlocContact.telephone', label: 'Téléphone', type: 'text' },
+      { name: 'journal_publication', inpi: 'BlocPublication.journalPublication', label: 'Journal d’annonces légales', type: 'text' },
+      { name: 'date_publication', inpi: 'BlocPublication.datePublication', label: 'Date de publication', type: 'date' },
     ],
     pieces: [
       { code: 'PJ_01', obligatoire: true },
@@ -197,7 +197,7 @@ const FORMALITES = {
     delai: { base: 'date_decision', ...DELAI_MODIFICATION },
     champs: [
       champDateDecision,
-      champAdresse('nouvelle_adresse', 'Nouvelle adresse du siège'),
+      champAdresse('nouvelle_adresse', 'Nouvelle adresse du siège', undefined, 'RubriqueAdresseEntreprise.adresse'),
       { name: 'date_effet', label: 'Date d’effet du transfert', type: 'date',
         aide: 'Laisser vide si le transfert prend effet à la date de la décision.' },
       { name: 'hors_ressort', label: 'Transfert dans un autre ressort de greffe', type: 'checkbox',
@@ -590,11 +590,23 @@ function piecesExigees(code, reponses = {}) {
   return def.pieces.filter((p) => !p.condition || p.condition(reponses)).map(decrirePiece);
 }
 
-/** Champs réellement à saisir (les dépendances masquent le reste). */
+/**
+ * Champs réellement à saisir (les dépendances masquent le reste), enrichis de
+ * ce que le dictionnaire officiel dit de leur caractère obligatoire.
+ *
+ * Le drapeau `required` reste notre appréciation ; `obligation` est le texte
+ * de l'INPI, qui seul fait foi, et qui est presque toujours conditionnel.
+ */
 function champsActifs(code, reponses = {}) {
-  const def = definition(code);
-  if (!def) return [];
-  return def.champs.filter((c) => !c.depend || c.depend.valeurs.includes(reponses[c.depend.name]));
+  return champsDecrits(code)
+    .filter((c) => !c.depend || c.depend.valeurs.includes(reponses[c.depend.name]));
 }
 
-module.exports = { FORMALITES, catalogue, definition, piecesExigees, champsActifs };
+/** Tous les champs d'une formalité, enrichis de la règle INPI. */
+function champsDecrits(code) {
+  const def = definition(code);
+  if (!def) return [];
+  return def.champs.map((c) => (c.inpi ? { ...c, obligation: obligation(c.inpi) } : c));
+}
+
+module.exports = { FORMALITES, catalogue, definition, piecesExigees, champsActifs, champsDecrits };
