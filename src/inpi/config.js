@@ -79,6 +79,8 @@ const guichet = {
     formalites: '/api/formalities',
     formalite: '/api/formalities/{id}',
     formalitesModification: '/api/formality_updates',
+    // Attention : sur le compte mandataire, ce groupe de sérialisation
+    // renvoie un objet sans aucun champ. Ne pas l'employer pour lister.
     formaliteAllegee: '/api/formalities/{id}?groups[]=formality:read:no-content',
     historiqueStatuts: '/api/formalities/{id}/formality_status_histories',
     piecesFormalite: '/api/formalities/{id}/attachments',

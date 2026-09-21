@@ -552,7 +552,7 @@ async function importerDepuisInpi({ services = ['formalites', 'comptes_annuels']
   const connus = await db(supabase.from('formalites').select('id, inpi_id, statut').not('inpi_id', 'is', null));
   const parInpiId = new Map(connus.map((f) => [String(f.inpi_id), f]));
 
-  const bilan = { importees: 0, actualisees: 0, inchangees: 0, erreurs: [] };
+  const bilan = { importees: 0, actualisees: 0, inchangees: 0, ignorees: 0, erreurs: [] };
 
   for (const service of services) {
     let distantes = [];
@@ -564,7 +564,10 @@ async function importerDepuisInpi({ services = ['formalites', 'comptes_annuels']
     }
 
     for (const d of distantes) {
-      if (!d.inpi_id) continue;
+      // Une ligne sans identifiant ne peut pas être rapprochée : on la compte
+      // plutôt que de l'ignorer en silence, un import qui ne ramène rien sans
+      // rien dire étant indiscernable d'un compte vide.
+      if (!d.inpi_id) { bilan.ignorees += 1; continue; }
       const existante = parInpiId.get(String(d.inpi_id));
 
       const champs = {

@@ -128,9 +128,11 @@ async function formalitesDashboard() {
     e.target.textContent = 'Import en cours…';
     try {
       const r = await api('POST', '/formalites/importer');
+      const detail = [`${r.importees} importée(s)`, `${r.actualisees} actualisée(s)`, `${r.inchangees} déjà à jour`];
+      if (r.ignorees) detail.push(`${r.ignorees} ligne(s) illisible(s)`);
       toast(r.erreurs?.length
-        ? `${r.importees} importée(s), ${r.actualisees} actualisée(s). Erreurs : ${r.erreurs.join(' ; ')}`
-        : `${r.importees} formalité(s) importée(s), ${r.actualisees} actualisée(s), ${r.inchangees} déjà à jour.`,
+        ? `${detail.join(', ')}. ${r.erreurs.join(' ; ')}`
+        : `${detail.join(', ')}.`,
       Boolean(r.erreurs?.length));
       render();
       majPastilleFormalites();

@@ -44,8 +44,8 @@ function normaliserFormalite(brute, idParDefaut) {
   const id = brute?.id ?? idParDefaut ?? null;
   const code = normaliserStatut(brute?.status);
   const panier = Array.isArray(brute?.carts) ? brute.carts[0] : brute?.carts;
-  // L'appel léger (`groups[]=formality:read:no-content`) renvoie les mêmes
-  // champs en snake_case : on accepte les deux graphies.
+  // Certaines réponses de l'INPI portent les champs en snake_case : on
+  // accepte les deux graphies.
   return {
     inpi_id: id === null ? null : String(id),
     numero_liasse: brute?.liasseNumber || brute?.liasse_number || null,
@@ -272,17 +272,20 @@ async function ajouterPiece(id, { code, nom, base64, path = null }) {
  * @param {number} maxPages garde-fou : un compte ancien peut compter des
  *   milliers de dossiers, on ne veut pas boucler indéfiniment.
  */
-async function listerTout({ service = 'formalites', itemsPerPage = 100, maxPages = 30, ...filtres } = {}) {
+async function listerTout({ service = 'formalites', itemsPerPage = 50, maxPages = 30, ...filtres } = {}) {
   if (config.modeGuichet === 'simulation') return [];
   const tout = [];
   for (let page = 1; page <= maxPages; page += 1) {
-    const lot = await lister({
-      page,
-      itemsPerPage,
-      'groups[]': 'formality:read:no-content',
-      ...filtres,
-    }, service);
-    tout.push(...lot);
+    // Sans `groups[]` : mesuré sur le compte mandataire, l'appel allégé
+    // `groups[]=formality:read:no-content` renvoie bien une ligne par
+    // formalité, mais vidée de tous ses champs — pas même l'identifiant.
+    // L'inventaire y perdait silencieusement tous les dossiers. On demande
+    // donc la réponse complète et on jette le contenu, inutile ici et lourd.
+    const lot = await lister({ page, itemsPerPage, ...filtres }, service);
+    for (const f of lot) {
+      if (f.brut) delete f.brut.content;
+      tout.push(f);
+    }
     if (lot.length < itemsPerPage) break;
   }
   return tout;
