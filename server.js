@@ -19,6 +19,18 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json({ limit: '5mb' }));
+
+// La page d'accueil est servie par l'application (gabarit public/app.html) et
+// non en statique, pour que les URL des assets portent la version du
+// déploiement : un cache navigateur ne peut plus servir un ancien JavaScript
+// après une mise en ligne.
+const { pageIndex, VERSION } = require('./src/version');
+app.get(['/', '/index.html'], (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.type('html').send(pageIndex());
+});
+app.get('/api/version', (req, res) => res.json({ version: VERSION }));
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', routes);
 

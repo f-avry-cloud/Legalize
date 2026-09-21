@@ -4,6 +4,17 @@
   "framework": null,
   "buildCommand": null,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" }
+    {
+      "source": "/",
+      "destination": "/api"
+    },
+    {
+      "source": "/index.html",
+      "destination": "/api"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    }
   ]
 }

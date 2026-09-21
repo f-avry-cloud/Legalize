@@ -110,6 +110,7 @@ async function render() {
     await route.view(...params);
     animerVue();
     animerCompteurs();
+    verifierVersion();
   } catch (e) {
     $main.innerHTML = `<div class="alerte alerte-bloquant"><strong>Erreur</strong> ${esc(e.message)}</div>`;
   }
@@ -164,6 +165,37 @@ function initCoque() {
     document.documentElement.dataset.theme = suivant;
     try { localStorage.setItem('legalize-theme', suivant); } catch (e) { /* stockage indisponible */ }
   });
+}
+
+/* ------------------------------------------------ version de l'application */
+
+// Injectée par le serveur dans index.html : identifie le déploiement chargé.
+const VERSION_CHARGEE = document.querySelector('meta[name="legalize-version"]')?.content || null;
+let dernierControleVersion = 0;
+
+/**
+ * Détecte qu'un déploiement plus récent est en ligne. Sans cela, un onglet
+ * resté ouvert continue d'exécuter l'ancien JavaScript : les nouveautés sont
+ * invisibles alors que tout semble fonctionner.
+ */
+async function verifierVersion() {
+  if (!VERSION_CHARGEE || Date.now() - dernierControleVersion < 60000) return;
+  dernierControleVersion = Date.now();
+  try {
+    const { version } = await api('GET', '/version');
+    if (version && version !== VERSION_CHARGEE) afficherMajDisponible();
+  } catch (e) { /* hors ligne : on réessaiera au prochain rendu */ }
+}
+
+function afficherMajDisponible() {
+  if (document.getElementById('maj-dispo')) return;
+  const el = document.createElement('div');
+  el.id = 'maj-dispo';
+  el.className = 'maj-dispo';
+  el.innerHTML = `<span>Une nouvelle version de l'application est en ligne.</span>
+    <button type="button" class="btn-primary btn-sm">Recharger</button>`;
+  el.querySelector('button').onclick = () => location.reload();
+  document.body.appendChild(el);
 }
 
 /** Pastille du menu : nombre de formalités en attente d'une action de notre côté. */

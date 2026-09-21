@@ -668,3 +668,16 @@ dialog h3 { font-weight: 800; font-size: 25px; margin-bottom: 20px; letter-spaci
   .card { box-shadow: none; border-color: #ccc; break-inside: avoid; }
   #main { padding: 0; max-width: none; }
 }
+
+/* ----------------------------------------------- nouvelle version en ligne */
+
+.maj-dispo {
+  position: fixed; left: 50%; bottom: 26px; translate: -50% 0; z-index: 95;
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface-3); color: var(--ink);
+  border: 1px solid var(--a2); border-radius: var(--r-full);
+  padding: 11px 12px 11px 20px; font-size: 13.5px; font-weight: 600;
+  box-shadow: var(--shadow-3), var(--halo); backdrop-filter: blur(16px);
+  animation: toast-entree .4s var(--rebond);
+}
+@media (max-width: 520px) { .maj-dispo { left: 16px; right: 16px; translate: none; border-radius: var(--r-sm); } }
