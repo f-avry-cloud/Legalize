@@ -450,30 +450,122 @@ create table if not exists rmt_audit (
 create index if not exists rmt_audit_societe_idx on rmt_audit (societe_id, created_at desc);
 create index if not exists rmt_audit_objet_idx on rmt_audit (objet_type, objet_id);
 
+-- ------------------------------------------------- soldes et cohérence
+--
+-- Le registre est la source de vérité : les soldes ne sont jamais stockés,
+-- ils se recalculent depuis les versions courantes. Une écriture supprimée
+-- ne compte plus, mais reste dans l'historique.
+
+create or replace view rmt_soldes as
+select
+  m.societe_id,
+  mouvements.compte_id,
+  mouvements.categorie_id,
+  sum(mouvements.sens * mouvements.quantite) as solde
+from rmt_mouvements m
+join rmt_versions_courantes vc on vc.mouvement_id = m.id and vc.action <> 'suppression'
+cross join lateral (
+  values
+    (vc.compte_credite, vc.categorie_id,  1::int, coalesce(vc.quantite, 0)),
+    (vc.compte_debite,  vc.categorie_id, -1::int, coalesce(vc.quantite, 0))
+) as mouvements(compte_id, categorie_id, sens, quantite)
+where mouvements.compte_id is not null
+group by m.societe_id, mouvements.compte_id, mouvements.categorie_id;
+
+-- Même calcul arrêté à une date : sert au contrôle « solde négatif à
+-- n'importe quelle date de l'historique », qu'un solde final positif masque.
+create or replace function rmt_soldes_a_date(p_societe_id bigint, p_date date)
+returns table (compte_id bigint, categorie_id bigint, solde bigint)
+language sql stable as $$
+  select mouvements.compte_id, mouvements.categorie_id,
+         sum(mouvements.sens * mouvements.quantite)::bigint
+  from rmt_mouvements m
+  join rmt_versions_courantes vc on vc.mouvement_id = m.id and vc.action <> 'suppression'
+  cross join lateral (
+    values
+      (vc.compte_credite, vc.categorie_id,  1::int, coalesce(vc.quantite, 0)),
+      (vc.compte_debite,  vc.categorie_id, -1::int, coalesce(vc.quantite, 0))
+  ) as mouvements(compte_id, categorie_id, sens, quantite)
+  where m.societe_id = p_societe_id
+    and mouvements.compte_id is not null
+    and coalesce(vc.date_effet, vc.date_inscription) <= p_date
+  group by mouvements.compte_id, mouvements.categorie_id;
+$$;
+
+-- Titres émis par catégorie, cumulés depuis les décisions sociales.
+create or replace view rmt_titres_emis as
+select c.societe_id, c.id as categorie_id, c.code, c.libelle, c.nominal,
+       coalesce(sum(e.quantite), 0)::bigint as emis
+from rmt_categories c
+left join rmt_emissions e on e.categorie_id = c.id
+group by c.societe_id, c.id, c.code, c.libelle, c.nominal;
+
+-- ---------------------------------------------------------------------------
+-- Réconciliation du capital.
+--
+-- Trois chiffres disent la même chose et peuvent diverger : le capital porté
+-- par la fiche société, le nombre de titres qu'elle indique, et ce que le
+-- registre contient réellement. Plutôt que d'imposer une double saisie, on
+-- expose les trois et l'écart, à charge pour l'écran de proposer la
+-- correction — aligner la fiche sur le registre, ou l'inverse.
+--
+-- L'identité vérifiée est : Σ (titres émis × nominal) = capital social.
+-- ---------------------------------------------------------------------------
+create or replace view rmt_coherence_capital as
+select
+  s.id                                          as societe_id,
+  s.denomination,
+  s.capital_social                              as capital_fiche,
+  s.nb_titres                                   as titres_fiche,
+  registre.titres_emis,
+  registre.titres_detenus,
+  registre.capital_calcule,
+  registre.nominal_indetermine,
+  -- Écarts : null quand l'information manque, 0 quand tout concorde.
+  case when s.capital_social is null or registre.capital_calcule is null then null
+       else round(s.capital_social - registre.capital_calcule, 2) end as ecart_capital,
+  case when s.nb_titres is null then null
+       else s.nb_titres - registre.titres_emis end                    as ecart_titres,
+  -- Invariant du registre lui-même : ce qui est émis doit être détenu.
+  registre.titres_emis - registre.titres_detenus                      as ecart_emis_detenus
+from societes s
+join lateral (
+  select
+    coalesce(sum(te.emis), 0)::bigint                               as titres_emis,
+    coalesce(sum(det.detenus), 0)::bigint                           as titres_detenus,
+    case when bool_or(te.nominal is null) then null
+         else sum(te.emis * te.nominal) end                         as capital_calcule,
+    bool_or(te.nominal is null)                                     as nominal_indetermine
+  from rmt_titres_emis te
+  left join lateral (
+    select coalesce(sum(so.solde), 0)::bigint as detenus
+    from rmt_soldes so where so.categorie_id = te.categorie_id
+  ) det on true
+  where te.societe_id = s.id
+) registre on true;
+
 -- ------------------------------------------------------------------- RLS
 --
--- Le contrôle d'accès s'exerce dans l'application, qui seule connaît la
--- session et le rôle. Les tables sont fermées par défaut : contrairement aux
--- tables existantes du MVP, aucune policy permissive n'est posée ici, un
--- registre de titres n'ayant pas à être lisible par la clé publique.
+-- Posture identique au reste du MVP : RLS activé, avec une policy permissive
+-- « demo acces complet ». Le contrôle d'accès ne se fera pas table par table
+-- mais par une brique d'authentification qui restreindra l'accès général de
+-- l'application. Une exception locale ici n'aurait fait que compliquer le
+-- module sans rien protéger tant que le reste est ouvert.
 
-alter table utilisateurs               enable row level security;
-alter table utilisateur_societes       enable row level security;
-alter table sessions_web               enable row level security;
-alter table rmt_societes               enable row level security;
-alter table rmt_categories             enable row level security;
-alter table rmt_emissions              enable row level security;
-alter table rmt_titulaires             enable row level security;
-alter table rmt_comptes                enable row level security;
-alter table rmt_comptes_titulaires     enable row level security;
-alter table rmt_mouvements             enable row level security;
-alter table rmt_mouvement_versions     enable row level security;
-alter table rmt_justificatifs          enable row level security;
-alter table rmt_mentions               enable row level security;
-alter table rmt_extraits               enable row level security;
-alter table rmt_extrait_mouvements     enable row level security;
-alter table rmt_extrait_destinataires  enable row level security;
-alter table rmt_demandes_suppression   enable row level security;
-alter table rmt_alertes_acquittees     enable row level security;
-alter table rmt_taux_enregistrement    enable row level security;
-alter table rmt_audit                  enable row level security;
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'utilisateurs', 'utilisateur_societes', 'sessions_web',
+    'rmt_societes', 'rmt_categories', 'rmt_emissions', 'rmt_titulaires',
+    'rmt_comptes', 'rmt_comptes_titulaires', 'rmt_mouvements',
+    'rmt_mouvement_versions', 'rmt_justificatifs', 'rmt_mentions',
+    'rmt_extraits', 'rmt_extrait_mouvements', 'rmt_extrait_destinataires',
+    'rmt_demandes_suppression', 'rmt_alertes_acquittees',
+    'rmt_taux_enregistrement', 'rmt_audit'
+  ] loop
+    execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists "demo acces complet" on %I', t);
+    execute format('create policy "demo acces complet" on %I for all using (true) with check (true)', t);
+  end loop;
+end $$;
