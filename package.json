@@ -11,7 +11,8 @@
     "test": "node scripts/smoke-test.js",
     "test:formalites": "node scripts/test-formalites.js",
     "test:api": "node scripts/test-api-formalites.js",
-    "inpi:test": "node scripts/inpi-connexion.js"
+    "inpi:test": "node scripts/inpi-connexion.js",
+    "test:rmt": "node scripts/test-rmt.js"
   },
   "engines": {
     "node": ">=20"

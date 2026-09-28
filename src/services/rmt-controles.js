@@ -99,35 +99,93 @@ function justificatifsManquants(lignes, justificatifs) {
   return anomalies;
 }
 
-/** Numéros de titres en double ou hors des titres émis. */
+/**
+ * Numéros de titres en double, inexistants, ou hors des titres émis.
+ *
+ * Seule une écriture qui CRÉE des titres leur attribue un numéro : une
+ * souscription, un apport en nature, une conversion. Une cession transfère
+ * des numéros déjà attribués — les compter comme une seconde attribution
+ * ferait voir un doublon à chaque mouvement du registre.
+ *
+ * Le contrôle raisonne par intervalles : un chevauchement de mille titres
+ * produit une anomalie, pas mille.
+ */
 function numerosIncoherents(lignes, emisTotal) {
   const anomalies = [];
-  const attribues = new Map();           // numéro → écriture qui l'a crédité
+  const attributions = [];
+
   for (const l of lignes) {
     if (l.supprimee || !l.numeros) continue;
-    for (const [de, a] of intervalles(l.numeros)) {
+    const bornes = intervalles(l.numeros);
+    if (!bornes.length) continue;
+
+    // Créer des titres, c'est créditer sans débiter aucun compte.
+    const creation = Boolean(l.compte_credite) && !l.compte_debite;
+
+    for (const [de, a] of bornes) {
       if (emisTotal && a > emisTotal) {
         anomalies.push({
           code: 'numeros_incoherents',
-          message: `Écriture n° ${l.numero_affiche} : le numéro ${a} dépasse les ${emisTotal} titres émis.`,
+          message: `Écriture n° ${l.numero_affiche} : les titres n° ${de} à ${a} dépassent `
+            + `les ${emisTotal} titres émis.`,
           mouvement_id: l.mouvement_id,
         });
       }
-      if (!l.compte_credite) continue;   // seul un crédit attribue un numéro
-      for (let n = de; n <= a; n += 1) {
-        if (attribues.has(n)) {
+    }
+
+    if (creation) {
+      for (const precedente of attributions) {
+        for (const chevauchement of chevauchements(precedente.bornes, bornes)) {
           anomalies.push({
             code: 'numeros_incoherents',
-            message: `Le titre n° ${n} est attribué deux fois : écritures n° ${attribues.get(n)} et n° ${l.numero_affiche}.`,
+            message: `Titres n° ${chevauchement[0]} à ${chevauchement[1]} attribués deux fois : `
+              + `écritures n° ${precedente.numero} et n° ${l.numero_affiche}.`,
             mouvement_id: l.mouvement_id,
           });
-        } else {
-          attribues.set(n, l.numero_affiche);
+        }
+      }
+      attributions.push({ numero: l.numero_affiche, bornes });
+    } else {
+      // Un transfert ne peut porter que sur des titres déjà attribués.
+      const attribues = attributions.flatMap((a) => a.bornes);
+      for (const [de, a] of bornes) {
+        if (!couvert([de, a], attribues)) {
+          anomalies.push({
+            code: 'numeros_incoherents',
+            message: `Écriture n° ${l.numero_affiche} : les titres n° ${de} à ${a} sont transférés `
+              + 'alors qu’aucune écriture antérieure ne les a attribués.',
+            mouvement_id: l.mouvement_id,
+          });
         }
       }
     }
   }
   return anomalies;
+}
+
+/** Intersections entre deux listes d'intervalles, agrégées. */
+function chevauchements(a, b) {
+  const sortie = [];
+  for (const [d1, f1] of a) {
+    for (const [d2, f2] of b) {
+      const de = Math.max(d1, d2);
+      const fin2 = Math.min(f1, f2);
+      if (de <= fin2) sortie.push([de, fin2]);
+    }
+  }
+  return sortie;
+}
+
+/** Vrai si l'intervalle est entièrement couvert par la liste fournie. */
+function couvert([de, a], intervalles2) {
+  const tries = [...intervalles2].sort((x, y) => x[0] - y[0]);
+  let curseur = de;
+  for (const [d, f] of tries) {
+    if (d > curseur) break;
+    if (f >= curseur) curseur = f + 1;
+    if (curseur > a) return true;
+  }
+  return curseur > a;
 }
 
 /** `{[1,100],[151,200]}` → [[1,100],[151,200]] */
@@ -288,4 +346,9 @@ async function acquitter({ societe_id, mouvement_id, version_id, code, commentai
   }, { onConflict: 'version_id,code' }).select().single());
 }
 
-module.exports = { analyser, acquitter, intervalles };
+module.exports = {
+  analyser, acquitter,
+  // Exportés pour les tests : ce sont eux qui portent les règles.
+  intervalles, numerosIncoherents, soldesNegatifs, invariantCategories,
+  justificatifsManquants, chevauchements, couvert,
+};
