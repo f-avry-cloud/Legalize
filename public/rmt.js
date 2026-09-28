@@ -50,14 +50,14 @@ async function rmtRegistre(societeId) {
   ]);
   rmtEtat = { ...rmtEtat, donnees, lignes, anomalies };
 
-  setTimeout(rmtBrancher, 0);
-  return `
+  $main.innerHTML = `
     ${rmtEntete(donnees)}
     ${rmtEncartCapital(donnees.capital, anomalies)}
     <div class="grid cols-3-1">
       <div>${rmtTableau(lignes, donnees)}</div>
       <div>${rmtPanneauAnomalies(anomalies)}${rmtPanneauExtraits(donnees.extraits)}</div>
     </div>`;
+  rmtBrancher();
 }
 
 /** Une société hors périmètre doit l'apprendre avant de saisir, pas après. */
@@ -78,7 +78,7 @@ function rmtEcranOuverture(donnees) {
     };
   }, 0);
 
-  return `<h1 class="titre-page">Registre des mouvements de titres</h1>
+  $main.innerHTML = `<h1 class="titre-page">Registre des mouvements de titres</h1>
     <div class="card">
       <h2>${esc(donnees.societe.denomination)}</h2>
       ${admise ? `
