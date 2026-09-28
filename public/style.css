@@ -902,3 +902,78 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
   letter-spacing: .04em;
   text-transform: uppercase;
 }
+
+/* ======================================================================
+   Registre des mouvements de titres
+   ====================================================================== */
+
+.mention-registre {
+  margin: -6px 0 18px;
+  padding: 7px 13px;
+  border-left: 3px solid var(--warn);
+  background: var(--warn-soft);
+  border-radius: 0 var(--r-xs) var(--r-xs) 0;
+  font-size: .8rem;
+  color: var(--ink-2);
+}
+
+.grid.cols-3-1 { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(280px, 1fr); gap: 18px; }
+@media (max-width: 1100px) { .grid.cols-3-1 { grid-template-columns: 1fr; } }
+
+.entete-carte { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.actions-vue { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* --- encart de réconciliation du capital --- */
+.carte-capital { border-left: 3px solid var(--ok); }
+.carte-capital.en-ecart { border-left-color: var(--warn); }
+.capital-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; align-items: start; }
+.capital-grille .etiquette {
+  display: block; font-size: .7rem; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 3px;
+}
+.capital-grille strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.capital-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+/* --- tableau du registre --- */
+.table-registre { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.table-registre th {
+  text-align: left; padding: 8px 10px; font-size: .72rem; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.table-registre th.num, .table-registre td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.table-registre td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.table-registre tbody tr:hover { background: var(--glass); }
+.table-registre .num-ordre { font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.ligne-registre.supprimee td { opacity: .55; text-decoration: line-through; }
+.ligne-registre.surligne { animation: surlignage 1.6s ease; }
+
+.actions-ligne { white-space: nowrap; text-align: right; }
+.lien-action {
+  border: 0; background: none; color: var(--a2); font: inherit; font-size: .82rem;
+  cursor: pointer; padding: 2px 6px; border-radius: 6px;
+}
+.lien-action:hover { background: var(--accent-soft); }
+.lien-action.danger { color: var(--danger); }
+
+/* --- badges crayon / encre --- */
+.badge-statut {
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px;
+  border-radius: var(--r-full); font-size: .74rem; font-weight: 600; white-space: nowrap;
+}
+.badge-statut.crayon { background: var(--glass-fort); color: var(--ink-2); border: 1px dashed var(--line-fort); }
+.badge-statut.encre { background: var(--accent-soft); color: var(--a2); border: 1px solid transparent; }
+.badge-statut.encre-modifiee { background: var(--warn-soft); color: var(--warn); }
+.badge-statut.encre-supprimee { background: var(--danger-soft); color: var(--danger); }
+.badge-statut.a_jour { background: var(--ok-soft); color: var(--ok); }
+.badge-statut.devenu_inexact { background: var(--warn-soft); color: var(--warn); }
+.badge-statut.revoque { background: var(--danger-soft); color: var(--danger); }
+.txt-alerte { color: var(--warn); }
+
+/* --- extraits et versions --- */
+.liste-extraits, .liste-versions { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.liste-extraits li, .liste-versions li {
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2);
+}
+.empreinte { font-size: .72rem; color: var(--ink-3); }
+.version-entete { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+.version-motif { margin-top: 5px; font-size: .82rem; color: var(--ink-2); font-style: italic; }

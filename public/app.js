@@ -331,6 +331,7 @@ async function societeDetail(id) {
         <h1>${esc(s.denomination)}</h1></div>
       <div>
         <button id="btn-edit">Modifier</button>
+        <button id="btn-registre" class="btn-primary">Registre des titres</button>
         <a class="btn btn-primary" href="#/operations/new?societe=${s.id}">Nouvelle opération</a>
       </div>
     </div>
@@ -375,6 +376,8 @@ async function societeDetail(id) {
     </div>`;
 
   document.getElementById('btn-edit').onclick = () => societeDialog(groupes, s);
+  const btnRegistre = document.getElementById('btn-registre');
+  if (btnRegistre) btnRegistre.onclick = () => { location.hash = `#/societes/${s.id}/registre`; };
   document.getElementById('btn-dirigeant').onclick = () => openDialog(`
     <h3>Nouveau dirigeant</h3>
     <form id="f">
