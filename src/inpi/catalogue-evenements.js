@@ -45,7 +45,7 @@ const FAMILLES = {
 
 /** Pièces communes à toute formalité déposée par un mandataire. */
 const PIECES_COMMUNES = [
-  { code: 'PJ_51', condition: 'pour toute formalité déposée par un mandataire, notamment un avocat' },
+  { code: 'PJ_51', condition: 'pour toute formalité déposée par un mandataire, notamment un avocat (C. com., partie Arrêtés, annexe 0, 3°)' },
 ];
 
 /** Pièces que le guichet génère lui-même : à signer, pas à fournir. */
@@ -60,13 +60,14 @@ const STATUTS_MAJ = ['PJ_02'];
 const ANNONCE = ['PJ_08'];
 const IDENTITE_DIRIGEANT = [
   ['PJ_11', 'pour chaque nouveau dirigeant personne physique (ou PJ_12, passeport)'],
-  ['PJ_63', 'pour chaque nouveau dirigeant personne physique'],
-  ['PJ_64', 'pour chaque nouveau dirigeant personne physique'],
-  ['PJ_20', 'pour chaque nouveau dirigeant personne morale'],
+  ['PJ_17', 'pour chaque nouveau dirigeant personne physique'],
+  ['PJ_20', 'pour chaque nouveau dirigeant personne morale (extrait de moins de trois mois)'],
 ];
 const SIEGE = [
   ['PJ_25', 'si le siège est fixé dans des locaux dont la société a la jouissance'],
+  ['PJ_26', 'si le siège est fixé, pour une durée limitée, au domicile du représentant légal'],
   ['PJ_29', 'si le siège est fixé chez une entreprise de domiciliation'],
+  ['PJ_45', 'domiciliation : extrait d’immatriculation du domiciliataire, sauf s’il relève du même greffe'],
 ];
 
 /* ------------------------------------------------------------------------
@@ -78,6 +79,7 @@ const SIEGE = [
 const DETAIL = {
   /* ------------------------------------------------------------ création */
   '01M': {
+    textes: ['C. com., art. R. 123-103 (actes constitutifs)', 'C. com., partie Arrêtés, annexe III (pièces justificatives)'],
     famille: 'creation',
     type: 'C',
     quand: 'Constitution d’une société qui commence son activité dès l’immatriculation.',
@@ -102,13 +104,14 @@ const DETAIL = {
       ...IDENTITE_DIRIGEANT,
       ['PJ_04', 'en cas d’apports en nature, sauf dispense de commissaire aux apports'],
       ['PJ_05', 'en cas d’apports en nature'],
-      ['PJ_40', 'si un commissaire aux comptes est désigné'],
+      ['PJ_40', 'si le commissaire aux comptes désigné ne figure pas encore sur la liste publiée'],
       ['PJ_41', 'si un commissaire aux comptes est désigné'],
       ['PJ_80', 'si une personne morale administrateur désigne un représentant permanent'],
       ['PJ_31', 'si l’activité est réglementée'],
     ],
   },
   '02M': {
+    textes: ['C. com., art. R. 123-103', 'C. com., partie Arrêtés, annexe III'],
     famille: 'creation',
     type: 'C',
     quand: 'Constitution d’une société qui n’exerce encore aucune activité (holding naissante, société en sommeil dès l’origine).',
@@ -128,11 +131,12 @@ const DETAIL = {
       ['PJ_03', 'si les premiers dirigeants ne sont pas désignés dans les statuts'],
       ...IDENTITE_DIRIGEANT,
       ['PJ_04', 'en cas d’apports en nature, sauf dispense'],
-      ['PJ_40', 'si un commissaire aux comptes est désigné'],
+      ['PJ_40', 'si le commissaire aux comptes désigné ne figure pas encore sur la liste publiée'],
       ['PJ_41', 'si un commissaire aux comptes est désigné'],
     ],
   },
   '03M': {
+    textes: ['C. com., art. R. 123-103', 'C. com., partie Arrêtés, annexe III'],
     famille: 'creation',
     type: 'C',
     quand: 'Constitution d’une société sans activité au siège, mais qui exerce dans un établissement distinct.',
@@ -175,6 +179,7 @@ const DETAIL = {
 
   /* ------------------------------------------------ statuts et identité */
   '10M': {
+    textes: ['C. com., art. R. 123-105 (dépôt des actes modificatifs, statuts à jour certifiés conformes)', 'C. com., partie Arrêtés, annexe IV'],
     source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36170',
     famille: 'identite',
     type: 'M',
@@ -188,6 +193,7 @@ const DETAIL = {
     pieces: [PV, STATUTS_MAJ, ANNONCE],
   },
   '11M': {
+    textes: ['C. com., art. R. 123-105 et R. 123-110 (transfert hors ressort)', 'C. com., partie Arrêtés, annexe IV, 2.1.1, et annexe V'],
     source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36267',
     famille: 'identite',
     type: 'M',
@@ -204,6 +210,7 @@ const DETAIL = {
     note: 'Un transfert hors ressort donne lieu à deux annonces légales : dans le département de départ et dans celui d’arrivée.',
   },
   '12M': {
+    textes: ['C. com., art. R. 123-105', 'C. com., partie Arrêtés, annexe IV'],
     source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36182',
     famille: 'identite',
     type: 'M',
@@ -215,6 +222,7 @@ const DETAIL = {
     pieces: [PV, STATUTS_MAJ, ANNONCE, ['PJ_31', 'si une activité réglementée est ajoutée']],
   },
   '13M': {
+    textes: ['C. com., art. R. 123-105 (dont dépôt du rapport du commissaire à la transformation)', 'C. com., partie Arrêtés, annexe IV'],
     source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36177',
     famille: 'identite',
     type: 'M',
@@ -244,6 +252,7 @@ const DETAIL = {
     note: 'Déclaration sans pièce justificative spécifique identifiée.',
   },
   '15M': {
+    textes: ['C. com., art. R. 123-105, R. 123-106 (SARL) et R. 123-107 (sociétés par actions)', 'C. com., partie Arrêtés, annexe IV'],
     source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36607',
     famille: 'identite',
     type: 'M',
@@ -261,9 +270,11 @@ const DETAIL = {
       ['PJ_180', 'augmentation en numéraire'],
       ['PJ_57', 'SA ou SAS : libération par compensation de créances'],
       ['PJ_163', 'augmentation par apport en nature (avec le récépissé de son dépôt)'],
+      ['PJ_191', 'société par actions, apport en nature sans commissaire aux apports : absence de circonstance nouvelle'],
     ],
   },
   '16M': {
+    textes: ['C. com., art. R. 123-105', 'C. com., partie Arrêtés, annexe IV'],
     famille: 'identite',
     type: 'M',
     quand: 'Prorogation de la durée de la société ou changement de la date de clôture de l’exercice.',
@@ -319,6 +330,7 @@ const DETAIL = {
 
   /* ------------------------------------------------------- dirigeants */
   '35M': {
+    textes: ['C. com., art. R. 123-105 et R. 123-109 (SA : modalité de direction générale)', 'C. com., partie Arrêtés, annexe IV, 1.3, renvoyant à l’annexe III, 1.2'],
     source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36173',
     famille: 'dirigeants',
     type: 'M',
@@ -334,13 +346,14 @@ const DETAIL = {
       ['PJ_230', 'en cas de démission'],
       ...IDENTITE_DIRIGEANT,
       ['PJ_80', 'désignation du représentant permanent d’une personne morale administrateur'],
-      ['PJ_40', 'nomination d’un commissaire aux comptes'],
+      ['PJ_40', 'nomination d’un commissaire aux comptes non encore inscrit sur la liste publiée'],
       ['PJ_41', 'nomination d’un commissaire aux comptes'],
       ['PJ_02', 'si les statuts sont modifiés'],
     ],
     note: 'Un changement de dirigeant ne modifie pas, à lui seul, les bénéficiaires effectifs : à vérifier au cas par cas (38F).',
   },
   '34M': {
+    textes: ['C. com., art. R. 123-105', 'C. com., partie Arrêtés, annexe IV, 1.3'],
     famille: 'dirigeants',
     type: 'M',
     quand: 'Changement de dirigeant d’une société de personnes (SNC, société en commandite simple, société civile).',
@@ -389,6 +402,7 @@ const DETAIL = {
 
   /* -------------------------------------------- établissements, activités */
   '54PMF': {
+    textes: ['C. com., partie Arrêtés, annexe IV, 2.2.1 (origine du fonds)'],
     famille: 'etablissements',
     type: 'M',
     quand: 'Ouverture d’un établissement secondaire.',
@@ -408,6 +422,7 @@ const DETAIL = {
     ],
   },
   '56PMF': {
+    textes: ['C. com., partie Arrêtés, annexe IV, 2.2.2'],
     famille: 'etablissements',
     type: 'M',
     quand: 'Transfert d’un établissement secondaire à une nouvelle adresse.',
@@ -557,6 +572,7 @@ const DETAIL = {
 
   /* ------------------------------------------- dissolution, fusion, radiation */
   '22M': {
+    textes: ['C. com., art. R. 123-105', 'C. com., art. L. 237-2 et R. 237-1 et s.'],
     source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F23744',
     famille: 'dissolution',
     type: 'M',
@@ -570,8 +586,7 @@ const DETAIL = {
     pieces: [
       ['PJ_108'], ANNONCE,
       ['PJ_11', 'liquidateur personne physique (ou PJ_12, passeport)'],
-      ['PJ_63', 'liquidateur personne physique'],
-      ['PJ_64', 'liquidateur personne physique'],
+      ['PJ_17', 'liquidateur personne physique'],
       ['PJ_20', 'liquidateur personne morale'],
     ],
     note: 'La société subsiste pour les besoins de la liquidation. Sa radiation suit, après clôture (42M).',
@@ -704,6 +719,7 @@ function fiche(code) {
     // Les pièces ne viennent d'aucun fichier INPI : vérifiées sur la fiche
     // service-public quand elle existe, à valider sinon.
     source: detail?.source || null,
+    textes: detail?.textes || [],
     pieces_a_valider: pieces.length > 0 && !detail?.source,
   };
 }

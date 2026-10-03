@@ -1066,3 +1066,5 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
 
 .cat-verifiee { background: var(--ok-soft); color: var(--ok); }
 .cat-verifiee a { color: inherit; text-decoration: underline; }
+
+.cat-textes { margin-top: 12px; font-size: .8rem; color: var(--ink-2); line-height: 1.5; }
