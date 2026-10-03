@@ -20,6 +20,7 @@ const { etat } = require('./inpi/config');
 const { catalogue } = require('./inpi/catalogue');
 const { formesCreation, enumeration } = require('./inpi/referentiels');
 const { diagnostiquer, diagnostiquerTout, diagnostiquerInventaire } = require('./inpi/diagnostic');
+const evenements = require('./inpi/catalogue-evenements');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -80,6 +81,27 @@ router.post('/inpi/importer-societe', async (req, res) => {
 });
 
 /* ------------------------------------------------------------- formalités */
+
+/**
+ * Le catalogue de toutes les formalités du guichet unique : pour chacune, les
+ * informations à transmettre et les pièces à joindre. C'est ce qu'il faut
+ * savoir avant de rédiger les actes.
+ */
+router.get('/formalites/evenements', (req, res) => {
+  res.json({
+    familles: evenements.FAMILLES,
+    pieces_communes: evenements.piecesCommunes(),
+    pieces_generees: evenements.piecesGenerees(),
+    formalites: evenements.catalogueComplet(),
+    sources: {
+      evenements: 'Référentiel INPI — dictionnaire des données mandataire, onglet « events ».',
+      informations: 'Déduites du même dictionnaire : drapeaux déclencheurs et champs conditionnés par chaque événement.',
+      pieces: 'Aucun fichier INPI ne rattache les pièces aux événements. La liste réglementaire est fixée '
+        + 'par l’arrêté prévu à l’article R. 123-292 du Code de commerce. Les rattachements proposés '
+        + 's’appuient sur les libellés officiels des codes PJ et sur la pratique : à valider.',
+    },
+  });
+});
 
 router.get('/formalites/catalogue', (req, res) => {
   res.json({ formalites: catalogue() });

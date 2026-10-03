@@ -1,0 +1,931 @@
+{
+ "_source": "8a86758b-inpi_dictionnaire-donne_es-mandataire_06-2026.xlsx",
+ "valeurs": {
+  "02M": {
+   "libelle": "Constitution d’une société sans activité",
+   "drapeaux": [],
+   "champs": []
+  },
+  "28P": {
+   "libelle": "Déclaration, modification de l’insaisissabilité",
+   "drapeaux": [
+    "BlocResidenceInsaisissabilite.is28PTriggered"
+   ],
+   "champs": [
+    "BlocResidenceInsaisissabilite.is28PTriggered"
+   ]
+  },
+  "40M": {
+   "libelle": "Cessation totale d’activité de l’entreprise sans disparition de la personne morale",
+   "drapeaux": [],
+   "champs": [
+    "BlocDetailCessation.dateDissolutionDisparition",
+    "BlocDetailCessation.lieuDeLiquidation",
+    "BlocDetailCessationEtablissement.dateDissolutionDisparition",
+    "BlocDetailCessationEtablissement.lieuDeLiquidation",
+    "BlocPublication.datePublication",
+    "BlocPublication.journalPublication"
+   ]
+  },
+  "37P": {
+   "libelle": "Suppression de la mention du contrat d’appui",
+   "drapeaux": [],
+   "champs": []
+  },
+  "69M": {
+   "libelle": "Changement de loueur du fonds",
+   "drapeaux": [
+    "BlocContrat.is69PMTriggered"
+   ],
+   "champs": []
+  },
+  "31P": {
+   "libelle": "Modification relative aux exploitants de l’indivision ou héritiers",
+   "drapeaux": [
+    "BlocDetailPouvoir.is31PModificationFonctionTriggered",
+    "BlocDetailPouvoir.is31PModificationTriggered",
+    "BlocDetailPouvoir.is31PSuppressionTriggered",
+    "BlocDetailPouvoir.is31PTriggered",
+    "BlocPouvoir.is31PModificationFonctionTriggered",
+    "BlocPouvoir.is31PModificationTriggered",
+    "BlocPouvoir.is31PSuppressionTriggered",
+    "BlocPouvoir.is31PTriggered"
+   ],
+   "champs": [
+    "BlocDetailPouvoir.is31PModificationFonctionTriggered",
+    "BlocDetailPouvoir.is31PModificationTriggered",
+    "BlocDetailPouvoir.is31PSuppressionTriggered",
+    "BlocDetailPouvoir.is31PTriggered",
+    "BlocPouvoir.is31PModificationFonctionTriggered",
+    "BlocPouvoir.is31PModificationTriggered",
+    "BlocPouvoir.is31PSuppressionTriggered",
+    "BlocPouvoir.is31PTriggered"
+   ]
+  },
+  "34M": {
+   "libelle": "Modification relative aux dirigeants d’une société de personnes",
+   "drapeaux": [
+    "BlocDetailPouvoir.is34Or35MAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is34Or35MAdjonctionTriggered",
+    "BlocDetailPouvoir.is34Or35MRolePouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is34Or35MSuppressionTriggered",
+    "BlocNatureModification.is34Or35MAddressOrInfoPouvoirTriggered",
+    "BlocNatureModification.is34Or35MAdjonctionTriggered",
+    "BlocNatureModification.is34Or35MSupressionTriggered",
+    "BlocPouvoir.is34Or35MAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocPouvoir.is34Or35MAdjonctionTriggered",
+    "BlocPouvoir.is34Or35MRolePouvoirUpdatedTriggered",
+    "BlocPouvoir.is34Or35MSuppressionTriggered"
+   ],
+   "champs": []
+  },
+  "26M": {
+   "libelle": "Reconstitution des capitaux propres",
+   "drapeaux": [],
+   "champs": []
+  },
+  "51M": {
+   "libelle": "Début d’activité au siège d’une entreprise sans activité ou reprise d’activité au siège après une cessation temporaire",
+   "drapeaux": [
+    "BlocStructureEntreprise.is51Or52MTriggered"
+   ],
+   "champs": []
+  },
+  "27M": {
+   "libelle": "Sortie de champ du Répertoire des Métiers",
+   "drapeaux": [
+    "BlocDescriptionActivite.is24Or27PMAgriTriggered",
+    "BlocDescriptionActivite.is24Or27PMTriggered",
+    "BlocDescriptionEtablissement.is27PMFermetureEtablissementTriggered"
+   ],
+   "champs": []
+  },
+  "11F": {
+   "libelle": "Transfert de l’entreprise",
+   "drapeaux": [
+    "RubriqueEtablissement.is11PMFTriggered"
+   ],
+   "champs": []
+  },
+  "43P": {
+   "libelle": "Cessation totale d’activité avec demande de maintien provisoire au RCS ou au RM",
+   "drapeaux": [],
+   "champs": []
+  },
+  "42M": {
+   "libelle": "Disparition de la personne morale",
+   "drapeaux": [],
+   "champs": [
+    "BlocDetailCessation.dateClotureLiquidation",
+    "BlocDetailCessation.dateTransfertPatrimoine",
+    "BlocDetailCessationEtablissement.dateClotureLiquidation",
+    "BlocDetailCessationEtablissement.dateTransfertPatrimoine"
+   ]
+  },
+  "68M": {
+   "libelle": "Changement de locataire - gérant",
+   "drapeaux": [
+    "BlocLocationGeranceMandat.is68PMTriggered"
+   ],
+   "champs": []
+  },
+  "38F": {
+   "libelle": "Modification des bénéficiaires effectifs",
+   "drapeaux": [
+    "PersonneMorale.is38FTriggered"
+   ],
+   "champs": [
+    "PMRubriqueBeneficiaireEffectif.is38FAddress",
+    "PMRubriqueBeneficiaireEffectif.is38FIdentite",
+    "PMRubriqueBeneficiaireEffectif.is38FModalitesControle",
+    "PersonneMorale.dateEffet38F",
+    "PersonneMorale.is38FTriggered"
+   ]
+  },
+  "65PMF": {
+   "libelle": "Embauche d’un premier salarié dans un établissement",
+   "drapeaux": [],
+   "champs": []
+  },
+  "10P": {
+   "libelle": "Modification du nom ou du prénom de la personne",
+   "drapeaux": [
+    "BlocDescriptionPersonne.is10PTriggered",
+    "BlocDescriptionPersonneIndividu.is10PTriggered"
+   ],
+   "champs": []
+  },
+  "77PF": {
+   "libelle": "Modification relative aux propriétaires indivis du fonds",
+   "drapeaux": [
+    "BlocDetailPouvoir.is77PFSuppressionTriggered",
+    "BlocDetailPouvoir.is77PFTriggered",
+    "BlocPouvoir.is77PFSuppressionTriggered",
+    "BlocPouvoir.is77PFTriggered"
+   ],
+   "champs": []
+  },
+  "63M": {
+   "libelle": "Acquisition du fonds par l'exploitant",
+   "drapeaux": [
+    "BlocDescriptionActivite.is63PMFTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.is63PMFTriggered"
+   ]
+  },
+  "36P": {
+   "libelle": "Modification relative au représentant social ou au représentant fiscal d’une entreprise personnelle étrangère employeur sans établissement en France",
+   "drapeaux": [
+    "BlocDetailPouvoir.is36PAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is36PAdjonctionTriggered",
+    "BlocDetailPouvoir.is36PRolePouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is36PSuppressionTriggered",
+    "BlocDetailPouvoir.is36PTriggered",
+    "BlocPouvoir.is36PAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocPouvoir.is36PAdjonctionTriggered",
+    "BlocPouvoir.is36PRolePouvoirUpdatedTriggered",
+    "BlocPouvoir.is36PSuppressionTriggered",
+    "BlocPouvoir.is36PTriggered"
+   ],
+   "champs": [
+    "BlocDetailPouvoir.is36PTriggered",
+    "BlocDetailPouvoir.newOrUpdatedRolePouvoir",
+    "BlocPouvoir.is36PTriggered",
+    "BlocPouvoir.newOrUpdatedRolePouvoir"
+   ]
+  },
+  "63P": {
+   "libelle": "Acquisition du fonds par l'exploitant",
+   "drapeaux": [
+    "BlocDescriptionActivite.is63PMFTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.is63PMFTriggered"
+   ]
+  },
+  "56PMF": {
+   "libelle": "Transfert d’un établissement",
+   "drapeaux": [
+    "RubriqueEtablissement.is56PMFTriggered"
+   ],
+   "champs": []
+  },
+  "11P": {
+   "libelle": "Transfert de l’entreprise",
+   "drapeaux": [
+    "RubriqueEtablissement.is11PMFTriggered"
+   ],
+   "champs": []
+  },
+  "18M": {
+   "libelle": "Economie Sociale et Solidaire (ESS)",
+   "drapeaux": [
+    "BlocDetailPersonneMorale.is18MTriggered"
+   ],
+   "champs": [
+    "BlocDetailPersonneMorale.is18MTriggered"
+   ]
+  },
+  "52M": {
+   "libelle": "Ouverture d’un établissement distinct du siège par une entreprise sans activité",
+   "drapeaux": [
+    "BlocStructureEntreprise.is51Or52MTriggered"
+   ],
+   "champs": []
+  },
+  "20M": {
+   "libelle": "Modification de la date de début d'activité",
+   "drapeaux": [
+    "BlocDescriptionActivite.is20MTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.is20MTriggered"
+   ]
+  },
+  "01P": {
+   "libelle": "Création d’une entreprise individuelle",
+   "drapeaux": [],
+   "champs": []
+  },
+  "07M": {
+   "libelle": "Inscription d’une société étrangère sans établissement en France",
+   "drapeaux": [],
+   "champs": []
+  },
+  "25M": {
+   "libelle": "Continuation de l’exploitation malgré un actif net devenu inférieur à la moitié du capital",
+   "drapeaux": [],
+   "champs": []
+  },
+  "62M": {
+   "libelle": "Suppression partielle d'activité",
+   "drapeaux": [
+    "BlocDescriptionActivite.is62PMTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.is62PMTriggered"
+   ]
+  },
+  "60PMF": {
+   "libelle": "Modification de l’identification de l’établissement",
+   "drapeaux": [
+    "BlocDescriptionEtablissement.is60PMFAddressTriggered",
+    "BlocDescriptionEtablissement.is60PMFTransfertTriggered",
+    "BlocDescriptionEtablissement.is60PMFTriggered"
+   ],
+   "champs": []
+  },
+  "27P": {
+   "libelle": "Sortie de champ du Répertoire des Métiers ou du RCS",
+   "drapeaux": [
+    "BlocDescriptionActivite.is24Or27PMAgriTriggered",
+    "BlocDescriptionActivite.is24Or27PMTriggered",
+    "BlocDescriptionEtablissement.is27PMFermetureEtablissementTriggered"
+   ],
+   "champs": []
+  },
+  "62P": {
+   "libelle": "Suppression partielle d'activité",
+   "drapeaux": [
+    "BlocDescriptionActivite.is62PMTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.is62PMTriggered"
+   ]
+  },
+  "30M": {
+   "libelle": "Modification relative aux membres d’un groupement",
+   "drapeaux": [],
+   "champs": [
+    "BlocDetailIndividuAvecConjoint.dateEffet35M",
+    "PPEntrepreneur.dateEffet35M"
+   ]
+  },
+  "40P": {
+   "libelle": "Cessation temporaire d’activité de l’entreprise",
+   "drapeaux": [],
+   "champs": [
+    "RubriqueAdresseEntreprise.dateEffet21P",
+    "RubriqueAdresseEntreprise.is21PTriggered"
+   ]
+  },
+  "29M": {
+   "libelle": "Autre modification concernant la personne morale",
+   "drapeaux": [
+    "BlocDescriptionActivite.is29PMTriggered",
+    "BlocDetailPersonneMorale.is29MQualiteSocieteMissionTriggered",
+    "BlocDetailPersonneMorale.is29MSimplifiedFusionTriggered",
+    "BlocDetailPersonneMorale.is29MTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.dateEffet29PM",
+    "BlocDescriptionActivite.is29PMTriggered",
+    "BlocDetailPersonneMorale.is29MQualiteSocieteMissionTriggered",
+    "BlocDetailPersonneMorale.is29MSimplifiedFusionTriggered",
+    "BlocDetailPersonneMorale.is29MTriggered"
+   ]
+  },
+  "16M": {
+   "libelle": "Modification de la durée de la personne morale ou de la date de clôture de l’exercice social",
+   "drapeaux": [
+    "BlocDetailPersonneMorale.is16MTriggered"
+   ],
+   "champs": [
+    "BlocDetailPersonneMorale.is16MTriggered",
+    "BlocDetailPersonneMorale.isModificationDateCloture",
+    "BlocDetailPersonneMorale.isProlongationDuree"
+   ]
+  },
+  "05P": {
+   "libelle": "Création d’une entreprise individuelle, personne ayant déjà exercé une activité non salariée",
+   "drapeaux": [],
+   "champs": []
+  },
+  "12M": {
+   "libelle": "Modification des principales activités de l’entreprise ou de l’objet d’un GEIE",
+   "drapeaux": [
+    "BlocDetailPersonneMorale.is12MTriggered"
+   ],
+   "champs": [
+    "BlocDetailPersonneMorale.is12MTriggered"
+   ]
+  },
+  "92PM": {
+   "libelle": "Rejet par le Greffe de la formalité présentée au RCS",
+   "drapeaux": [],
+   "champs": []
+  },
+  "30P": {
+   "libelle": "Modification relative au conjoint collaborateur",
+   "drapeaux": [
+    "BlocDetailIndividu.is29Or30PInfoTriggered",
+    "BlocDetailIndividu.is29Or30PTriggered",
+    "BlocDetailIndividuAvecConjoint.is29Or30PInfoTriggered",
+    "BlocDetailIndividuAvecConjoint.is29Or30PTriggered",
+    "BlocIndividuChapeau.is29Or30PInfoTriggered",
+    "BlocIndividuChapeau.is29Or30PTriggered",
+    "PPEntrepreneur.is29Or30PInfoTriggered",
+    "PPEntrepreneur.is29Or30PTriggered"
+   ],
+   "champs": []
+  },
+  "77F": {
+   "libelle": "Modification relative aux propriétaires indivis du fonds",
+   "drapeaux": [
+    "BlocDetailPouvoir.is77PFModificationTriggered",
+    "BlocDetailPouvoir.is77PFSuppressionTriggered",
+    "BlocDetailPouvoir.is77PFTriggered",
+    "BlocPouvoir.is77PFModificationTriggered",
+    "BlocPouvoir.is77PFSuppressionTriggered",
+    "BlocPouvoir.is77PFTriggered"
+   ],
+   "champs": []
+  },
+  "45P": {
+   "libelle": "Cessation d’activité agricole avec conservation de stocks ou de cheptel",
+   "drapeaux": [],
+   "champs": []
+  },
+  "20P": {
+   "libelle": "Modification de la date de début d'activité",
+   "drapeaux": [
+    "BlocDescriptionActivite.is20PTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.is20PTriggered"
+   ]
+  },
+  "22P": {
+   "libelle": "Décès de l’exploitant avec poursuite de l’exploitation",
+   "drapeaux": [],
+   "champs": []
+  },
+  "24P": {
+   "libelle": "Entrée de champ RCS, RM ou RSAC",
+   "drapeaux": [
+    "BlocDescriptionActivite.is24Or27PMAgriTriggered",
+    "BlocDescriptionActivite.is24Or27PMTriggered"
+   ],
+   "champs": []
+  },
+  "41M": {
+   "libelle": "Disparition de la personne morale par suite de fusion ou de scission",
+   "drapeaux": [],
+   "champs": [
+    "BlocDetailCessation.dateDissolutionDisparition",
+    "BlocDetailCessationEtablissement.dateDissolutionDisparition",
+    "PMRubriqueIdentitePM.entreprisesIntervenant"
+   ]
+  },
+  "47P": {
+   "libelle": "Option TVA bailleur de biens ruraux",
+   "drapeaux": [
+    "RubriqueEtablissement.is47PMFTriggered"
+   ],
+   "champs": [
+    "BlocDetailMiseEnLocationBiensRurauxEtablissement.precisionMiseEnLocation",
+    "BlocDetailMiseEnLocationBiensRurauxEtablissement.preneurBail",
+    "RubriqueEtablissement.dateEffet47PMF",
+    "RubriqueEtablissement.is47PMFTriggered"
+   ]
+  },
+  "44M": {
+   "libelle": "Cessation d’activité agricole avec mise en location des terres et assujettissement à la TVA pour ce bail",
+   "drapeaux": [],
+   "champs": [
+    "BlocDetailCessation.dateLocationBiensRuraux",
+    "BlocDetailCessationEtablissement.dateLocationBiensRuraux"
+   ]
+  },
+  "22M": {
+   "libelle": "Dissolution",
+   "drapeaux": [],
+   "champs": [
+    "BlocDetailCessation.dateClotureLiquidation",
+    "BlocDetailCessation.dateDissolutionDisparition",
+    "BlocDetailCessation.lieuDeLiquidation",
+    "BlocDetailCessationEtablissement.dateClotureLiquidation",
+    "BlocDetailCessationEtablissement.dateDissolutionDisparition",
+    "BlocDetailCessationEtablissement.lieuDeLiquidation",
+    "BlocPublication.datePublication",
+    "BlocPublication.journalPublication"
+   ]
+  },
+  "12F": {
+   "libelle": "Modification des principales activités de l’exploitation en commun",
+   "drapeaux": [
+    "BlocAncienExploitant.is12FTriggered",
+    "BlocEntrepriseChapeau.is12FTriggered",
+    "BlocEntrepriseIdentite.is12FTriggered",
+    "BlocSocieteGestion.is12FTriggered"
+   ],
+   "champs": []
+  },
+  "35M": {
+   "libelle": "Modification relative aux dirigeants d’une SARL ou d’une société de capitaux",
+   "drapeaux": [
+    "BlocDetailIndividuAvecConjoint.is35MInfoTriggered",
+    "BlocDetailIndividuAvecConjoint.is35MTriggered",
+    "BlocDetailPouvoir.is34Or35MAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is34Or35MAdjonctionTriggered",
+    "BlocDetailPouvoir.is34Or35MRolePouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is34Or35MSuppressionTriggered",
+    "BlocNatureModification.is34Or35MAddressOrInfoPouvoirTriggered",
+    "BlocNatureModification.is34Or35MAdjonctionTriggered",
+    "BlocNatureModification.is34Or35MSupressionTriggered",
+    "BlocPouvoir.is34Or35MAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocPouvoir.is34Or35MAdjonctionTriggered",
+    "BlocPouvoir.is34Or35MRolePouvoirUpdatedTriggered",
+    "BlocPouvoir.is34Or35MSuppressionTriggered",
+    "PPEntrepreneur.is35MInfoTriggered",
+    "PPEntrepreneur.is35MTriggered"
+   ],
+   "champs": [
+    "BlocDetailPouvoir.dateEffet34Or35M",
+    "BlocDetailPouvoir.is34Or35MAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is34Or35MAdjonctionTriggered",
+    "BlocDetailPouvoir.is34Or35MRolePouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is34Or35MSuppressionTriggered",
+    "BlocDetailPouvoir.isModificationAdressePouvoir",
+    "BlocDetailPouvoir.isModificationIdentitePouvoir",
+    "BlocDetailPouvoir.isModificationRepresentantPermanent",
+    "BlocDetailPouvoir.newOrUpdatedRolePouvoir",
+    "BlocPouvoir.dateEffet34Or35M",
+    "BlocPouvoir.is34Or35MAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocPouvoir.is34Or35MAdjonctionTriggered",
+    "BlocPouvoir.is34Or35MRolePouvoirUpdatedTriggered",
+    "BlocPouvoir.is34Or35MSuppressionTriggered",
+    "BlocPouvoir.isModificationAdressePouvoir",
+    "BlocPouvoir.isModificationIdentitePouvoir",
+    "BlocPouvoir.isModificationRepresentantPermanent",
+    "BlocPouvoir.newOrUpdatedRolePouvoir"
+   ]
+  },
+  "91PM": {
+   "libelle": "Rejet de l’immatriculation au RM",
+   "drapeaux": [],
+   "champs": []
+  },
+  "17P": {
+   "libelle": "Modification de la nationalité",
+   "drapeaux": [
+    "BlocDescriptionPersonne.is17PTriggered",
+    "BlocDescriptionPersonneIndividu.is17PTriggered"
+   ],
+   "champs": []
+  },
+  "82PMF": {
+   "libelle": "Mise en location gérance ou en gérance mandat d’un des fonds exploités",
+   "drapeaux": [],
+   "champs": []
+  },
+  "11M": {
+   "libelle": "Transfert du siège de l’entreprise",
+   "drapeaux": [
+    "RubriqueEtablissement.is11PMFTriggered"
+   ],
+   "champs": []
+  },
+  "36M": {
+   "libelle": "Modification relative au représentant social ou au représentant fiscal d’une société étrangère employeur sans établissement en France",
+   "drapeaux": [
+    "BlocDetailPouvoir.is36MAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is36MAdjonctionTriggered",
+    "BlocDetailPouvoir.is36MRolePouvoirUpdatedTriggered",
+    "BlocDetailPouvoir.is36MSuppressionTriggered",
+    "BlocDetailPouvoir.is36MTriggered",
+    "BlocPouvoir.is36MAddressOrInfoPouvoirUpdatedTriggered",
+    "BlocPouvoir.is36MAdjonctionTriggered",
+    "BlocPouvoir.is36MRolePouvoirUpdatedTriggered",
+    "BlocPouvoir.is36MSuppressionTriggered",
+    "BlocPouvoir.is36MTriggered"
+   ],
+   "champs": [
+    "BlocDetailPouvoir.newOrUpdatedRolePouvoir",
+    "BlocPouvoir.newOrUpdatedRolePouvoir"
+   ]
+  },
+  "40F": {
+   "libelle": "Fin d’exploitation en commun",
+   "drapeaux": [],
+   "champs": []
+  },
+  "32M": {
+   "libelle": "Modification relative aux associés non gérants relevant du régime TNS - MSA",
+   "drapeaux": [],
+   "champs": []
+  },
+  "05M": {
+   "libelle": "Constitution d’une personne morale dont l’immatriculation est prévue par un texte",
+   "drapeaux": [],
+   "champs": []
+  },
+  "37M": {
+   "libelle": "Suppression de la mention du contrat d’appui",
+   "drapeaux": [],
+   "champs": []
+  },
+  "30F": {
+   "libelle": "Modification relative aux membres de l'exploitation en commun",
+   "drapeaux": [
+    "BlocDetailPouvoir.is30FSuppressionTriggered",
+    "BlocDetailPouvoir.is30FTriggered",
+    "BlocNatureModification.is30FSuppressionTriggered",
+    "BlocNatureModification.is30FTriggered",
+    "BlocPouvoir.is30FSuppressionTriggered",
+    "BlocPouvoir.is30FTriggered"
+   ],
+   "champs": []
+  },
+  "17M": {
+   "libelle": "Modification de la mention « associé unique » (déclaration ou suppression)",
+   "drapeaux": [
+    "BlocDetailPersonneMorale.is17MNotDirigeantTriggered",
+    "BlocDetailPersonneMorale.is17MTriggered"
+   ],
+   "champs": []
+  },
+  "13M": {
+   "libelle": "Modification de la forme juridique ou du statut particulier",
+   "drapeaux": [
+    "BlocNatureCreation.is13MTriggered"
+   ],
+   "champs": []
+  },
+  "29P": {
+   "libelle": "Autre modification concernant la personne 1",
+   "drapeaux": [
+    "BlocDescriptionActivite.is29PMTriggered",
+    "BlocDetailIndividu.is29Or30PInfoTriggered",
+    "BlocDetailIndividu.is29Or30PTriggered",
+    "BlocDetailIndividuAvecConjoint.is29Or30PInfoTriggered",
+    "BlocDetailIndividuAvecConjoint.is29Or30PTriggered",
+    "BlocIndividuChapeau.is29Or30PInfoTriggered",
+    "BlocIndividuChapeau.is29Or30PTriggered",
+    "PPEntrepreneur.is29Or30PInfoTriggered",
+    "PPEntrepreneur.is29Or30PTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.dateEffet29PM",
+    "BlocDescriptionActivite.is29PMTriggered"
+   ]
+  },
+  "20F": {
+   "libelle": "Modification de la date de début d’activité",
+   "drapeaux": [
+    "BlocAncienExploitant.is20FTriggered",
+    "BlocEntrepriseChapeau.is20FTriggered",
+    "BlocEntrepriseIdentite.is20FTriggered",
+    "BlocSocieteGestion.is20FTriggered"
+   ],
+   "champs": []
+  },
+  "28M": {
+   "libelle": "Dissolution sans liquidation suite à décision de l'associé unique Personne Morale (TUP)",
+   "drapeaux": [],
+   "champs": [
+    "BlocDetailCessation.dateDissolutionDisparition",
+    "BlocDetailCessation.dateTransfertPatrimoine",
+    "BlocDetailCessationEtablissement.dateDissolutionDisparition",
+    "BlocDetailCessationEtablissement.dateTransfertPatrimoine"
+   ]
+  },
+  "68P": {
+   "libelle": "Changement de locataire - gérant",
+   "drapeaux": [
+    "BlocLocationGeranceMandat.is68PMTriggered"
+   ],
+   "champs": []
+  },
+  "44F": {
+   "libelle": "Cessation d'activité agricole avec mise en location des terres et assujettissement à la TVA pour ce bail",
+   "drapeaux": [],
+   "champs": []
+  },
+  "84M": {
+   "libelle": "Mise en location gérance du fonds unique ou en gérance mandat avec maintien au RCS",
+   "drapeaux": [
+    "RubriqueEtablissement.is84MTriggered"
+   ],
+   "champs": []
+  },
+  "10F": {
+   "libelle": "Modification de l’identification de l’exploitation en commun",
+   "drapeaux": [
+    "BlocAncienExploitant.is10FTriggered",
+    "BlocEntrepriseChapeau.is10FTriggered",
+    "BlocEntrepriseIdentite.is10FTriggered",
+    "BlocSocieteGestion.is10FTriggered"
+   ],
+   "champs": [
+    "BlocAncienExploitant.nouveauNomExploitation",
+    "BlocEntrepriseChapeau.nouveauNomExploitation",
+    "BlocEntrepriseIdentite.nouveauNomExploitation",
+    "BlocSocieteGestion.nouveauNomExploitation"
+   ]
+  },
+  "67PMF": {
+   "libelle": "Modification des activités de l’établissement",
+   "drapeaux": [],
+   "champs": []
+  },
+  "61PMF": {
+   "libelle": "Adjonction d’activité",
+   "drapeaux": [
+    "BlocDescriptionActivite.is61PMFTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.is61PMFTriggered"
+   ]
+  },
+  "21P": {
+   "libelle": "Reprise d'activité de l'entreprise après une cessation temporaire",
+   "drapeaux": [
+    "RubriqueAdresseEntreprise.is21PTriggered"
+   ],
+   "champs": []
+  },
+  "01M": {
+   "libelle": "Création d’une entreprise personne morale",
+   "drapeaux": [],
+   "champs": []
+  },
+  "55PM": {
+   "libelle": "Modification du nom de domaine du site internet d'un établissement",
+   "drapeaux": [
+    "BlocNomDeDomaine.is55PMTriggered"
+   ],
+   "champs": [
+    "BlocNomDeDomaine.dateEffet"
+   ]
+  },
+  "07P": {
+   "libelle": "Inscription d’une entreprise individuelle étrangère sans établissement en France",
+   "drapeaux": [],
+   "champs": []
+  },
+  "45F": {
+   "libelle": "Cessation d'activité agricole avec conservation de stocks ou de cheptel",
+   "drapeaux": [],
+   "champs": []
+  },
+  "19M": {
+   "libelle": "Changement de la nature de la gérance",
+   "drapeaux": [
+    "BlocDetailPersonneMorale.is19MTriggered"
+   ],
+   "champs": [
+    "BlocDetailPersonneMorale.is19MTriggered"
+   ]
+  },
+  "53PMF": {
+   "libelle": "Reprise de l’exploitation d’un fonds mis en location gérance",
+   "drapeaux": [
+    "BlocDescriptionActivite.is53PMFTriggered",
+    "RubriqueEtablissement.is53PMFTriggered"
+   ],
+   "champs": [
+    "RubriqueEtablissement.is53PMFTriggered"
+   ]
+  },
+  "70PM": {
+   "libelle": "Modification relative à une personne ayant le pouvoir d’engager l’établissement",
+   "drapeaux": [
+    "BlocDetailPouvoir.is70PMSuppressionTriggered",
+    "BlocDetailPouvoir.is70PMTriggered",
+    "BlocPouvoir.is70PMSuppressionTriggered",
+    "BlocPouvoir.is70PMTriggered"
+   ],
+   "champs": [
+    "BlocDetailPouvoir.is70PMModificationTriggered",
+    "BlocDetailPouvoir.is70PMSuppressionTriggered",
+    "BlocPouvoir.is70PMModificationTriggered",
+    "BlocPouvoir.is70PMSuppressionTriggered"
+   ]
+  },
+  "24M": {
+   "libelle": "Entrée de champ RCS, RM ou RSAC",
+   "drapeaux": [
+    "BlocDescriptionActivite.is24Or27PMAgriTriggered",
+    "BlocDescriptionActivite.is24Or27PMTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.dateEffet24Or27PM",
+    "BlocDescriptionActivite.dateEffet24Or27PMAgri",
+    "BlocDescriptionActivite.is24Or27PMAgriTriggered",
+    "BlocDescriptionActivite.is24Or27PMTriggered"
+   ]
+  },
+  "80PMF": {
+   "libelle": "Fermeture d’un établissement",
+   "drapeaux": [
+    "RubriqueEtablissement.is80PMFTriggered"
+   ],
+   "champs": []
+  },
+  "23M": {
+   "libelle": "Demande de prorogation de l’immatriculation au RCS",
+   "drapeaux": [],
+   "champs": []
+  },
+  "15P": {
+   "libelle": "Modification du nom d’usage ou du pseudonyme",
+   "drapeaux": [
+    "BlocDescriptionPersonne.is15PTriggered",
+    "BlocDescriptionPersonneIndividu.is15PTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionPersonne.dateEffet15P",
+    "BlocDescriptionPersonneIndividu.dateEffet15P"
+   ]
+  },
+  "14M": {
+   "libelle": "Modification du ou des noms de domaine des sites internet de la personne morale",
+   "drapeaux": [
+    "BlocNomDeDomaine.is14MTriggered"
+   ],
+   "champs": []
+  },
+  "42P": {
+   "libelle": "Décès de l’exploitant individuel sans poursuite de l’exploitation avec demande de maintien provisoire au RCS ou au RM",
+   "drapeaux": [],
+   "champs": []
+  },
+  "10M": {
+   "libelle": "Modification de l’identification de la personne morale",
+   "drapeaux": [
+    "BlocDetailPersonneMorale.is10MTriggered"
+   ],
+   "champs": [
+    "BlocDetailPersonneMorale.is10MTriggered"
+   ]
+  },
+  "41P": {
+   "libelle": "Cessation totale d’activité non salariée",
+   "drapeaux": [],
+   "champs": []
+  },
+  "01F": {
+   "libelle": "Déclaration d'exploitation en commun",
+   "drapeaux": [],
+   "champs": []
+  },
+  "66PMF": {
+   "libelle": "Fin d’emploi de tout salarié dans un établissement",
+   "drapeaux": [],
+   "champs": []
+  },
+  "25P": {
+   "libelle": "Déclaration, modification relative à l’EIRL",
+   "drapeaux": [
+    "BlocEirl.is25PActiviteTriggered",
+    "BlocEirl.is25PDateClotureTriggered",
+    "BlocEirl.is25PDenominationTriggered",
+    "BlocEirl.is25PEtablissementRattachementTriggered",
+    "BlocEirl.is25PRenonciationTriggered"
+   ],
+   "champs": [
+    "BlocEirl.is25PActiviteTriggered",
+    "BlocEirl.is25PDateClotureTriggered",
+    "BlocEirl.is25PDenominationTriggered",
+    "BlocEirl.is25PEtablissementRattachementTriggered",
+    "BlocEirl.is25PRenonciationTriggered"
+   ]
+  },
+  "03M": {
+   "libelle": "Constitution d’une société sans activité au siège avec début d’activité hors siège",
+   "drapeaux": [],
+   "champs": []
+  },
+  "04M": {
+   "libelle": "Ouverture du 1 er établissement en France d’une société commerciale ayant son siège à l'étranger",
+   "drapeaux": [],
+   "champs": []
+  },
+  "44P": {
+   "libelle": "Cessation d’activité agricole avec mise en location des terres et assujettissement à la TVA pour ce bail",
+   "drapeaux": [],
+   "champs": []
+  },
+  "46P": {
+   "libelle": "Départ en retraite avec conservation d’une exploitation de subsistance",
+   "drapeaux": [],
+   "champs": []
+  },
+  "43M": {
+   "libelle": "Fermeture de l’établissement principal d’une société étrangère",
+   "drapeaux": [],
+   "champs": []
+  },
+  "99PMF": {
+   "libelle": "Correction ou complément d’une formalité",
+   "drapeaux": [],
+   "champs": []
+  },
+  "54PMF": {
+   "libelle": "PMF Ouverture d’un nouvel établissement",
+   "drapeaux": [
+    "RubriqueEtablissement.is54PMFTriggered"
+   ],
+   "champs": []
+  },
+  "16P": {
+   "libelle": "Modification du domicile personnel",
+   "drapeaux": [
+    "BlocAdresse.is16PTriggered"
+   ],
+   "champs": []
+  },
+  "15M": {
+   "libelle": "Modification du capital social",
+   "drapeaux": [
+    "BlocDetailPersonneMorale.is15MTriggered"
+   ],
+   "champs": [
+    "BlocDetailPersonneMorale.is15MTriggered"
+   ]
+  },
+  "63F": {
+   "libelle": "Acquisition du fonds par l'exploitant",
+   "drapeaux": [
+    "BlocDescriptionActivite.is63PMFTriggered"
+   ],
+   "champs": [
+    "BlocDescriptionActivite.is63PMFTriggered"
+   ]
+  },
+  "64PMF": {
+   "libelle": "Renouvellement du contrat de location gérance",
+   "drapeaux": [],
+   "champs": []
+  },
+  "23P": {
+   "libelle": "Demande de renouvellement du maintien provisoire de l'immatriculation au RCS ou au RM",
+   "drapeaux": [],
+   "champs": []
+  },
+  "33M": {
+   "libelle": "Modification relative aux dirigeants d’un groupement",
+   "drapeaux": [],
+   "champs": []
+  },
+  "69P": {
+   "libelle": "Changement de loueur du fonds",
+   "drapeaux": [
+    "BlocContrat.is69PMTriggered"
+   ],
+   "champs": [
+    "BlocContrat.dateEffet69PM"
+   ]
+  },
+  "84P": {
+   "libelle": "Mise en location gérance du fonds unique ou en gérance mandat avec maintien au RCS",
+   "drapeaux": [
+    "RubriqueEtablissement.is82Or83Or84PTriggered",
+    "RubriqueEtablissement.is84PTriggered"
+   ],
+   "champs": []
+  }
+ }
+}

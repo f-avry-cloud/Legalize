@@ -19,7 +19,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DOSSIER = path.join(__dirname, '..', 'public');
-const FICHIERS = ['app.html', 'style.css', 'app.js', 'formalites.js', 'rmt.js'];
+const FICHIERS = ['app.html', 'style.css', 'app.js', 'formalites.js', 'rmt.js', 'catalogue.js'];
 
 function calculer() {
   // Sur une plateforme de déploiement, le SHA du commit est la source la plus
@@ -51,7 +51,7 @@ const VERSION = calculer();
 function pageIndex() {
   const html = fs.readFileSync(path.join(DOSSIER, 'app.html'), 'utf8');
   return html
-    .replace(/(href|src)="(style\.css|app\.js|formalites\.js|rmt\.js)(\?v=[^"]*)?"/g,
+    .replace(/(href|src)="(style\.css|app\.js|formalites\.js|rmt\.js|catalogue\.js)(\?v=[^"]*)?"/g,
       (_, attr, fichier) => `${attr}="${fichier}?v=${VERSION}"`)
     .replace('</head>', `  <meta name="legalize-version" content="${VERSION}">\n</head>`);
 }

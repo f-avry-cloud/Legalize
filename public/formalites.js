@@ -78,6 +78,7 @@ async function formalitesDashboard() {
     <div class="page-head"><h1>Formalités</h1>
       <div>
         <button id="btn-test-inpi">Tester la connexion INPI</button>
+        <a class="btn btn-primary" href="#/formalites/catalogue">Catalogue des formalités</a>
         <button id="btn-importer">Importer depuis l'INPI</button>
         <button id="btn-sync">Synchroniser</button>
         <a class="btn btn-primary" href="#/formalites/new">Nouvelle formalité</a>

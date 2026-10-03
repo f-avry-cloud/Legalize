@@ -12,7 +12,8 @@
     "test:formalites": "node scripts/test-formalites.js",
     "test:api": "node scripts/test-api-formalites.js",
     "inpi:test": "node scripts/inpi-connexion.js",
-    "test:rmt": "node scripts/test-rmt.js"
+    "test:rmt": "node scripts/test-rmt.js",
+    "test:catalogue": "node scripts/test-catalogue-formalites.js"
   },
   "engines": {
     "node": ">=20"

@@ -19,6 +19,7 @@ Usage :
 
 import argparse
 import json
+import re
 import pathlib
 import sys
 
@@ -110,7 +111,9 @@ def dictionnaire(chemin):
             deja.add(nom)
     ecrire("enumerations", enums, source)
 
-    ecrire("dictionnaire", classes(wb["Types Et Classes"]), source)
+    structure = classes(wb["Types Et Classes"])
+    ecrire("dictionnaire", structure, source)
+    ecrire("evenements-dictionnaire", traces_evenements(paires(wb["events"]), structure), source)
     wb.close()
 
 
@@ -137,6 +140,59 @@ def classes(ws):
                 "description": None if desc in (None, "n/a") else desc,
             }
     return resultat
+
+
+# ---------------------------------------------------------------------------
+# Ce que le dictionnaire dit de chaque événement.
+#
+# Il n'existe pas de tableau « événement → champs » : l'information est
+# dispersée. Deux traces la portent :
+#   - les drapeaux `is…Triggered`, dont le nom encode les événements qu'ils
+#     déclenchent : is11PMFTriggered vaut pour 11P, 11M et 11F,
+#     is34Or35MAdjonctionTriggered pour 34M et 35M ;
+#   - les descriptions, qui citent l'événement rendant un champ obligatoire :
+#     « obligatoire car c'est un événement 22M40M ».
+# ---------------------------------------------------------------------------
+
+def _evenements_du_drapeau(nom, codes):
+    m = re.match(r"^is(.+?)Triggered$", nom)
+    if not m:
+        return set()
+    corps = m.group(1)
+    trouves = set()
+    for num, lettres in re.findall(r"(\d{2})([PMF]*)", corps):
+        if not lettres:
+            suite = re.search(r"\d{2}([PMF]+)", corps[corps.find(num) + 2:])
+            lettres = suite.group(1) if suite else ""
+        for lettre in lettres:
+            trouves.add(num + lettre)
+        trouves.add(num + lettres)
+    return {c for c in trouves if c in codes}
+
+
+def _evenements_cites(texte, codes):
+    trouves = set()
+    for num, lettres in re.findall(r"(\d{2})([PMF]{1,3})", texte or ""):
+        for lettre in lettres:
+            trouves.add(num + lettre)
+        trouves.add(num + lettres)
+    return {c for c in trouves if c in codes}
+
+
+def traces_evenements(evenements, structure):
+    codes = set(evenements)
+    traces = {c: {"libelle": evenements[c], "drapeaux": set(), "champs": set()} for c in codes}
+    for classe, definition in structure.items():
+        for nom, prop in definition["proprietes"].items():
+            ref = f"{classe}.{nom}"
+            for c in _evenements_du_drapeau(nom, codes):
+                traces[c]["drapeaux"].add(ref)
+            for c in _evenements_cites(prop.get("description"), codes):
+                traces[c]["champs"].add(ref)
+    return {
+        c: {"libelle": t["libelle"], "drapeaux": sorted(t["drapeaux"]), "champs": sorted(t["champs"])}
+        for c, t in traces.items()
+    }
 
 
 def formes_juridiques(chemin):
