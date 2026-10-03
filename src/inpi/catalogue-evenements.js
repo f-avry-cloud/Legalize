@@ -60,7 +60,8 @@ const STATUTS_MAJ = ['PJ_02'];
 const ANNONCE = ['PJ_08'];
 const IDENTITE_DIRIGEANT = [
   ['PJ_11', 'pour chaque nouveau dirigeant personne physique (ou PJ_12, passeport)'],
-  ['PJ_17', 'pour chaque nouveau dirigeant personne physique'],
+  ['PJ_63', 'pour chaque nouveau dirigeant personne physique'],
+  ['PJ_64', 'pour chaque nouveau dirigeant personne physique'],
   ['PJ_20', 'pour chaque nouveau dirigeant personne morale'],
 ];
 const SIEGE = [
@@ -174,6 +175,7 @@ const DETAIL = {
 
   /* ------------------------------------------------ statuts et identité */
   '10M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36170',
     famille: 'identite',
     type: 'M',
     quand: 'Changement de dénomination, de sigle ou de nom commercial de la société.',
@@ -186,6 +188,7 @@ const DETAIL = {
     pieces: [PV, STATUTS_MAJ, ANNONCE],
   },
   '11M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36267',
     famille: 'identite',
     type: 'M',
     quand: 'Le siège social est déplacé, dans le ressort du même greffe ou hors de ce ressort.',
@@ -201,6 +204,7 @@ const DETAIL = {
     note: 'Un transfert hors ressort donne lieu à deux annonces légales : dans le département de départ et dans celui d’arrivée.',
   },
   '12M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36182',
     famille: 'identite',
     type: 'M',
     quand: 'Modification de l’objet social ou des principales activités exercées.',
@@ -211,6 +215,7 @@ const DETAIL = {
     pieces: [PV, STATUTS_MAJ, ANNONCE, ['PJ_31', 'si une activité réglementée est ajoutée']],
   },
   '13M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36177',
     famille: 'identite',
     type: 'M',
     quand: 'Transformation de la société (SARL en SAS, SAS en SA…) ou changement de statut particulier.',
@@ -220,7 +225,7 @@ const DETAIL = {
       ['Capital, s’il est modifié à cette occasion', 'BlocDetailPersonneMorale.montantCapital'],
     ],
     pieces: [
-      ['PJ_153'], STATUTS_MAJ, ANNONCE,
+      ['PJ_153'], ['PJ_157'], STATUTS_MAJ, ANNONCE,
       ['PJ_160', 'lorsqu’un commissaire à la transformation doit être désigné'],
       ['PJ_58', 'pour la transformation d’une SARL en SA'],
       ['PJ_03', 'si de nouveaux dirigeants sont nommés'],
@@ -239,6 +244,7 @@ const DETAIL = {
     note: 'Déclaration sans pièce justificative spécifique identifiée.',
   },
   '15M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36607',
     famille: 'identite',
     type: 'M',
     quand: 'Augmentation ou réduction du capital social.',
@@ -252,10 +258,9 @@ const DETAIL = {
       ['PJ_156', 'en cas de réduction : décision actant son principe'],
       ['PJ_54', 'en cas de réduction : décision constatant sa réalisation'],
       ['PJ_55', 'SA ou SAS : décision du conseil ou du directoire agissant sur délégation'],
-      ['PJ_56', 'SA ou SAS : augmentation en numéraire'],
-      ['PJ_92', 'autres formes : augmentation en numéraire'],
+      ['PJ_180', 'augmentation en numéraire'],
       ['PJ_57', 'SA ou SAS : libération par compensation de créances'],
-      ['PJ_163', 'augmentation par apport en nature'],
+      ['PJ_163', 'augmentation par apport en nature (avec le récépissé de son dépôt)'],
     ],
   },
   '16M': {
@@ -314,6 +319,7 @@ const DETAIL = {
 
   /* ------------------------------------------------------- dirigeants */
   '35M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F36173',
     famille: 'dirigeants',
     type: 'M',
     quand: 'Nomination, cessation ou changement de fonctions d’un dirigeant de SARL, SAS, SA (gérant, président, directeur général, administrateur, commissaire aux comptes…).',
@@ -324,16 +330,15 @@ const DETAIL = {
       ['Date d’effet', 'BlocPouvoir.dateEffet34Or35M'],
     ],
     pieces: [
-      ANNONCE,
-      ['PJ_03', 'en cas de nomination'],
-      ['PJ_54', 'en cas de cessation ou de changement de fonctions'],
+      ['PJ_54'], ANNONCE,
       ['PJ_230', 'en cas de démission'],
       ...IDENTITE_DIRIGEANT,
       ['PJ_80', 'désignation du représentant permanent d’une personne morale administrateur'],
       ['PJ_40', 'nomination d’un commissaire aux comptes'],
       ['PJ_41', 'nomination d’un commissaire aux comptes'],
-      ['PJ_02', 'si le dirigeant est désigné dans les statuts'],
+      ['PJ_02', 'si les statuts sont modifiés'],
     ],
+    note: 'Un changement de dirigeant ne modifie pas, à lui seul, les bénéficiaires effectifs : à vérifier au cas par cas (38F).',
   },
   '34M': {
     famille: 'dirigeants',
@@ -552,6 +557,7 @@ const DETAIL = {
 
   /* ------------------------------------------- dissolution, fusion, radiation */
   '22M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F23744',
     famille: 'dissolution',
     type: 'M',
     quand: 'Dissolution anticipée de la société suivie d’une liquidation amiable.',
@@ -564,12 +570,14 @@ const DETAIL = {
     pieces: [
       ['PJ_108'], ANNONCE,
       ['PJ_11', 'liquidateur personne physique (ou PJ_12, passeport)'],
-      ['PJ_17', 'liquidateur personne physique'],
+      ['PJ_63', 'liquidateur personne physique'],
+      ['PJ_64', 'liquidateur personne physique'],
       ['PJ_20', 'liquidateur personne morale'],
     ],
     note: 'La société subsiste pour les besoins de la liquidation. Sa radiation suit, après clôture (42M).',
   },
   '42M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F23744',
     famille: 'dissolution',
     type: 'R',
     quand: 'Radiation de la société après la clôture de la liquidation.',
@@ -578,12 +586,12 @@ const DETAIL = {
       ['Motif de la disparition', 'BlocDetailCessation.motifDisparition'],
     ],
     pieces: [
-      ['PJ_134'], ['PJ_82'], ANNONCE,
-      ['PJ_59', 'récépissé du dépôt des comptes de clôture'],
-      ['PJ_204', 'si le rapport du liquidateur est exigé'],
+      ['PJ_133'], ['PJ_82'], ANNONCE, ['PJ_240'], ['PJ_241'],
     ],
+    note: 'Depuis octobre 2024, la clôture d’une liquidation amiable exige une attestation fiscale et une attestation de régularité sociale.',
   },
   '28M': {
+    source: 'https://entreprendre.service-public.gouv.fr/vosdroits/F35962',
     famille: 'dissolution',
     type: 'R',
     quand: 'Dissolution sans liquidation par décision de l’associé unique personne morale (transmission universelle de patrimoine).',
@@ -591,8 +599,8 @@ const DETAIL = {
       ['Date de la décision et de la transmission du patrimoine', 'BlocDetailCessation.dateTransfertPatrimoine'],
       ['Identité de l’associé unique qui reçoit le patrimoine', null],
     ],
-    pieces: [['PJ_108'], ANNONCE, ['PJ_188', 'extrait d’immatriculation de l’associé unique']],
-    note: 'La transmission n’a lieu qu’à l’issue du délai d’opposition des créanciers.',
+    pieces: [['PJ_108'], ANNONCE],
+    note: 'La transmission n’a lieu qu’à l’issue du délai d’opposition des créanciers (30 jours après la publication au Bodacc). Le procès-verbal n’a pas à être enregistré.',
   },
   '41M': {
     famille: 'dissolution',
@@ -693,8 +701,10 @@ function fiche(code) {
     // Ce que le dictionnaire INPI rattache à l'événement, pour qui veut
     // vérifier : le drapeau déclencheur et les champs qu'il conditionne.
     inpi: { drapeaux: trace.drapeaux, champs: trace.champs },
-    // Les pièces ne viennent d'aucun fichier INPI : elles restent à valider.
-    pieces_a_valider: pieces.length > 0,
+    // Les pièces ne viennent d'aucun fichier INPI : vérifiées sur la fiche
+    // service-public quand elle existe, à valider sinon.
+    source: detail?.source || null,
+    pieces_a_valider: pieces.length > 0 && !detail?.source,
   };
 }
 

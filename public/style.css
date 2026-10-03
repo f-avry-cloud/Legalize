@@ -1053,7 +1053,7 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
 .cat-nota { display: block; margin-top: 3px; font-size: .78rem; color: var(--ink-3); }
 .cat-piece.inconnue .cat-pj { color: var(--danger); }
 
-.cat-a-valider, .cat-note {
+.cat-a-valider, .cat-note, .cat-verifiee {
   margin-top: 12px; padding: 7px 12px; border-radius: var(--r-xs); font-size: .82rem;
 }
 .cat-a-valider { background: var(--warn-soft); color: var(--warn); }
@@ -1063,3 +1063,6 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
 .cat-technique summary { cursor: pointer; }
 .cat-technique p { margin-top: 6px; line-height: 1.7; }
 .cat-technique code { font-size: .74rem; padding: 1px 5px; border-radius: 5px; background: var(--glass-fort); }
+
+.cat-verifiee { background: var(--ok-soft); color: var(--ok); }
+.cat-verifiee a { color: inherit; text-decoration: underline; }

@@ -32,7 +32,7 @@ async function vueCatalogueFormalites() {
         <li><span class="cat-puce sure"></span>Les informations à transmettre sont déduites du dictionnaire INPI.</li>
         <li><span class="cat-puce a-valider"></span>Les pièces justificatives sont rattachées aux codes officiels, mais <strong>aucun fichier INPI
         ne dit quelle pièce va avec quelle formalité</strong>. La liste réglementaire relève de l’arrêté prévu à
-        l’article R. 123-292 du Code de commerce. Les rattachements proposés sont <strong>à valider</strong>.</li>
+        l’article R. 123-292 du Code de commerce. Les formalités courantes ont été vérifiées sur les fiches de service-public.gouv.fr, citées dans chaque fiche ; les autres rattachements restent <strong>à valider</strong>.</li>
       </ul>
     </div>
 
@@ -122,6 +122,7 @@ function catFiche(f, ouverte) {
             <h3>Pièces toujours requises</h3>
             ${nbOblig ? f.pieces_obligatoires.map(catPiece).join('') : '<p class="muted">Aucune.</p>'}
             ${nbCas ? `<h3 class="mt">Pièces selon le cas</h3>${f.pieces_selon_le_cas.map(catPiece).join('')}` : ''}
+            ${f.source ? `<p class="cat-verifiee">Pièces vérifiées sur la <a href="${esc(f.source)}" target="_blank" rel="noopener">fiche service-public</a>.</p>` : ''}
             ${f.pieces_a_valider ? '<p class="cat-a-valider">Rattachement des pièces à valider.</p>' : ''}
           </div>
         </div>` : `
