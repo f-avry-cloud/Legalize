@@ -93,4 +93,18 @@ test('les événements courants du droit des sociétés sont détaillés', () =>
   }
 });
 
+test('les résultats des dépôts de test portent sur des événements connus et sont complets', () => {
+  const { evenements: verifs, frais_libelles: libelles } = require('../src/inpi/data/verifications-inpi.json');
+  for (const [code, v] of Object.entries(verifs)) {
+    assert.ok(catalogue.fiche(code), `${code} : événement inconnu`);
+    assert.ok(['verifie', 'non_concluant'].includes(v.statut), `${code} : statut ${v.statut}`);
+    if (v.statut === 'verifie') {
+      assert.ok(v.evenement_detecte && v.champs.length, `${code} : événement détecté ou champs manquants`);
+      for (const [c] of v.frais) assert.ok(libelles[c], `${code} : frais ${c} sans libellé`);
+    } else {
+      assert.ok(v.note, `${code} : échec non expliqué`);
+    }
+  }
+});
+
 console.log(`\n${ok} assertion(s) passée(s).${process.exitCode ? ' ÉCHECS ci-dessus.' : ' Tout est vert.'}\n`);

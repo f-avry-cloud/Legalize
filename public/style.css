@@ -1068,3 +1068,17 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
 .cat-verifiee a { color: inherit; text-decoration: underline; }
 
 .cat-textes { margin-top: 12px; font-size: .8rem; color: var(--ink-2); line-height: 1.5; }
+
+/* Résultats des dépôts de test sur le serveur INPI */
+.cat-sonde summary { cursor: pointer; }
+.cat-sonde ul { margin-top: 8px; }
+.cat-sonde p { margin-top: 10px; }
+.cat-badge-teste { background: var(--ok-soft); color: var(--ok); }
+.cat-sonde-fiche {
+  margin-top: 14px; padding: 12px 14px; border-radius: var(--r-xs);
+  border: 1px solid var(--line); border-left: 3px solid var(--ok); background: var(--surface-2);
+  font-size: .86rem; line-height: 1.5;
+}
+.cat-sonde-fiche p { margin-top: 8px; }
+.cat-sonde-fiche .cat-infos { margin-top: 6px; }
+.cat-sonde-fiche.non-concluant { border-left-color: var(--warn); }

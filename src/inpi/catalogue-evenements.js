@@ -30,6 +30,7 @@
 
 const EVENEMENTS = require('./data/evenements.json').valeurs;
 const TRACES = require('./data/evenements-dictionnaire.json').valeurs;
+const VERIFICATIONS = require('./data/verifications-inpi.json');
 const { piece } = require('./referentiels');
 
 const FAMILLES = {
@@ -721,6 +722,38 @@ function fiche(code) {
     source: detail?.source || null,
     textes: detail?.textes || [],
     pieces_a_valider: pieces.length > 0 && !detail?.source,
+    verification_inpi: verification(code),
+  };
+}
+
+/**
+ * Ce qu'un dépôt de test sur le serveur de démonstration a montré : les champs
+ * qui ont suffi (ou que le serveur a réclamés), l'événement qu'il a reconnu,
+ * les frais qu'il a calculés. Rien sur les pièces : le serveur ne les contrôle pas.
+ */
+function verification(code) {
+  const v = VERIFICATIONS.evenements[code];
+  if (!v) return null;
+  const frais = (v.frais || []).map(([c, centimes]) => ({
+    code: c, libelle: VERIFICATIONS.frais_libelles[c] || c, montant: centimes / 100,
+  }));
+  return {
+    date: VERIFICATIONS.date,
+    statut: v.statut,
+    evenement_detecte: v.evenement_detecte || null,
+    champs: (v.champs || []).map(([libelle, ref]) => ({ libelle, ref })),
+    frais,
+    frais_total: frais.length ? Math.round(frais.reduce((t, f) => t + f.montant, 0) * 100) / 100 : null,
+    acte_attendu: v.acte_attendu ?? null,
+    note: v.note || null,
+  };
+}
+
+function verificationsCommunes() {
+  return {
+    date: VERIFICATIONS.date,
+    constats: VERIFICATIONS.constats,
+    socle_modification: VERIFICATIONS.socle_modification.map(([libelle, ref]) => ({ libelle, ref })),
   };
 }
 
@@ -732,7 +765,7 @@ function catalogueComplet() {
 
 module.exports = {
   FAMILLES, PIECES_COMMUNES, PIECES_GENEREES, DETAIL,
-  fiche, catalogueComplet,
+  fiche, catalogueComplet, verificationsCommunes,
   piecesCommunes: () => PIECES_COMMUNES.map((p) => decrirePiece([p.code, p.condition])),
   piecesGenerees: () => PIECES_GENEREES.map((p) => decrirePiece([p.code, p.condition])),
 };

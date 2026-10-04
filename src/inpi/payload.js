@@ -151,7 +151,10 @@ function descriptionPersonne(personne, role) {
     genre: personne.genre || undefined,
     dateDeNaissance: dateInpi(personne.date_naissance),
     lieuDeNaissance: personne.lieu_naissance || undefined,
-    paysNaissance: personne.pays_naissance || 'France',
+    // Le serveur attend le libellé du référentiel (« FRANCE ») et refuse « France ».
+    paysNaissance: String(personne.pays_naissance || 'FRANCE').toUpperCase(),
+    codePaysNaissance: personne.code_pays_naissance || (/^france$/i.test(personne.pays_naissance || 'France') ? 'FRA' : undefined),
+    codeInseeGeographique: personne.code_insee_naissance || undefined,
     nationalite: personne.nationalite || 'Française',
   };
 }
@@ -178,7 +181,8 @@ function piecesInpi(pieces) {
     nomDocument: p.nom || p.filename || undefined,
     typeDocument: p.code || undefined,
     documentExtension: 'pdf',
-    langueDocument: 'Français',
+    // Code de langue ISO : le serveur refuse « Français ».
+    langueDocument: 'fr',
     documentBase64: p.base64 || undefined,
     observations: p.observations || undefined,
   }));
@@ -447,7 +451,9 @@ const CONTENUS = {
           indicateurDissolution: dissolution || undefined,
           typeDissolution: dissolution ? (r.type_dissolution || '1') : undefined,
           dateDissolutionDisparition: dateInpi(r.date_cessation),
-          lieuDeLiquidation: r.adresse_liquidation?.commune || undefined,
+          // Code du référentiel (S siège, L adresse du liquidateur, A autre
+          // adresse) : le serveur refuse le nom de la commune.
+          lieuDeLiquidation: r.lieu_liquidation || (r.adresse_liquidation ? 'A' : 'S'),
           adresse: adresseInpi(r.adresse_liquidation),
           dateClotureLiquidation: cloture ? dateInpi(r.date_cessation) : undefined,
           indicateurDisparitionPM: cloture || undefined,
@@ -510,10 +516,29 @@ function enveloppe(dossier, contenu, type) {
     typeFormalite: type,
     typePersonne: TYPES_PERSONNE.MORALE,
     diffusionINSEE: dossier.reponses?.diffusion_insee === false ? 'N' : 'O',
+    // Exigé par le serveur pour toute formalité, constaté par dépôt de test.
+    diffusionCommerciale: dossier.reponses?.diffusion_commerciale === false ? 'N' : 'O',
     indicateurEntreeSortieRegistre: type !== TYPES_FORMALITE.MODIFICATION,
     content: {
-      ...contenu,
+      ...avecCorrespondance(contenu),
       piecesJointes: piecesInpi(dossier.pieces),
+    },
+  };
+}
+
+/**
+ * Le serveur exige le destinataire de la correspondance (constaté par dépôt
+ * de test). Le cabinet dépose comme mandataire : c'est lui, sauf réponse
+ * contraire.
+ */
+function avecCorrespondance(contenu) {
+  const identite = contenu?.personneMorale?.identite;
+  if (!identite || identite.destinataireCorrespondance) return contenu;
+  return {
+    ...contenu,
+    personneMorale: {
+      ...contenu.personneMorale,
+      identite: { ...identite, destinataireCorrespondance: { typeDestinataireCorrespondance: '2' } },
     },
   };
 }

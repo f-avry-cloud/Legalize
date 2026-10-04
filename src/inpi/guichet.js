@@ -256,7 +256,8 @@ async function ajouterPiece(id, { code, nom, base64, path = null }) {
     corps: {
       nomDocument: nom,
       typeDocument: code,
-      langueDocument: 'Français',
+      // Code de langue ISO : le serveur refuse « Français ».
+      langueDocument: 'fr',
       documentExtension: 'pdf',
       documentBase64: base64,
       ...(path ? { path } : {}),

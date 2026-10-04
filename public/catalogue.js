@@ -30,11 +30,20 @@ async function vueCatalogueFormalites() {
       <ul>
         <li><span class="cat-puce sure"></span>La liste des formalités et leurs libellés viennent du référentiel INPI : ils font foi.</li>
         <li><span class="cat-puce sure"></span>Les informations à transmettre sont déduites du dictionnaire INPI.</li>
-        <li><span class="cat-puce a-valider"></span>Les pièces justificatives sont rattachées aux codes officiels, mais <strong>aucun fichier INPI
+        <li><span class="cat-puce a-valider"></span><span>Les pièces justificatives sont rattachées aux codes officiels, mais <strong>aucun fichier INPI
         ne dit quelle pièce va avec quelle formalité</strong>. La liste réglementaire relève de l’arrêté prévu à
-        l’article R. 123-292 du Code de commerce. Les formalités courantes ont été confrontées au Code de commerce (articles R. 123-103 à R. 123-110 et annexes de la partie Arrêtés, lus via l’API Légifrance) et aux fiches de service-public.gouv.fr ; le fondement est cité dans chaque fiche. Les autres rattachements restent <strong>à valider</strong>.</li>
+        l’article R. 123-292 du Code de commerce. Les formalités courantes ont été confrontées au Code de commerce (articles R. 123-103 à R. 123-110 et annexes de la partie Arrêtés, lus via l’API Légifrance) et aux fiches de service-public.gouv.fr ; le fondement est cité dans chaque fiche. Les autres rattachements restent <strong>à valider</strong>.</span></li>
       </ul>
     </div>
+
+    ${d.verifications ? `
+    <details class="cat-source cat-sonde">
+      <summary><strong>Ce que le serveur de l’INPI exige réellement</strong>
+        <span class="muted">— dépôts de test du ${esc(catDate(d.verifications.date))}</span></summary>
+      <ul>${d.verifications.constats.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>
+      <p><strong>Pour toute modification, le serveur exige en plus :</strong></p>
+      <ul>${d.verifications.socle_modification.map((c) => `<li>${esc(c.libelle)}</li>`).join('')}</ul>
+    </details>` : ''}
 
     <div class="cat-barre">
       <input type="search" id="cat-recherche" placeholder="Chercher une formalité, une pièce, un code (11M, PJ_08, statuts…)"
@@ -108,6 +117,7 @@ function catFiche(f, ouverte) {
       <span class="cat-titre">${esc(f.libelle)}</span>
       ${f.type ? `<span class="badge">${esc(CAT_TYPES[f.type] || f.type)}</span>` : ''}
       <span class="cat-resume muted">${resume}</span>
+      ${f.verification_inpi?.statut === 'verifie' ? '<span class="badge cat-badge-teste" title="Vérifiée par un dépôt de test sur le serveur INPI">testée INPI</span>' : ''}
     </summary>
     <div class="cat-corps">
       ${f.emise_par_le_registre ? '<p class="cat-note">Cet événement est émis par le registre lui-même : il ne se dépose pas.</p>' : ''}
@@ -130,6 +140,7 @@ function catFiche(f, ouverte) {
         <p class="muted">Formalité hors du droit des sociétés courant, ou trop spécifique pour être détaillée à ce stade.
         Le libellé et les repères INPI ci-dessous sont officiels.</p>`}
       ${f.note ? `<p class="cat-note">${esc(f.note)}</p>` : ''}
+      ${catVerification(f.verification_inpi)}
       ${f.inpi.drapeaux.length || f.inpi.champs.length ? `
         <details class="cat-technique">
           <summary>Repères dans le dictionnaire INPI</summary>
@@ -138,6 +149,32 @@ function catFiche(f, ouverte) {
         </details>` : ''}
     </div>
   </details>`;
+}
+
+function catDate(iso) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/** Résultat du dépôt de test sur le serveur de démonstration de l'INPI. */
+function catVerification(v) {
+  if (!v) return '';
+  if (v.statut !== 'verifie') {
+    return `<div class="cat-sonde-fiche non-concluant">
+      <h3>Test sur le serveur INPI : non concluant</h3>
+      <p>${esc(v.note || '')}</p>
+    </div>`;
+  }
+  const euros = (n) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+  return `<div class="cat-sonde-fiche">
+    <h3>Testée sur le serveur INPI le ${esc(catDate(v.date))}</h3>
+    <p>Le serveur a reconnu l’événement <strong>${esc(v.evenement_detecte)}</strong> avec ces informations :</p>
+    <ul class="cat-infos">${v.champs.map((c) => `<li>${esc(c.libelle)}</li>`).join('')}</ul>
+    ${v.acte_attendu === true ? '<p><strong>Dépôt d’actes facturé</strong> : le greffe attend un acte (procès-verbal, statuts…).</p>' : ''}
+    ${v.acte_attendu === false ? '<p>Aucun dépôt d’actes facturé par le serveur.</p>' : ''}
+    ${v.frais.length ? `<p class="muted">Frais calculés, à titre indicatif : ${euros(v.frais_total)}
+      (${v.frais.map((x) => `${esc(x.libelle)} ${euros(x.montant)}`).join(' · ')}), hors notification aux greffes des établissements secondaires.</p>` : ''}
+    ${v.note ? `<p class="cat-note">${esc(v.note)}</p>` : ''}
+  </div>`;
 }
 
 function catPiece(p) {
