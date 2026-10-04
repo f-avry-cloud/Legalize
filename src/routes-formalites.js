@@ -21,6 +21,7 @@ const { catalogue } = require('./inpi/catalogue');
 const { formesCreation, enumeration } = require('./inpi/referentiels');
 const { diagnostiquer, diagnostiquerTout, diagnostiquerInventaire } = require('./inpi/diagnostic');
 const evenements = require('./inpi/catalogue-evenements');
+const sonde = require('./inpi/sonde');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -57,6 +58,14 @@ router.post('/inpi/test-connexion', async (req, res) => {
  */
 router.get('/inpi/diagnostic-import', async (req, res) => {
   res.json(await diagnostiquerInventaire());
+});
+
+/**
+ * Relais brut vers le serveur de démonstration du Guichet unique, pour lire
+ * dans ses refus ce qu'une formalité exige. Inactif hors démonstration.
+ */
+router.post('/inpi/sonde', async (req, res) => {
+  res.json(await sonde.sonder(req.body || {}));
 });
 
 router.get('/inpi/recherche', async (req, res) => {
