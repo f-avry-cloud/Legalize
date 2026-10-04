@@ -120,7 +120,11 @@ async function deposer(requete) {
     chemin: config.guichet.paths[requete.endpoint],
     corps: requete.corps,
   });
-  return normaliserFormalite(rep);
+  // Une modification (formality_updates) renvoie { formalities: [ … ] } et
+  // non la formalité elle-même : sans ce déballage, l'identifiant INPI du
+  // dossier déposé était perdu (constaté sur le serveur de démonstration).
+  const formalite = Array.isArray(rep?.formalities) ? rep.formalities[0] : rep;
+  return { ...normaliserFormalite(formalite), evenements: formalite?.events || [] };
 }
 
 /** Mise à jour d'un dépôt avant signature, ou réponse à une régularisation. */

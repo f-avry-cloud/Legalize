@@ -99,3 +99,13 @@ end $$;
 -- drop policy "demo acces complet" on formalites;
 -- create policy "cabinet" on formalites for all to authenticated using (true) with check (true);
 -- (idem sur les deux autres tables)
+
+-- ---------------------------------------------------------------------------
+-- Parcours de formalités (plusieurs opérations dans un même dossier).
+alter table formalites add column if not exists operations jsonb not null default '[]'::jsonb;
+alter table formalites add column if not exists typologie jsonb not null default '{}'::jsonb;
+alter table formalite_pieces add column if not exists cle text;
+alter table formalite_pieces add column if not exists version text not null default 'definitive';
+alter table formalite_pieces add column if not exists a_signer boolean not null default false;
+alter table formalite_pieces add column if not exists extraction jsonb;
+create index if not exists formalite_pieces_cle_idx on formalite_pieces (formalite_id, cle);

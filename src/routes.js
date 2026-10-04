@@ -15,6 +15,7 @@ const router = express.Router();
 // /api/formalites/*, montées en tête pour rester indépendantes du reste.
 router.use(require('./routes-formalites'));
 router.use(require('./routes-rmt'));
+router.use(require('./routes-parcours'));
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },

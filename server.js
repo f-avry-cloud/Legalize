@@ -52,7 +52,13 @@ app.use('/api', routes);
 // Gestion d'erreurs centralisée (Express 5 propage les rejets async).
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(err.status || 500).json({ error: err.message || 'Erreur interne' });
+  res.status(err.status || 500).json({
+    error: err.message || 'Erreur interne',
+    // Ce qui permet à l'écran d'expliquer l'échec : contrôles non levés,
+    // champs refusés par le guichet.
+    ...(err.details ? { details: err.details } : {}),
+    ...(Array.isArray(err.detail?.violations) ? { violations: err.detail.violations.map((v) => ({ champ: v.propertyPath, message: v.message })) } : {}),
+  });
 });
 
 const PORT = process.env.PORT || 3000;

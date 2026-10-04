@@ -13,7 +13,8 @@
     "test:api": "node scripts/test-api-formalites.js",
     "inpi:test": "node scripts/inpi-connexion.js",
     "test:rmt": "node scripts/test-rmt.js",
-    "test:catalogue": "node scripts/test-catalogue-formalites.js"
+    "test:catalogue": "node scripts/test-catalogue-formalites.js",
+    "test:parcours": "node scripts/test-parcours.js"
   },
   "engines": {
     "node": ">=20"
@@ -21,6 +22,7 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@supabase/supabase-js": "^2.110.2",
     "diff": "^9.0.0",
     "docxtemplater": "^3.69.0",
