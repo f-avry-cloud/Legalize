@@ -60,7 +60,7 @@ const PV = ['PJ_54'];
 const STATUTS_MAJ = ['PJ_02'];
 const ANNONCE = ['PJ_08'];
 const IDENTITE_DIRIGEANT = [
-  ['PJ_11', 'pour chaque nouveau dirigeant personne physique (ou PJ_12, passeport)'],
+  ['PJ_11', 'pour chaque nouveau dirigeant personne physique (ou passeport)'],
   ['PJ_17', 'pour chaque nouveau dirigeant personne physique'],
   ['PJ_20', 'pour chaque nouveau dirigeant personne morale (extrait de moins de trois mois)'],
 ];
@@ -586,7 +586,7 @@ const DETAIL = {
     ],
     pieces: [
       ['PJ_108'], ANNONCE,
-      ['PJ_11', 'liquidateur personne physique (ou PJ_12, passeport)'],
+      ['PJ_11', 'liquidateur personne physique (ou passeport)'],
       ['PJ_17', 'liquidateur personne physique'],
       ['PJ_20', 'liquidateur personne morale'],
     ],
@@ -681,6 +681,90 @@ function familleParDefaut(code) {
   return 'particulier';
 }
 
+/**
+ * Noms courts des pièces, pour une lecture d'un coup d'œil. Le libellé
+ * officiel INPI reste disponible à côté.
+ */
+const LIBELLES_COURTS = {
+  PJ_01: 'Statuts',
+  PJ_02: 'Statuts mis à jour',
+  PJ_03: 'Actes de nomination des premiers dirigeants',
+  PJ_04: 'Rapport du commissaire aux apports',
+  PJ_05: 'Décision des fondateurs sur les apports en nature',
+  PJ_06: 'Certificat du dépositaire des fonds',
+  PJ_08: 'Attestation de parution de l’annonce légale',
+  PJ_108: 'Décision de l’assemblée ou de l’associé unique',
+  PJ_11: 'Pièce d’identité',
+  PJ_115: 'Document de synthèse signé',
+  PJ_120: 'Synthèse des bénéficiaires effectifs signée',
+  PJ_132: 'Convention de représentation',
+  PJ_133: 'PV de clôture de liquidation',
+  PJ_135: 'PV d’AGE de la société absorbée',
+  PJ_137: 'Extrait d’immatriculation de l’établissement dans l’UE',
+  PJ_140: 'Certificat d’immatriculation étranger',
+  PJ_141: 'Attestation d’assujettissement à la TVA étrangère',
+  PJ_142: 'Traduction des statuts',
+  PJ_153: 'PV de transformation',
+  PJ_155: 'Décision d’augmentation du capital',
+  PJ_156: 'Décision de principe de réduction du capital',
+  PJ_157: 'Actes enregistrés (PV et statuts)',
+  PJ_160: 'Rapport du commissaire à la transformation',
+  PJ_161: 'Projet de fusion',
+  PJ_163: 'Rapport du commissaire aux apports',
+  PJ_17: 'Déclaration de non-condamnation et de filiation',
+  PJ_175: 'PV d’approbation de la fusion',
+  PJ_176: 'Publication au BODACC',
+  PJ_180: 'Attestation de dépôt des fonds',
+  PJ_189: 'Acte notarié de cession ou donation de parts',
+  PJ_190: 'Acte sous seing privé de cession ou donation de parts',
+  PJ_191: 'Attestation de non-modification de l’évaluation des apports',
+  PJ_199: 'Projet de scission',
+  PJ_20: 'Extrait Kbis de moins de 3 mois',
+  PJ_202: 'Rapport du commissaire à la fusion',
+  PJ_203: 'Rapport du commissaire à la scission',
+  PJ_225: 'Désignation du représentant fiscal',
+  PJ_230: 'Lettre de démission',
+  PJ_236: 'PV d’affectation du résultat',
+  PJ_240: 'Attestation fiscale',
+  PJ_241: 'Attestation de régularité sociale',
+  PJ_245: 'Justificatif de la correction',
+  PJ_25: 'Justificatif de jouissance des locaux (bail, titre…)',
+  PJ_26: 'Justificatif de domicile du représentant légal',
+  PJ_29: 'Contrat de domiciliation',
+  PJ_31: 'Diplôme ou autorisation d’exercer l’activité réglementée',
+  PJ_33: 'Acte d’acquisition du fonds',
+  PJ_34: 'Acte de donation du fonds',
+  PJ_36: 'Acte d’apport du fonds',
+  PJ_37: 'Contrat de location-gérance (ou acte d’y mettre fin)',
+  PJ_38: 'Contrat de gérance-mandat (ou acte d’y mettre fin)',
+  PJ_40: 'Inscription du commissaire aux comptes sur la liste',
+  PJ_41: 'Acceptation du commissaire aux comptes',
+  PJ_45: 'Kbis du domiciliataire',
+  PJ_51: 'Pouvoir du mandataire',
+  PJ_53: 'Carte d’activité non sédentaire',
+  PJ_54: 'PV de la décision',
+  PJ_55: 'Décision du conseil ou du directoire sur le capital',
+  PJ_57: 'Certificat de libération par compensation',
+  PJ_58: 'Récépissé de dépôt du rapport sur la transformation',
+  PJ_61: 'Contrat d’appui au projet d’entreprise',
+  PJ_80: 'Désignation du représentant permanent',
+  PJ_82: 'Compte de liquidation',
+  PJ_83: 'Acte de cession du fonds de commerce',
+  PJ_85: 'Déclaration de régularité et de conformité',
+  PJ_90: 'Convention de gérance-mandat',
+  PJ_97: 'Liste des sièges sociaux antérieurs',
+};
+
+/**
+ * Pièces que le cabinet rédige ou obtient lui-même (actes, annonce légale,
+ * documents générés par le guichet) : elles ne se demandent pas au client.
+ * Rattachement de pratique, à ajuster par le cabinet.
+ */
+const PAR_LE_CABINET = new Set([
+  'PJ_01', 'PJ_02', 'PJ_03', 'PJ_08', 'PJ_17', 'PJ_51', 'PJ_54', 'PJ_85', 'PJ_97', 'PJ_108', 'PJ_115', 'PJ_120',
+  'PJ_133', 'PJ_153', 'PJ_155', 'PJ_156', 'PJ_157', 'PJ_161', 'PJ_199', 'PJ_236',
+]);
+
 function decrirePiece([code, condition]) {
   // Un code inconnu ne doit pas rendre tout le catalogue indisponible : il
   // s'affiche tel quel, signalé, et le test de cohérence le fait échouer.
@@ -688,6 +772,8 @@ function decrirePiece([code, condition]) {
   return {
     code,
     libelle: p ? p.libelle : code,
+    court: LIBELLES_COURTS[code] || (p ? p.libelle : code),
+    par_le_cabinet: PAR_LE_CABINET.has(code),
     nota: p?.nota || null,
     condition: condition || null,
     inconnue: !p,

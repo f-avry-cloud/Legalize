@@ -1082,3 +1082,58 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
 .cat-sonde-fiche p { margin-top: 8px; }
 .cat-sonde-fiche .cat-infos { margin-top: 6px; }
 .cat-sonde-fiche.non-concluant { border-left-color: var(--warn); }
+
+/* ------------------------------------------------------- mémo des formalités */
+
+.memo-recherche { width: 100%; max-width: 560px; font-size: 1.02rem; padding: 12px 16px; margin: 6px 0 22px; }
+.memo-groupe { margin-bottom: 22px; }
+.memo-groupe h2 { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+.memo-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.memo-tuile {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-height: 84px;
+  padding: 14px 16px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2);
+  color: var(--ink); text-decoration: none; transition: border-color .15s, transform .15s;
+}
+.memo-tuile:hover { border-color: var(--a2); transform: translateY(-1px); }
+.memo-tuile-nom { font-weight: 650; line-height: 1.35; }
+.memo-tuile-code { font-size: .72rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+.memo-entete { align-items: flex-start; }
+.memo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.memo-reperes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.memo-repere {
+  padding: 5px 12px; border-radius: var(--r-full); font-size: .8rem; font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2);
+}
+.memo-code { color: var(--ink-3); font-weight: 500; }
+
+.memo-colonnes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .memo-colonnes { grid-template-columns: 1fr; } }
+.memo-col { padding: 16px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); }
+.memo-col h2 { display: flex; align-items: center; gap: 10px; font-size: .98rem; margin-bottom: 10px; }
+.memo-col h3 { margin: 14px 0 4px; font-size: .72rem; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.memo-num {
+  flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--grad); color: #fff; font-size: .78rem;
+}
+.memo-cabinet .memo-num { background: var(--ink-3); }
+.memo-ligne {
+  display: flex; gap: 10px; align-items: flex-start; padding: 7px 4px; border-top: 1px solid var(--line);
+  cursor: pointer; line-height: 1.4; font-size: .9rem;
+}
+.memo-col h2 + .memo-ligne, .memo-col h3 + .memo-ligne { border-top: none; }
+.memo-ligne input { margin-top: 3px; flex: none; }
+.memo-ligne small { display: block; margin-top: 2px; color: var(--a2); font-size: .78rem; }
+.memo-ligne.fait span { color: var(--ink-3); text-decoration: line-through; }
+.memo-vide { font-size: .86rem; }
+.memo-note { margin-top: 16px; padding: 10px 14px; border-radius: var(--r-xs); background: var(--info-soft); color: var(--ink-2); font-size: .88rem; }
+.memo-pied { margin-top: 18px; font-size: .84rem; }
+.lien { background: none; border: none; box-shadow: none; padding: 0; color: var(--a2); text-decoration: underline; cursor: pointer; font: inherit; }
+.lien:hover { transform: none; box-shadow: none; background: none; }
+
+@media print {
+  .memo-actions, .memo-pied, .crumb { display: none !important; }
+  .memo-colonnes { grid-template-columns: 1fr 1fr 1fr; }
+  .memo-col { background: #fff; border-color: #ccc; }
+  .memo-ligne { font-size: 11pt; }
+}

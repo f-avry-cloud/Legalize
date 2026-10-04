@@ -111,4 +111,18 @@ test('les résultats des dépôts de test portent sur des événements connus et
   for (const f of corporatives) assert.ok(verifs[f.code], `${f.code} : aucun résultat de test`);
 });
 
+test('chaque opération du mémo renvoie à une formalité détaillée, avec des pièces nommées simplement', () => {
+  const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'memo.js'), 'utf8');
+  const bloc = source.slice(source.indexOf('const MEMO_OPERATIONS'), source.indexOf('const MEMO_MOTS_CLES'));
+  const codes = [...bloc.matchAll(/\['([0-9A-Z]+)', '/g)].map((m) => m[1]);
+  assert.ok(codes.length >= 20, `seulement ${codes.length} opérations lues`);
+  for (const code of codes) {
+    const f = catalogue.fiche(code);
+    assert.ok(f && f.detaillee, `${code} : opération du mémo sans fiche détaillée`);
+    for (const p of [...f.pieces_obligatoires, ...f.pieces_selon_le_cas]) {
+      assert.ok(p.court && p.court.length <= 70, `${code} : ${p.code} sans nom court lisible`);
+    }
+  }
+});
+
 console.log(`\n${ok} assertion(s) passée(s).${process.exitCode ? ' ÉCHECS ci-dessus.' : ' Tout est vert.'}\n`);
