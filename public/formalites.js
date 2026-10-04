@@ -534,6 +534,24 @@ function champCorps(champ, valeur, contexte) {
           <label class="field">Nationalité<input name="${champ.name}.nationalite" value="${esc(p.nationalite || 'Française')}"></label>
         </div>
         <div class="row">
+          <label class="field">Sexe<select name="${champ.name}.genre">
+            <option value=""></option>
+            <option value="1" ${p.genre === '1' ? 'selected' : ''}>Masculin</option>
+            <option value="2" ${p.genre === '2' ? 'selected' : ''}>Féminin</option>
+          </select></label>
+          <label class="field">Code INSEE de la commune de naissance<input name="${champ.name}.code_insee_naissance" value="${esc(p.code_insee_naissance || '')}" maxlength="5"></label>
+          <label class="field">Situation matrimoniale<select name="${champ.name}.situation_matrimoniale">
+            <option value=""></option>
+            ${[['1', 'Célibataire'], ['4', 'Marié(e)'], ['5', 'Pacsé(e)'], ['6', 'En concubinage'], ['2', 'Divorcé(e)'], ['3', 'Veuf(ve)']]
+              .map(([v, l]) => `<option value="${v}" ${p.situation_matrimoniale === v ? 'selected' : ''}>${l}</option>`).join('')}
+          </select></label>
+          <label class="field">Affiliation sociale<select name="${champ.name}.forme_sociale">
+            <option value=""></option>
+            ${[['0', 'Non applicable'], ['1', 'Sans affiliation sociale'], ['3', 'Avec affiliation sociale']]
+              .map(([v, l]) => `<option value="${v}" ${p.forme_sociale === v ? 'selected' : ''}>${l}</option>`).join('')}
+          </select></label>
+        </div>
+        <div class="row">
           <label class="field">Adresse — n° et voie<input name="${champ.name}.adresse.voie" value="${esc(a.voie || '')}"></label>
           <label class="field">Code postal<input name="${champ.name}.adresse.codePostal" value="${esc(a.codePostal || '')}" maxlength="5"></label>
           <label class="field">Commune<input name="${champ.name}.adresse.commune" value="${esc(a.commune || '')}"></label>

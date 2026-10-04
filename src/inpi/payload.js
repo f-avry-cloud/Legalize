@@ -54,6 +54,20 @@ function clotureInpi(valeur) {
   return chiffres.length === 4 ? chiffres : undefined;
 }
 
+/**
+ * Première clôture par défaut : la première date de clôture statutaire qui
+ * suit le début d'activité. Choix juridique à confirmer (un premier exercice
+ * peut être allongé), d'où la réponse explicite date_premiere_cloture.
+ */
+function premiereCloture(cloture, debut) {
+  const jjmm = clotureInpi(cloture);
+  const d = dateInpi(debut);
+  if (!jjmm || !d) return undefined;
+  const annee = Number(d.slice(0, 4));
+  const candidate = `${annee}-${jjmm.slice(2)}-${jjmm.slice(0, 2)}`;
+  return candidate > d ? candidate : `${annee + 1}-${jjmm.slice(2)}-${jjmm.slice(0, 2)}`;
+}
+
 function nombre(v) {
   if (v === '' || v === null || v === undefined) return undefined;
   const n = Number(v);
@@ -86,7 +100,8 @@ function etablissementInpi(o) {
       indicateurEtablissementPrincipal: Boolean(o.principal),
     },
     adresse: o.adresse,
-    effectifSalarie: o.salaries,
+    // Exigé à toute ouverture d'établissement, salariés ou non.
+    effectifSalarie: o.salaries || { presenceSalarie: false, emploiPremierSalarie: false },
     activites: o.activite ? [{
       indicateurPrincipal: Boolean(o.principal),
       rolePrincipalPourEntreprise: Boolean(o.principal),
@@ -95,9 +110,10 @@ function etablissementInpi(o) {
       dateDebut: dateInpi(o.dateDebut),
       formeExercice: o.formeExercice || 'COMMERCIALE',
       precisionActivite: o.precision || undefined,
-      exerciceActivite: o.exercice || undefined,
       activiteReguliere: o.regularite || undefined,
-      origine: o.origine || undefined,
+      // Bloc et non simple code : le serveur attend { typeOrigine }.
+      origine: o.origine ? { typeOrigine: o.origine } : undefined,
+      exerciceActivite: o.exercice || 'P',
     }] : undefined,
   };
 }
@@ -129,7 +145,8 @@ function optionsFiscalesInpi(r) {
     regimeImpositionBenefices: r.regime_benefices || undefined,
     regimeImpositionTVA: r.regime_tva || undefined,
     periodiciteEtOptionsParticulieresTVA: r.periodicite_tva || undefined,
-    dateClotureExerciceComptable: dateInpi(r.date_cloture_comptable),
+    // Le serveur attend JJMM, pas une date complète.
+    dateClotureExerciceComptable: clotureInpi(r.date_cloture_comptable),
     chiffreAffairePrevisionnelVente: nombre(r.ca_previsionnel_vente),
     chiffreAffairePrevisionnelService: nombre(r.ca_previsionnel_service),
   };
@@ -148,13 +165,18 @@ function descriptionPersonne(personne, role) {
     nom: personne.nom || undefined,
     nomUsage: personne.nom_usage || undefined,
     prenoms: prenoms.length ? prenoms : undefined,
+    // Exigés par le serveur pour tout dirigeant personne physique (constaté
+    // par dépôt de test) : sexe, commune et code INSEE de naissance.
     genre: personne.genre || undefined,
+    situationMatrimoniale: personne.situation_matrimoniale || undefined,
     dateDeNaissance: dateInpi(personne.date_naissance),
     lieuDeNaissance: personne.lieu_naissance || undefined,
     // Le serveur attend le libellé du référentiel (« FRANCE ») et refuse « France ».
     paysNaissance: String(personne.pays_naissance || 'FRANCE').toUpperCase(),
     codePaysNaissance: personne.code_pays_naissance || (/^france$/i.test(personne.pays_naissance || 'France') ? 'FRA' : undefined),
     codeInseeGeographique: personne.code_insee_naissance || undefined,
+    // Affiliation sociale : choix du déclarant, exigé par le serveur (0, 1 ou 3).
+    formeSociale: personne.forme_sociale || undefined,
     nationalite: personne.nationalite || 'Française',
   };
 }
@@ -166,6 +188,8 @@ function pouvoirIndividu(personne, { fonction, codeForme, statut, representantLe
     typeDePersonne: 'INDIVIDU',
     roleEntreprise: r ? r.code : undefined,
     isRepresentantLegal: representantLegal,
+    // Exigé par le serveur pour tout pouvoir d'une personne morale.
+    beneficiaireEffectif: Boolean(personne.beneficiaire_effectif),
     statutPourLaFormalite: statut || undefined,
     individu: {
       descriptionPersonne: descriptionPersonne(personne, r ? r.code : undefined),
@@ -239,7 +263,9 @@ function contenuAnterieur(fiche) {
 
 const CONTENUS = {
   creation_societe(r) {
-    const codeForme = r.forme_juridique_code || codeFormeDepuisLibelle(r.forme_juridique);
+    // Le serveur refuse 5720 : une SASU se déclare en SAS avec associé unique.
+    const sasu = (r.forme_juridique_code || codeFormeDepuisLibelle(r.forme_juridique)) === '5720';
+    const codeForme = sasu ? '5710' : (r.forme_juridique_code || codeFormeDepuisLibelle(r.forme_juridique));
     const adresse = adresseInpi(r.adresse_siege);
     const salaries = Boolean(r.emploi_salaries);
 
@@ -281,17 +307,26 @@ const CONTENUS = {
             nomCommercial: r.nom_commercial || undefined,
             formeJuridique: codeForme || undefined,
           },
+          publicationLegale: r.journal_publication ? {
+            journalPublication: r.journal_publication,
+            datePublication: dateInpi(r.date_publication),
+          } : undefined,
           description: {
             objet: r.objet,
             duree: nombre(r.duree),
             dateClotureExerciceSocial: clotureInpi(r.date_cloture),
+            datePremiereCloture: dateInpi(r.date_premiere_cloture) || premiereCloture(r.date_cloture, r.date_debut_activite),
+            depotDemandeAcre: Boolean(r.acre),
             montantCapital: nombre(r.capital),
             deviseCapital: 'EUR',
             capitalVariable: Boolean(r.capital_variable),
-            indicateurAssocieUnique: Boolean(r.associe_unique),
+            indicateurAssocieUnique: Boolean(r.associe_unique) || sasu,
           },
         },
-        adresseEntreprise: { adresse },
+        adresseEntreprise: {
+          adresse,
+          caracteristiques: { ambulant: false, domiciliataire: Boolean(r.domiciliation), indicateurDomicileEntrepreneur: Boolean(r.siege_domicile_dirigeant) },
+        },
         composition: { pouvoirs },
         beneficiairesEffectifs: beneficiairesInpi(r.beneficiaires_effectifs),
         etablissementPrincipal: etablissementInpi({

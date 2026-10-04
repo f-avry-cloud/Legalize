@@ -43,6 +43,8 @@ async function vueCatalogueFormalites() {
       <ul>${d.verifications.constats.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>
       <p><strong>Pour toute modification, le serveur exige en plus :</strong></p>
       <ul>${d.verifications.socle_modification.map((c) => `<li>${esc(c.libelle)}</li>`).join('')}</ul>
+      ${d.verifications.socle_creation?.length ? `<p><strong>Pour toute création, le serveur exige notamment :</strong></p>
+      <ul>${d.verifications.socle_creation.map((c) => `<li>${esc(c.libelle)}</li>`).join('')}</ul>` : ''}
     </details>` : ''}
 
     <div class="cat-barre">
@@ -159,15 +161,16 @@ function catDate(iso) {
 function catVerification(v) {
   if (!v) return '';
   if (v.statut !== 'verifie') {
+    const titre = v.statut === 'non_testable' ? 'non testable sur le serveur de démonstration' : 'non concluant';
     return `<div class="cat-sonde-fiche non-concluant">
-      <h3>Test sur le serveur INPI : non concluant</h3>
+      <h3>Test sur le serveur INPI : ${titre}</h3>
       <p>${esc(v.note || '')}</p>
     </div>`;
   }
   const euros = (n) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
   return `<div class="cat-sonde-fiche">
     <h3>Testée sur le serveur INPI le ${esc(catDate(v.date))}</h3>
-    <p>Le serveur a reconnu l’événement <strong>${esc(v.evenement_detecte)}</strong> avec ces informations :</p>
+    <p>Le serveur a reconnu l’événement <strong>${esc(v.evenement_detecte)}</strong> avec ces informations, en plus de celles exigées pour toute formalité :</p>
     <ul class="cat-infos">${v.champs.map((c) => `<li>${esc(c.libelle)}</li>`).join('')}</ul>
     ${v.acte_attendu === true ? '<p><strong>Dépôt d’actes facturé</strong> : le greffe attend un acte (procès-verbal, statuts…).</p>' : ''}
     ${v.acte_attendu === false ? '<p>Aucun dépôt d’actes facturé par le serveur.</p>' : ''}

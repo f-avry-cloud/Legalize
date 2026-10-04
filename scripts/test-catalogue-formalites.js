@@ -97,14 +97,18 @@ test('les résultats des dépôts de test portent sur des événements connus et
   const { evenements: verifs, frais_libelles: libelles } = require('../src/inpi/data/verifications-inpi.json');
   for (const [code, v] of Object.entries(verifs)) {
     assert.ok(catalogue.fiche(code), `${code} : événement inconnu`);
-    assert.ok(['verifie', 'non_concluant'].includes(v.statut), `${code} : statut ${v.statut}`);
+    assert.ok(['verifie', 'non_concluant', 'non_testable'].includes(v.statut), `${code} : statut ${v.statut}`);
     if (v.statut === 'verifie') {
       assert.ok(v.evenement_detecte && v.champs.length, `${code} : événement détecté ou champs manquants`);
       for (const [c] of v.frais) assert.ok(libelles[c], `${code} : frais ${c} sans libellé`);
+      for (const [lib] of v.champs) assert.ok(lib, `${code} : champ sans libellé`);
     } else {
       assert.ok(v.note, `${code} : échec non expliqué`);
     }
   }
+  // Toutes les formalités de sociétés ont été passées au serveur.
+  const corporatives = catalogue.catalogueComplet().filter((f) => f.famille !== 'hors_champ' && !f.emise_par_le_registre);
+  for (const f of corporatives) assert.ok(verifs[f.code], `${f.code} : aucun résultat de test`);
 });
 
 console.log(`\n${ok} assertion(s) passée(s).${process.exitCode ? ' ÉCHECS ci-dessus.' : ' Tout est vert.'}\n`);

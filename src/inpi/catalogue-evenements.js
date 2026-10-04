@@ -754,6 +754,7 @@ function verificationsCommunes() {
     date: VERIFICATIONS.date,
     constats: VERIFICATIONS.constats,
     socle_modification: VERIFICATIONS.socle_modification.map(([libelle, ref]) => ({ libelle, ref })),
+    socle_creation: (VERIFICATIONS.socle_creation || []).map(([libelle, ref]) => ({ libelle, ref })),
   };
 }
 

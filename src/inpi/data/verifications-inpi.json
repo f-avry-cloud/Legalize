@@ -1,45 +1,134 @@
 {
-  "_source": "Dépôts de test sur le serveur de démonstration du Guichet unique (guichet-unique-demo.inpi.fr), société fictive, 4 octobre 2026. Chaque dossier a été supprimé aussitôt créé.",
+  "_source": "Dépôts de test sur le serveur de démonstration du Guichet unique (guichet-unique-demo.inpi.fr), 4 octobre 2026 : modifications et cessations sur la fiche réelle d'une SAS connue du serveur, créations sur des sociétés fictives produites par le générateur de l'application. Chaque dossier a été supprimé aussitôt créé.",
   "date": "2026-10-04",
   "constats": [
-    "Le serveur ne contrôle aucune pièce jointe : un dossier de modification sans procès-verbal ni statuts est accepté, signé et passe en attente de paiement. Les pièces sont examinées ensuite par le greffe, qui adresse alors une demande de régularisation.",
-    "Le serveur valide toute la société à chaque modification, pas seulement le point modifié : une fiche incomplète au registre bloque n’importe quelle formalité.",
-    "Le serveur reconnaît la formalité à partir du drapeau déclencheur et des données modifiées ; sans déclencheur, il refuse le dépôt (« au moins une modification »).",
-    "La présence du frais DE052 (« dépôt d’actes ») indique que le greffe attend un acte : c’est le seul signal que l’API donne sur les pièces."
+    "Le serveur ne contrôle aucune pièce jointe : un dossier sans procès-verbal ni statuts est accepté, signé et passe en attente de paiement. Les pièces sont examinées ensuite par le greffe, qui adresse alors une demande de régularisation.",
+    "Le serveur revalide toute la société à chaque formalité, pas seulement le point modifié. Même les données déjà inscrites au registre peuvent être refusées (constaté : commissaires aux comptes sans lieu d’immatriculation, code postal incohérent) et bloquer n’importe quelle modification tant qu’elles ne sont pas corrigées.",
+    "Le serveur reconnaît la formalité à partir d’un drapeau déclencheur et des données modifiées. Sans déclencheur, il refuse le dépôt (« au moins une modification »). Une date d’effet est exigée pour presque chaque événement.",
+    "Le code de l’événement dépend de la forme sociale : une modification de dirigeant déclarée en 34M sur une SAS est enregistrée en 35M.",
+    "Le serveur de démonstration ne connaît qu’un échantillon de sociétés : une société récente, ou même ancienne mais absente de l’échantillon, y est « introuvable ».",
+    "La présence du frais DE052 (« dépôt d’actes ») indique que le greffe attend un acte : c’est le seul signal que l’API donne sur les pièces.",
+    "Attention : une erreur interne du serveur (code 500) peut laisser derrière elle un dossier créé. Après une telle erreur, il faut relire la liste des dossiers avant de recommencer, sous peine de doublon."
   ],
   "socle_modification": [
-    ["Destinataire de la correspondance (type)", "identite.destinataireCorrespondance.typeDestinataireCorrespondance"],
-    ["Diffusion commerciale des données (O/N)", "diffusionCommerciale"],
-    ["Siège domicilié chez une entreprise de domiciliation (oui/non)", "adresseEntreprise.caracteristiques.domiciliataire"],
-    ["Siège au domicile du dirigeant (oui/non)", "adresseEntreprise.caracteristiques.indicateurDomicileEntrepreneur"],
-    ["NIC du siège", "identite.entreprise.nicSiege"],
-    ["Code APE de l’entreprise", "identite.entreprise.codeApe"],
-    ["Demande d’ACRE déposée (oui/non)", "identite.description.depotDemandeAcre"],
-    ["SIRET de l’établissement principal", "etablissementPrincipal.descriptionEtablissement.siret"],
-    ["Code APE et catégorisation de l’activité (deux premiers niveaux au moins, codes à deux chiffres)", "etablissementPrincipal.activites[].categorisationActivite1"],
-    ["Pour chaque dirigeant personne physique : sexe, pays, commune et code INSEE du lieu de naissance", "composition.pouvoirs[].individu.descriptionPersonne"]
+    [
+      "Destinataire de la correspondance (type)",
+      "identite.destinataireCorrespondance.typeDestinataireCorrespondance"
+    ],
+    [
+      "Diffusion commerciale des données (O/N)",
+      "diffusionCommerciale"
+    ],
+    [
+      "Siège domicilié chez une entreprise de domiciliation (oui/non)",
+      "adresseEntreprise.caracteristiques.domiciliataire"
+    ],
+    [
+      "Siège au domicile du dirigeant (oui/non)",
+      "adresseEntreprise.caracteristiques.indicateurDomicileEntrepreneur"
+    ],
+    [
+      "NIC du siège",
+      "identite.entreprise.nicSiege"
+    ],
+    [
+      "Code APE de l’entreprise",
+      "identite.entreprise.codeApe"
+    ],
+    [
+      "Demande d’ACRE déposée (oui/non)",
+      "identite.description.depotDemandeAcre"
+    ],
+    [
+      "SIRET de l’établissement principal",
+      "etablissementPrincipal.descriptionEtablissement.siret"
+    ],
+    [
+      "Code APE et catégorisation de l’activité (deux premiers niveaux au moins, codes à deux chiffres)",
+      "etablissementPrincipal.activites[].categorisationActivite1"
+    ],
+    [
+      "Pour chaque dirigeant personne physique : sexe, pays, commune et code INSEE du lieu de naissance",
+      "composition.pouvoirs[].individu.descriptionPersonne"
+    ],
+    [
+      "Pour chaque personne morale dirigeante ou contrôleuse : lieu d’immatriculation en majuscules (ex. « NANTERRE »)",
+      "composition.pouvoirs[].entreprise.lieuRegistre"
+    ]
   ],
   "evenements": {
     "10M": {
       "statut": "verifie",
       "evenement_detecte": "10M",
       "champs": [
-        ["Nouvelle dénomination", "identite.entreprise.denomination"],
-        ["Déclencheur", "identite.description.is10MTriggered"],
-        ["Date d’effet — exigée par le serveur", "identite.description.dateEffet10M"]
+        [
+          "Nouvelle dénomination",
+          "identite.entreprise.denomination"
+        ],
+        [
+          "Déclencheur",
+          "identite.description.is10MTriggered"
+        ],
+        [
+          "Date d’effet — exigée par le serveur",
+          "identite.description.dateEffet10M"
+        ]
       ],
-      "frais": [["BO116", 11600], ["IN590", 590], ["IP590", 590], ["DE052", 763], ["MB701", 5338]],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB701",
+          5338
+        ]
+      ],
       "acte_attendu": true
     },
     "12M": {
       "statut": "verifie",
       "evenement_detecte": "12M",
       "champs": [
-        ["Nouvel objet / nouvelles activités", "identite.description.objet"],
-        ["Déclencheur", "identite.description.is12MTriggered"],
-        ["Date d’effet", "identite.description.dateEffet12M"]
+        [
+          "Nouvel objet / nouvelles activités",
+          "identite.description.objet"
+        ],
+        [
+          "Déclencheur",
+          "identite.description.is12MTriggered"
+        ],
+        [
+          "Date d’effet",
+          "identite.description.dateEffet12M"
+        ]
       ],
-      "frais": [["BO116", 11600], ["IN590", 590], ["MB702", 5338]],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB702",
+          5338
+        ]
+      ],
       "acte_attendu": false,
       "note": "Le serveur ne facture pas de dépôt d’actes pour cet événement. Si l’objet statutaire change, les statuts mis à jour restent à déposer."
     },
@@ -47,46 +136,156 @@
       "statut": "verifie",
       "evenement_detecte": "13M",
       "champs": [
-        ["Nouvelle forme juridique (deux emplacements)", "natureCreation.formeJuridique + identite.entreprise.formeJuridique"],
-        ["Déclencheur", "natureCreation.is13MTriggered"],
-        ["Date d’effet", "natureCreation.dateEffet13M"]
+        [
+          "Nouvelle forme juridique (deux emplacements)",
+          "natureCreation.formeJuridique + identite.entreprise.formeJuridique"
+        ],
+        [
+          "Déclencheur",
+          "natureCreation.is13MTriggered"
+        ],
+        [
+          "Date d’effet",
+          "natureCreation.dateEffet13M"
+        ]
       ],
-      "frais": [["BO116", 11600], ["IN590", 590], ["IP590", 590], ["DE052", 763], ["MB708", 7244]],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB708",
+          7244
+        ]
+      ],
       "acte_attendu": true
     },
     "14M": {
       "statut": "verifie",
       "evenement_detecte": "14M",
       "champs": [
-        ["Nom de domaine", "identite.nomsDeDomaine[].nomDomaine"],
-        ["Statut du nom de domaine (nouveau, remplacé, supprimé) — exigé", "identite.nomsDeDomaine[].statutDomaine"],
-        ["Déclencheur", "identite.nomsDeDomaine[].is14MTriggered"],
-        ["Date d’effet — exigée", "identite.nomsDeDomaine[].dateEffet14M"]
+        [
+          "Nom de domaine",
+          "identite.nomsDeDomaine[].nomDomaine"
+        ],
+        [
+          "Statut du nom de domaine (nouveau, remplacé, supprimé) — exigé",
+          "identite.nomsDeDomaine[].statutDomaine"
+        ],
+        [
+          "Déclencheur",
+          "identite.nomsDeDomaine[].is14MTriggered"
+        ],
+        [
+          "Date d’effet — exigée",
+          "identite.nomsDeDomaine[].dateEffet14M"
+        ]
       ],
-      "frais": [["IN590", 590], ["MB704", 5338]],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB704",
+          5338
+        ]
+      ],
       "acte_attendu": false
     },
     "15M": {
       "statut": "verifie",
       "evenement_detecte": "15M",
       "champs": [
-        ["Nouveau montant du capital", "identite.description.montantCapital"],
-        ["Déclencheur", "identite.description.is15MTriggered"],
-        ["Date d’effet", "identite.description.dateEffet15M"]
+        [
+          "Nouveau montant du capital",
+          "identite.description.montantCapital"
+        ],
+        [
+          "Déclencheur",
+          "identite.description.is15MTriggered"
+        ],
+        [
+          "Date d’effet",
+          "identite.description.dateEffet15M"
+        ]
       ],
-      "frais": [["BO116", 11600], ["IN590", 590], ["IP590", 590], ["DE052", 763], ["MB701", 5338]],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB701",
+          5338
+        ]
+      ],
       "acte_attendu": true
     },
     "16M": {
       "statut": "verifie",
       "evenement_detecte": "16M",
       "champs": [
-        ["Clôture : nouvelle date (JJMM) et indicateur", "identite.description.dateClotureExerciceSocial + isModificationDateCloture"],
-        ["Durée : nouvelle durée, indicateur et date de fin — la date de fin est exigée", "identite.description.duree + isProlongationDuree + dateFinExistence"],
-        ["Déclencheur", "identite.description.is16MTriggered"],
-        ["Date d’effet", "identite.description.dateEffet16M"]
+        [
+          "Clôture : nouvelle date (JJMM) et indicateur",
+          "identite.description.dateClotureExerciceSocial + isModificationDateCloture"
+        ],
+        [
+          "Durée : nouvelle durée, indicateur et date de fin — la date de fin est exigée",
+          "identite.description.duree + isProlongationDuree + dateFinExistence"
+        ],
+        [
+          "Déclencheur",
+          "identite.description.is16MTriggered"
+        ],
+        [
+          "Date d’effet",
+          "identite.description.dateEffet16M"
+        ]
       ],
-      "frais": [["IN590", 590], ["IP590", 590], ["DE052", 763], ["MB703", 5338]],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB703",
+          5338
+        ]
+      ],
       "acte_attendu": true,
       "note": "Pas d’annonce au BODACC facturée."
     },
@@ -94,74 +293,889 @@
       "statut": "verifie",
       "evenement_detecte": "17M",
       "champs": [
-        ["Associé unique (oui/non) et associé unique dirigeant (oui/non)", "identite.description.indicateurAssocieUnique + indicateurAssocieUniqueDirigeant"],
-        ["Déclencheurs — le premier seul ne suffit pas", "identite.description.is17MTriggered + is17MNotDirigeantTriggered"],
-        ["Date d’effet", "identite.description.dateEffet17M"]
+        [
+          "Associé unique (oui/non) et associé unique dirigeant (oui/non)",
+          "identite.description.indicateurAssocieUnique + indicateurAssocieUniqueDirigeant"
+        ],
+        [
+          "Déclencheurs — le premier seul ne suffit pas",
+          "identite.description.is17MTriggered + is17MNotDirigeantTriggered"
+        ],
+        [
+          "Date d’effet",
+          "identite.description.dateEffet17M"
+        ]
       ],
-      "frais": [["BO116", 11600], ["IN590", 590], ["IP590", 590], ["DE052", 763], ["MB701", 5338]],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB701",
+          5338
+        ]
+      ],
       "acte_attendu": true
     },
     "35M": {
       "statut": "verifie",
       "evenement_detecte": "35M",
       "champs": [
-        ["Dirigeant sortant : déclencheur de suppression", "composition.pouvoirs[].is34Or35MSuppressionTriggered"],
-        ["Dirigeant entrant : déclencheur d’adjonction", "composition.pouvoirs[].is34Or35MAdjonctionTriggered"],
-        ["Date d’effet pour chacun", "composition.pouvoirs[].dateEffet34Or35M"],
-        ["Identité complète du nouveau dirigeant : nom, prénoms, sexe, date, commune, code INSEE et pays de naissance, nationalité", "composition.pouvoirs[].individu.descriptionPersonne"]
+        [
+          "Dirigeant sortant : déclencheur de suppression",
+          "composition.pouvoirs[].is34Or35MSuppressionTriggered"
+        ],
+        [
+          "Dirigeant entrant : déclencheur d’adjonction",
+          "composition.pouvoirs[].is34Or35MAdjonctionTriggered"
+        ],
+        [
+          "Date d’effet pour chacun",
+          "composition.pouvoirs[].dateEffet34Or35M"
+        ],
+        [
+          "Identité complète du nouveau dirigeant : nom, prénoms, sexe, date, commune, code INSEE et pays de naissance, nationalité",
+          "composition.pouvoirs[].individu.descriptionPersonne"
+        ],
+        [
+          "Changement de domicile d’un dirigeant : déclencheur de mise à jour, statut « modification » — sans annonce ni dépôt d’actes",
+          "is34Or35MAddressOrInfoPouvoirUpdatedTriggered + isModificationAdressePouvoir"
+        ]
       ],
-      "frais": [["BO116", 11600], ["IN590", 590], ["IP590", 590], ["DE052", 763], ["MB701", 5338]],
-      "acte_attendu": true
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB701",
+          5338
+        ]
+      ],
+      "acte_attendu": true,
+      "note": "Testé : remplacement du président, ajout d’un dirigeant, départ d’un commissaire aux comptes, changement de domicile (ce dernier sans annonce ni dépôt d’actes)."
     },
     "38F": {
       "statut": "verifie",
       "evenement_detecte": "38F",
       "champs": [
-        ["Mode de déclaration (nombre entier 1 ou 2) — exigé", "personneMorale.mode38F"],
-        ["Statut de chaque bénéficiaire (ajout, modification, suppression) — exigé", "beneficiairesEffectifs[].statutPourLaFormalite"],
-        ["Identité, domicile et modalités de contrôle de chaque bénéficiaire", "beneficiairesEffectifs[]"],
-        ["Déclencheur et date d’effet", "personneMorale.is38FTriggered + dateEffet38F"]
+        [
+          "Mode de déclaration (nombre entier 1 ou 2) — exigé",
+          "personneMorale.mode38F"
+        ],
+        [
+          "Statut de chaque bénéficiaire (ajout, modification, suppression) — exigé",
+          "beneficiairesEffectifs[].statutPourLaFormalite"
+        ],
+        [
+          "Identité, domicile et modalités de contrôle de chaque bénéficiaire",
+          "beneficiairesEffectifs[]"
+        ],
+        [
+          "Déclencheur et date d’effet",
+          "personneMorale.is38FTriggered + dateEffet38F"
+        ]
       ],
-      "frais": [["IN590", 590], ["BE003", 3558], ["FP001", 156]],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "BE003",
+          3558
+        ],
+        [
+          "FP001",
+          156
+        ]
+      ],
       "acte_attendu": false
     },
     "54PMF": {
       "statut": "verifie",
       "evenement_detecte": "54M",
       "champs": [
-        ["Adresse du nouvel établissement", "autresEtablissements[].adresse"],
-        ["Rôle (établissement secondaire) et statut (nouveau)", "autresEtablissements[].descriptionEtablissement.rolePourEntreprise + statutPourFormalite"],
-        ["Date d’ouverture", "autresEtablissements[].dateEffetOuvertureEtablissement"],
-        ["Activité : date de début, catégorisation, origine du fonds — origine exigée", "autresEtablissements[].activites[].origine"],
-        ["Salariés : présence et premier emploi — exigés", "autresEtablissements[].effectifSalarie.presenceSalarie + emploiPremierSalarie"],
-        ["Déclencheur", "autresEtablissements[].is54PMFTriggered"]
+        [
+          "Adresse du nouvel établissement",
+          "autresEtablissements[].adresse"
+        ],
+        [
+          "Rôle (établissement secondaire) et statut (nouveau)",
+          "autresEtablissements[].descriptionEtablissement.rolePourEntreprise + statutPourFormalite"
+        ],
+        [
+          "Date d’ouverture",
+          "autresEtablissements[].dateEffetOuvertureEtablissement"
+        ],
+        [
+          "Activité : date de début, catégorisation, origine du fonds — origine exigée",
+          "autresEtablissements[].activites[].origine"
+        ],
+        [
+          "Salariés : présence et premier emploi — exigés",
+          "autresEtablissements[].effectifSalarie.presenceSalarie + emploiPremierSalarie"
+        ],
+        [
+          "Déclencheur",
+          "autresEtablissements[].is54PMFTriggered"
+        ],
+        [
+          "Identifiant temporaire numérique du nouvel établissement",
+          "descriptionEtablissement.identifiantTemporaire"
+        ]
       ],
-      "frais": [["BS701", 5591]],
+      "frais": [
+        [
+          "BS701",
+          5591
+        ]
+      ],
       "acte_attendu": false
     },
     "60PMF": {
       "statut": "verifie",
       "evenement_detecte": "60M",
       "champs": [
-        ["Nouvelle adresse et date de prise d’effet", "adresse + adresse.datePriseEffetAdresse"],
-        ["Déclencheur (changement d’adresse sans transfert)", "descriptionEtablissement.is60PMFAddressTriggered"],
-        ["Date d’effet", "descriptionEtablissement.dateEffet60PMF"]
+        [
+          "Enseigne ou nom commercial : déclencheur et date d’effet",
+          "descriptionEtablissement.enseigne + is60PMFTriggered + dateEffet60PMF"
+        ],
+        [
+          "Nouvelle adresse et date de prise d’effet",
+          "adresse + adresse.datePriseEffetAdresse"
+        ],
+        [
+          "Déclencheur (changement d’adresse sans transfert)",
+          "descriptionEtablissement.is60PMFAddressTriggered"
+        ],
+        [
+          "Date d’effet",
+          "descriptionEtablissement.dateEffet60PMF"
+        ]
       ],
-      "frais": [["MB799", 0]],
+      "frais": [
+        [
+          "MB799",
+          0
+        ]
+      ],
       "acte_attendu": false,
-      "note": "Changement d’adresse sans déménagement (renumérotation, nouveau nom de voie) : gratuit."
+      "note": "Changement d’enseigne : frais IN590 + MB704 (59,28 €). Changement d’adresse sans déménagement : gratuit."
     },
     "11M": {
       "statut": "non_concluant",
-      "note": "Après quinze essais, le serveur n’a pas reconnu le transfert de siège : il le lit comme un simple changement d’adresse (60M). Le transfert se déclare en fermant l’ancien établissement et en le reliant au nouveau par un identifiant temporaire, mais la combinaison exacte reste à trouver. Elle dépend sans doute de l’état réel de la société au registre."
+      "note": "Non concluant après environ quatre-vingts essais. Ce que le serveur a révélé : le drapeau « is11PMFTriggered » est accepté ; il exige alors une date de transfert, une destination et la présence d’un établissement d’origine et d’un établissement de destination, reliés par un identifiant temporaire numérique ; le nouvel établissement n’est reconnu que s’il porte le drapeau d’ouverture ; le siège ne peut pas être fermé par une modification. Le dernier blocage porte sur l’activité principale après le déplacement des activités."
     },
     "22M": {
       "statut": "non_concluant",
-      "note": "Se dépose comme une cessation (typeFormalite R). Exigences relevées : lieu de liquidation codé (S siège, L adresse du liquidateur, A autre adresse), et non le nom de la commune ; indicateur de prolongement sur chaque activité ; statut de chaque établissement. Le serveur confronte ensuite les établissements au registre réel : impossible à mener au bout avec une société fictive."
+      "note": "Non concluant après huit variantes : le serveur ne détecte aucune modification. Exigences relevées : lieu de liquidation codé (S siège, L adresse du liquidateur, A autre adresse), indicateur de prolongement sur chaque activité, statut de chaque dirigeant, destination de chaque établissement, nature de cessation « entreprise »."
     },
     "42M": {
       "statut": "non_concluant",
-      "note": "Se dépose comme une cessation (typeFormalite R). Mêmes exigences que la dissolution, plus l’indicateur de dissolution. Même blocage sur les établissements."
+      "note": "Non testable sur une société active : selon le dictionnaire INPI, la date de clôture de liquidation n’est exigée que pour un 42M « à la suite d’un 22M ». La radiation suppose donc une dissolution déjà inscrite au registre."
+    },
+    "01M": {
+      "statut": "verifie",
+      "evenement_detecte": "01M",
+      "champs": [
+        [
+          "Toutes les informations de la société : voir l’encadré « création »",
+          null
+        ],
+        [
+          "Formes testées : SAS, SARL, EURL, SA, SNC, société civile immobilière",
+          null
+        ]
+      ],
+      "frais": [
+        [
+          "DE052",
+          763
+        ],
+        [
+          "IBP01",
+          2796
+        ]
+      ],
+      "acte_attendu": true,
+      "note": "Formes testées avec le générateur de l’application, accepté du premier coup après corrections : SAS, SASU, SARL, société civile immobilière ; SA, EURL et SNC acceptées après complétion. La SASU se déclare en SAS (5710) avec associé unique : le code 5720 est refusé. Pour une SA, le serveur accepte un seul dirigeant et ne vérifie pas le nombre légal d’administrateurs. Frais : 35,59 € pour une société commerciale, 63,54 € pour une société civile immobilière."
+    },
+    "02M": {
+      "statut": "verifie",
+      "evenement_detecte": "02M",
+      "champs": [
+        [
+          "Siège déclaré seul, sans activité, statut « nouveau »",
+          "autresEtablissements[].descriptionEtablissement"
+        ],
+        [
+          "Structure : aucune activité et date de création sans activité",
+          "structureEntreprise.aucuneActivite + dateAucuneActivite"
+        ]
+      ],
+      "frais": [
+        [
+          "DE052",
+          763
+        ],
+        [
+          "IB707",
+          5591
+        ]
+      ],
+      "acte_attendu": true
+    },
+    "03M": {
+      "statut": "verifie",
+      "evenement_detecte": "03M",
+      "champs": [
+        [
+          "Siège sans activité (« sans activité, autre activité hors siège »)",
+          "autresEtablissements[].descriptionEtablissement.sansActiviteAutreActiviteSiege"
+        ],
+        [
+          "Établissement principal distinct, avec salariés renseignés",
+          "etablissementPrincipal"
+        ],
+        [
+          "Structure : siège distinct de l’établissement principal",
+          "structureEntreprise.indicateurPrincipalIdemSiege"
+        ]
+      ],
+      "frais": [],
+      "acte_attendu": null
+    },
+    "04M": {
+      "statut": "non_concluant",
+      "note": "Partiel : le serveur exige un seul établissement « premier établissement en France », la disponibilité du capital (oui/non), l’indicateur « visée par le Code de commerce » et, pour chaque établissement, l’emploi de salariés hors régime français. Le dossier complet n’a pas abouti."
+    },
+    "07M": {
+      "statut": "non_concluant",
+      "note": "Partiel : le serveur exige un rôle de dirigeant compatible avec une société étrangère sans établissement (30, 51, 53, 60…), une forme « établissement ou succursale » cohérente et un établissement « premier en France ». Le dossier complet n’a pas abouti."
+    },
+    "05M": {
+      "statut": "non_testable",
+      "note": "Non testé : suppose une personne morale dont l’immatriculation est prévue par un texte particulier."
+    },
+    "18M": {
+      "statut": "verifie",
+      "evenement_detecte": "18M",
+      "champs": [
+        [
+          "Économie sociale et solidaire (oui/non)",
+          "identite.description.ess"
+        ],
+        [
+          "Déclencheur",
+          "is18MTriggered"
+        ],
+        [
+          "Date d’effet — exigée",
+          "dateEffet18M"
+        ]
+      ],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB704",
+          5338
+        ]
+      ],
+      "acte_attendu": false
+    },
+    "19M": {
+      "statut": "verifie",
+      "evenement_detecte": "19M",
+      "champs": [
+        [
+          "Nature de la gérance",
+          "identite.description.natureGerance"
+        ],
+        [
+          "Déclencheur",
+          "is19MTriggered"
+        ],
+        [
+          "Date d’effet — exigée",
+          "dateEffet19M"
+        ]
+      ],
+      "frais": [],
+      "acte_attendu": false,
+      "note": "Gratuit."
+    },
+    "20M": {
+      "statut": "verifie",
+      "evenement_detecte": "20M",
+      "champs": [
+        [
+          "Nouvelle date de début d’activité",
+          "etablissementPrincipal.activites[].dateDebut"
+        ],
+        [
+          "Déclencheur",
+          "activites[].is20MTriggered"
+        ]
+      ],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB702",
+          5338
+        ]
+      ],
+      "acte_attendu": false,
+      "note": "Aucune date d’effet exigée."
+    },
+    "25M": {
+      "statut": "verifie",
+      "evenement_detecte": "25M",
+      "champs": [
+        [
+          "Continuation malgré des capitaux propres inférieurs à la moitié du capital",
+          "identite.description.continuationAvecActifNetInferieurMoitieCapital"
+        ],
+        [
+          "Date d’effet — exigée",
+          "dateEffet25M"
+        ]
+      ],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB703",
+          5338
+        ]
+      ],
+      "acte_attendu": true
+    },
+    "26M": {
+      "statut": "verifie",
+      "evenement_detecte": "26M",
+      "champs": [
+        [
+          "Reconstitution des capitaux propres",
+          "identite.description.reconstitutionCapitauxPropres"
+        ],
+        [
+          "Date d’effet — exigée",
+          "dateEffet26M"
+        ]
+      ],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB703",
+          5338
+        ]
+      ],
+      "acte_attendu": true
+    },
+    "29M": {
+      "statut": "verifie",
+      "evenement_detecte": "29M",
+      "champs": [
+        [
+          "Modification de l’identification : type 1 dénomination, 2 sigle, 3 les deux",
+          "identite.description.identificationModification + is29MTriggered + dateEffet29M"
+        ],
+        [
+          "Qualité de société à mission",
+          "societeMission + is29MQualiteSocieteMissionTriggered + dateEffet29MQualiteSocieteMission"
+        ],
+        [
+          "Fusion simplifiée : sociétés intervenantes (SIREN, dénomination, forme, greffe en majuscules, adresse)",
+          "is29MSimplifiedFusionTriggered + entreprisesIntervenant[] + dateEffet29MSimplifiedFusion"
+        ]
+      ],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB704",
+          5338
+        ]
+      ],
+      "acte_attendu": false,
+      "note": "Pour une fusion simplifiée, le serveur facture l’annonce BODACC et le dépôt d’actes (BO116, DE052)."
+    },
+    "34M": {
+      "statut": "verifie",
+      "evenement_detecte": "35M",
+      "champs": [
+        [
+          "Comme 35M : le serveur choisit l’événement selon la forme sociale",
+          null
+        ]
+      ],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "IP590",
+          590
+        ],
+        [
+          "DE052",
+          763
+        ],
+        [
+          "MB701",
+          5338
+        ]
+      ],
+      "acte_attendu": true,
+      "note": "Testé sur une SAS : enregistré en 35M."
+    },
+    "36M": {
+      "statut": "non_testable",
+      "note": "Non reconnu sur une société française : concerne une société étrangère employeur sans établissement en France."
+    },
+    "70PM": {
+      "statut": "non_concluant",
+      "note": "Non reconnu : le pouvoir d’engager un établissement ne se déclare pas comme un dirigeant de la société ; structure à identifier."
+    },
+    "51M": {
+      "statut": "verifie",
+      "evenement_detecte": "51M",
+      "champs": [
+        [
+          "Début d’activité au siège",
+          "structureEntreprise.is51Or52MTriggered"
+        ],
+        [
+          "Date d’effet — exigée",
+          "structureEntreprise.dateEffet51M"
+        ]
+      ],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB711",
+          5338
+        ]
+      ],
+      "acte_attendu": false
+    },
+    "52M": {
+      "statut": "non_testable",
+      "note": "Non testé : suppose une société inscrite sans activité."
+    },
+    "55PM": {
+      "statut": "verifie",
+      "evenement_detecte": "55M",
+      "champs": [
+        [
+          "Nom de domaine de l’établissement, statut et date d’effet",
+          "autresEtablissements[].nomsDeDomaine[]"
+        ],
+        [
+          "Déclencheur",
+          "is55PMTriggered"
+        ]
+      ],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB704",
+          5338
+        ]
+      ],
+      "acte_attendu": false
+    },
+    "56PMF": {
+      "statut": "non_concluant",
+      "note": "Non concluant : même blocage que le transfert de siège (le serveur ne trouve pas d’activité principale après le déplacement des activités)."
+    },
+    "61PMF": {
+      "statut": "verifie",
+      "evenement_detecte": "61M",
+      "champs": [
+        [
+          "Nouvelle activité : description, catégorisation, code APE, date de début",
+          "etablissementPrincipal.activites[]"
+        ],
+        [
+          "Déclencheur",
+          "activites[].is61PMFTriggered"
+        ]
+      ],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB702",
+          5338
+        ]
+      ],
+      "acte_attendu": false
+    },
+    "62M": {
+      "statut": "verifie",
+      "evenement_detecte": "62M",
+      "champs": [
+        [
+          "Activité supprimée : date de fin",
+          "activites[].dateFin"
+        ],
+        [
+          "Déclencheur",
+          "activites[].is62PMTriggered"
+        ]
+      ],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB702",
+          5338
+        ]
+      ],
+      "acte_attendu": false
+    },
+    "65PMF": {
+      "statut": "non_concluant",
+      "note": "Non reconnu : aucune combinaison des champs « salariés » n’a été détectée comme une embauche."
+    },
+    "66PMF": {
+      "statut": "non_concluant",
+      "note": "Non reconnu : aucune combinaison des champs « salariés » n’a été détectée comme une fin d’emploi."
+    },
+    "67PMF": {
+      "statut": "verifie",
+      "evenement_detecte": "67M",
+      "champs": [
+        [
+          "Nouvelle description de l’activité",
+          "activites[].descriptionDetaillee"
+        ],
+        [
+          "Déclencheur",
+          "activites[].is67PMTriggered"
+        ],
+        [
+          "Date d’effet — exigée",
+          "activites[].dateEffet67PM"
+        ]
+      ],
+      "frais": [],
+      "acte_attendu": false,
+      "note": "Gratuit."
+    },
+    "80PMF": {
+      "statut": "verifie",
+      "evenement_detecte": "80M",
+      "champs": [
+        [
+          "Établissement fermé : statut « supprimé, fermeture » (le rôle ne change pas)",
+          "descriptionEtablissement.statutPourFormalite"
+        ],
+        [
+          "Destination (B : fermé) et date de fermeture",
+          "destinationEtablissement + dateEffetFermeture"
+        ],
+        [
+          "Déclencheur",
+          "is80PMFTriggered"
+        ]
+      ],
+      "frais": [
+        [
+          "RBS01",
+          0
+        ]
+      ],
+      "acte_attendu": false,
+      "note": "Le siège ne peut pas être fermé par une formalité de modification."
+    },
+    "63M": {
+      "statut": "verifie",
+      "evenement_detecte": "63M",
+      "champs": [
+        [
+          "Acquisition du fonds : déclencheur et date d’effet",
+          "activites[].is63PMFTriggered + dateEffet63PMF"
+        ]
+      ],
+      "frais": [
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB707",
+          5593
+        ]
+      ],
+      "acte_attendu": false
+    },
+    "84M": {
+      "statut": "verifie",
+      "evenement_detecte": "84M",
+      "champs": [
+        [
+          "Mise en location-gérance du fonds unique",
+          "etablissementPrincipal.is84MTriggered + isLocationGeranceOrGeranceMandat"
+        ],
+        [
+          "Les activités passent en location-gérance",
+          "activites[].isLocationGeranceOrGeranceMandat"
+        ]
+      ],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB705",
+          5593
+        ]
+      ],
+      "acte_attendu": false,
+      "note": "Ne pas renseigner de destination d’établissement : le serveur la refuse si l’établissement reste ouvert."
+    },
+    "82PMF": {
+      "statut": "non_concluant",
+      "note": "Non reconnu sous la forme essayée (destination D sur un établissement secondaire)."
+    },
+    "53PMF": {
+      "statut": "non_testable",
+      "note": "Non testé : suppose une location-gérance déjà inscrite au registre."
+    },
+    "64PMF": {
+      "statut": "non_testable",
+      "note": "Non testé : suppose une location-gérance déjà inscrite au registre."
+    },
+    "68M": {
+      "statut": "non_testable",
+      "note": "Non testé : suppose une location-gérance déjà inscrite au registre."
+    },
+    "69M": {
+      "statut": "non_testable",
+      "note": "Non testé : suppose une location-gérance déjà inscrite au registre."
+    },
+    "24M": {
+      "statut": "non_testable",
+      "note": "Non reconnu : l’entrée dans le champ du RCS ne s’applique pas à une société déjà commerciale."
+    },
+    "27M": {
+      "statut": "non_testable",
+      "note": "Non reconnu : sortie du champ du RCS, non applicable à une société commerciale."
+    },
+    "30M": {
+      "statut": "non_testable",
+      "note": "Non testé : propre aux groupements (GIE, GEIE)."
+    },
+    "33M": {
+      "statut": "non_testable",
+      "note": "Non testé : propre aux groupements (GIE, GEIE)."
+    },
+    "37M": {
+      "statut": "non_testable",
+      "note": "Non reconnu : suppose un contrat d’appui déclaré au registre."
+    },
+    "43M": {
+      "statut": "non_testable",
+      "note": "Non testé : propre aux sociétés étrangères."
+    },
+    "99PMF": {
+      "statut": "non_testable",
+      "note": "Non testé : la correction porte sur une formalité déjà déposée et validée."
+    },
+    "23M": {
+      "statut": "non_concluant",
+      "note": "Le dépôt est accepté mais enregistré comme une cessation totale d’activité (40M) : la prorogation suppose une cessation déjà inscrite."
+    },
+    "28M": {
+      "statut": "verifie",
+      "evenement_detecte": "28M",
+      "champs": [
+        [
+          "Type de dissolution 2 (sans liquidation) et dates de dissolution et de transmission du patrimoine",
+          "detailCessationEntreprise.typeDissolution + dateDissolutionDisparition + dateTransfertPatrimoine"
+        ],
+        [
+          "Associé unique personne morale qui récupère le patrimoine (rôle 130) — exigé",
+          "composition.pouvoirs[]"
+        ],
+        [
+          "Statut de chaque dirigeant existant (inchangé) — exigé",
+          "pouvoirs[].statutPourLaFormalite"
+        ],
+        [
+          "Destination de chaque établissement fermé — exigée",
+          "descriptionEtablissement.destinationEtablissement"
+        ]
+      ],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB701",
+          5338
+        ]
+      ],
+      "acte_attendu": null,
+      "note": "Se dépose comme une cessation (type R), nature « entreprise »."
+    },
+    "40M": {
+      "statut": "verifie",
+      "evenement_detecte": "40M",
+      "champs": [
+        [
+          "Date de cessation totale d’activité, pas de dissolution, pas de disparition",
+          "detailCessationEntreprise"
+        ],
+        [
+          "Tous les établissements, siège compris, en statut « supprimé, fermeture » avec destination et date — exigé",
+          "descriptionEtablissement.statutPourFormalite"
+        ],
+        [
+          "Statut de chaque dirigeant — exigé",
+          "pouvoirs[].statutPourLaFormalite"
+        ]
+      ],
+      "frais": [
+        [
+          "BO116",
+          11600
+        ],
+        [
+          "IN590",
+          590
+        ],
+        [
+          "MB702",
+          5338
+        ]
+      ],
+      "acte_attendu": false,
+      "note": "Se dépose comme une cessation (type R)."
+    },
+    "41M": {
+      "statut": "verifie",
+      "evenement_detecte": "42M",
+      "champs": [
+        [
+          "Sociétés intervenantes : SIREN, dénomination, forme, adresse — exigés",
+          "identite.entreprisesIntervenant[].entreprise + adresse"
+        ],
+        [
+          "Motif 12 (radiation suite à fusion), disparition de la personne morale",
+          "detailCessationEntreprise"
+        ],
+        [
+          "Fermeture de chaque établissement avec date",
+          "descriptionEtablissement.dateEffetFermeture"
+        ]
+      ],
+      "frais": [
+        [
+          "RB701",
+          0
+        ]
+      ],
+      "acte_attendu": null,
+      "note": "Le serveur enregistre l’événement en 42M (disparition) ; gratuit."
     }
   },
   "frais_libelles": {
@@ -177,6 +1191,57 @@
     "MB799": "Modification non tarifée",
     "BE003": "Déclaration des bénéficiaires effectifs",
     "FP001": "Frais postaux",
-    "BS701": "Ouverture d’un établissement secondaire"
-  }
+    "BS701": "Ouverture d’un établissement secondaire",
+    "MB705": "Mise en location-gérance",
+    "MB707": "Acquisition du fonds",
+    "MB711": "Début d’activité",
+    "IB707": "Immatriculation d’une société sans activité",
+    "RBS01": "Fermeture d’un établissement secondaire",
+    "RB701": "Radiation",
+    "IBP01": "Immatriculation d’une société commerciale",
+    "IB711": "Immatriculation d’une société commerciale",
+    "IDP01": "Immatriculation d’une société civile"
+  },
+  "socle_creation": [
+    [
+      "Date de clôture du premier exercice",
+      "identite.description.datePremiereCloture"
+    ],
+    [
+      "Annonce légale : journal et date de parution",
+      "identite.publicationLegale"
+    ],
+    [
+      "Caractéristiques du siège : ambulant, domiciliation, domicile du dirigeant",
+      "adresseEntreprise.caracteristiques"
+    ],
+    [
+      "Demande d’ACRE (oui/non)",
+      "identite.description.depotDemandeAcre"
+    ],
+    [
+      "Catégorisation de l’activité sur quatre niveaux (codes à deux chiffres)",
+      "etablissementPrincipal.activites[].categorisationActivite1…4"
+    ],
+    [
+      "Mode d’exercice (permanent ou saisonnier) et origine du fonds",
+      "activites[].exerciceActivite + origine.typeOrigine"
+    ],
+    [
+      "Salariés : présence et premier emploi",
+      "etablissementPrincipal.effectifSalarie"
+    ],
+    [
+      "Options fiscales, date de clôture comptable au format JJMM",
+      "optionsFiscales"
+    ],
+    [
+      "Pour chaque dirigeant : sexe, commune et code INSEE de naissance, affiliation sociale, bénéficiaire effectif (oui/non)",
+      "composition.pouvoirs[]"
+    ],
+    [
+      "Gérant de SARL : situation matrimoniale",
+      "pouvoirs[].individu.descriptionPersonne.situationMatrimoniale"
+    ]
+  ]
 }
