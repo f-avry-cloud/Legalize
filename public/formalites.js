@@ -78,11 +78,12 @@ async function formalitesDashboard() {
     <div class="page-head"><h1>Formalités</h1>
       <div>
         <button id="btn-test-inpi">Tester la connexion INPI</button>
-        <a class="btn btn-primary" href="#/formalites/memo">Que voulez-vous faire ?</a>
+        <a class="btn btn-primary" href="#/parcours/nouveau">Nouveau dossier</a>
+        <a class="btn-ghost" href="#/formalites/memo">Mémo des formalités</a>
         <a class="btn-ghost" href="#/formalites/catalogue">Catalogue détaillé</a>
         <button id="btn-importer">Importer depuis l'INPI</button>
         <button id="btn-sync">Synchroniser</button>
-        <a class="btn btn-primary" href="#/formalites/new">Nouvelle formalité</a>
+        <a class="btn-ghost" href="#/formalites/new">Formulaire classique</a>
       </div>
     </div>
     ${bandeauMode(etat)}
@@ -651,6 +652,7 @@ function collecterReponses(form, champs) {
 
 async function formaliteDetail(id) {
   const [f, etat] = await Promise.all([api('GET', `/formalites/${id}`), getEtatInpi()]);
+  if (f.type === 'parcours') { location.replace(`#/parcours/${id}`); return; }
   if (f.importe) return detailImporte(f, etat);
   const def = f.definition;
   const champs = (def?.champs || []).filter((c) => !c.depend || c.depend.valeurs.includes(f.reponses[c.depend.name]));

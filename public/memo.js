@@ -212,7 +212,8 @@ async function vueMemoFiche(code) {
           ${f.quand ? `<p class="muted">${esc(f.quand)}</p>` : ''}
         </div>
         <div class="memo-actions">
-          <button class="btn btn-primary" id="memo-copier">Copier la liste pour le client</button>
+          <a class="btn btn-primary" href="#/parcours/nouveau?ops=${esc(code)}">Ouvrir un dossier</a>
+          <button class="btn" id="memo-copier">Copier la liste pour le client</button>
           <button class="btn-ghost" id="memo-imprimer">Imprimer</button>
         </div>
       </div>

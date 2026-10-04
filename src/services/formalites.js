@@ -45,6 +45,7 @@ function estImporte(formalite) {
 }
 
 function libelleType(code) {
+  if (code === 'parcours') return 'Parcours de formalités';
   return definition(code)?.libelle || TYPES_IMPORTES[code] || code;
 }
 
@@ -197,6 +198,8 @@ function construireSansEchec(dossier) {
 /** Dossier complet : réponses, pièces, contrôles, payload, journal. */
 async function lire(id) {
   const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
+  // Les dossiers « parcours » ont leur propre écran et leur propre lecture.
+  if (formalite.type === 'parcours') return { id: formalite.id, type: 'parcours', libelle: formalite.libelle };
   const [pieces, evenements, societe] = await Promise.all([
     db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id')),
     db(supabase.from('formalite_evenements').select('*').eq('formalite_id', id).order('created_at', { ascending: false })),

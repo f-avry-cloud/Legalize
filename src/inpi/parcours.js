@@ -484,7 +484,7 @@ function champs(ops, t, fiche) {
     if (REGLES[op]?.personnes && op !== '01M') {
       for (const [i, e] of (t.entrants || []).entries()) {
         if (!e?.nom || (op === '22M' && e.fonction !== 'liquidateur')) continue;
-        liste.push({ name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: e.nature === 'PM' ? 'personne_morale' : 'personne', requis: true, prerempli: { nom: e.nom } });
+        liste.push({ name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: e.nature === 'PM' ? 'personne_morale' : 'personne', requis: true, prerempli: e.nature === 'PM' ? { denomination: e.nom } : separerNom(e.nom) });
       }
     }
     if (OPERATIONS[op]?.creation) {
@@ -533,6 +533,14 @@ function complementsRegistre(fiche, rejets = []) {
 }
 
 const AFFILIATION = [['0', 'Non applicable'], ['1', 'Sans affiliation sociale'], ['3', 'Avec affiliation sociale']];
+
+/** « Claire MARTIN » → nom MARTIN, prénoms Claire (le nom s'écrit en capitales). */
+function separerNom(complet) {
+  const mots = String(complet || '').trim().split(/\s+/);
+  const nom = mots.filter((m) => m.length > 1 && m === m.toUpperCase() && /\p{L}/u.test(m));
+  if (!nom.length || nom.length === mots.length) return { nom: complet };
+  return { nom: nom.join(' '), prenoms: mots.filter((m) => !nom.includes(m)).join(' ') };
+}
 
 function libelleFonction(code) {
   return (FONCTIONS.find(([c]) => c === code) || [null, 'fonction à préciser'])[1].replace(/ \(.+\)$/, '');
