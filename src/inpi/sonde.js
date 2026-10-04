@@ -23,8 +23,11 @@ const CHEMINS_AUTORISES = [
   /^\/api\/attachments\/\d+(\/file)?$/,
   /^\/api\/regularization_requests(\/\d+)?$/,
   /^\/api\/signatures$/,
-  /^\/api\/companies\/\d{9}$/,
 ];
+
+// Côté RNE, seule la lecture d'une fiche publique : c'est l'état antérieur
+// qu'une modification doit reprendre.
+const CHEMINS_RNE = [/^\/api\/companies\/\d{9}$/];
 
 function disponible() {
   return config.guichet.environnement === 'demonstration' && config.modeGuichet === 'reel';
@@ -45,11 +48,18 @@ function sansFichiers(valeur) {
  * @param {{methode?: string, chemin: string, params?: object, corps?: object}} demande
  * @returns {{ok: boolean, statut: number, message?: string, reponse: any}}
  */
-async function sonder({ methode = 'GET', chemin, params, corps }) {
+async function sonder({ api = 'guichet', methode = 'GET', chemin, params, corps }) {
   if (!disponible()) {
     throw new ErreurInpi('La sonde ne fonctionne que sur l’environnement de démonstration de l’INPI.', { status: 403 });
   }
   methode = String(methode).toUpperCase();
+  if (api === 'rne') {
+    if (methode !== 'GET' || !CHEMINS_RNE.some((re) => re.test(String(chemin)))) {
+      throw new ErreurInpi(`Lecture RNE refusée par la sonde : ${methode} ${chemin}.`, { status: 400 });
+    }
+    const { donnees } = await requete('rne', { chemin, token: await jeton('rne') });
+    return { ok: true, statut: 200, reponse: donnees };
+  }
   if (!['GET', 'POST', 'PUT', 'DELETE'].includes(methode)) {
     throw new ErreurInpi(`Méthode refusée : ${methode}.`, { status: 400 });
   }
