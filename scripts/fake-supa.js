@@ -44,6 +44,7 @@ function requete(table) {
     like() { return builder; },
     order(col, opts) { etat.tri = { col, asc: opts?.ascending !== false }; return builder; },
     single() { etat.unique = true; return builder; },
+    maybeSingle() { etat.unique = 'peut-etre'; return builder; },
     then(resoudre, rejeter) { return executer().then(resoudre, rejeter); },
   };
 
@@ -76,7 +77,10 @@ function requete(table) {
     // jour ultérieure ne modifie pas rétroactivement un objet déjà lu.
     const copie = (l) => ({ ...l });
     if (etat.unique) {
-      if (!selection.length) return { data: null, error: { message: 'JSON object requested, 0 rows returned' } };
+      if (!selection.length) {
+        return etat.unique === 'peut-etre' ? { data: null, error: null }
+          : { data: null, error: { message: 'JSON object requested, 0 rows returned' } };
+      }
       return { data: copie(selection[0]), error: null };
     }
     return { data: selection.map(copie), error: null };

@@ -37,7 +37,8 @@ async function effacer(table, colonne, valeur) {
 
 /** Ce que la suppression emporterait, et ce qu'elle laisserait. */
 async function impact(id) {
-  const societe = await q(supabase.from('societes').select('*').eq('id', id).single());
+  const societe = await q(supabase.from('societes').select('*').eq('id', id).maybeSingle());
+  if (!societe) throw Object.assign(new Error('Société introuvable (déjà supprimée ?).'), { status: 404 });
   const [dirigeants, associes, operations, formalites, participations, mouvements, extraits] = await Promise.all([
     lignes('dirigeants', 'societe_id', id, 'id'),
     lignes('associes', 'societe_id', id, 'id'),

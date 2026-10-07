@@ -64,6 +64,7 @@ function verifier(nom, condition, detail) {
   verifier('formalité conservée et détachée', tables.formalites.find((f) => f.id === 1)?.societe_id === null);
   verifier('participation conservée sans le lien', tables.associes.find((a) => a.id === 2)?.societe_liee_id === null);
   verifier('fichier des documents retiré du stockage', !fichiers.has('operations/1/pv.docx'));
+  verifier('société déjà supprimée : 404', (await appel('GET', '/societes/1/suppression')).statut === 404);
 
   console.log('\nSuppression des dossiers de formalités');
   tables.formalites.push(
