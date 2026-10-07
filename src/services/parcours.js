@@ -17,6 +17,7 @@ const creationPc = require('../inpi/parcours-creation');
 const { construireParcours, deposable } = require('../inpi/payload-parcours');
 const { nettoyerSiren, formaterSiren } = require('../inpi/normalize');
 const analyse = require('./analyse');
+const { pdfLisible, MESSAGE_ILLISIBLE } = require('../inpi/pdf');
 
 const TYPE = 'parcours';
 
@@ -150,7 +151,10 @@ async function lire(id) {
     incompatibilites: res.incompatibilites,
     analyse: { disponible: analyse.disponible(), derniere: rep._analyse || null },
     etat: {
-      questions_restantes: res.questions.filter((qq) => qq.valeur === null || qq.valeur === undefined || (Array.isArray(qq.valeur) && !qq.valeur.length)).length,
+      // Une liste vide est une réponse (« Aucune ») ; seule l'absence de réponse compte.
+      questions_restantes: res.questions.filter((qq) => ((qq.valeur === null || qq.valeur === undefined) && !qq.attente)
+        // Une société ne se crée pas sans dirigeant.
+        || (qq.id === 'entrants' && qq.creation && Array.isArray(qq.valeur) && !qq.valeur.length)).length,
       pieces_manquantes: manquantes.map((p) => p.court + (p.personne ? ` — ${p.personne}` : '')),
       pieces_a_preciser: listes.a_preciser.length,
       champs_manquants: champsManquants,
@@ -220,6 +224,8 @@ async function ajouterPiece(id, { cle, code, version = 'definitive', a_signer = 
     throw erreur('Le guichet n’accepte que des PDF.', 422);
   }
   if (fichier.size > 10 * 1024 * 1024) throw erreur('Fichier de plus de 10 Mo : le guichet le refuserait.', 422);
+  // Constaté par essai : le guichet refuse un PDF abîmé (« pièce jointe corrompue »).
+  if (!(await pdfLisible(fichier.buffer))) throw erreur(MESSAGE_ILLISIBLE, 422);
   const nom = fichier.originalname.replace(/[^\w.\-]+/g, '_');
   const chemin = `formalites/${id}/${code}_${Date.now()}_${nom}`;
   await uploadFile(chemin, fichier.buffer, 'application/pdf');

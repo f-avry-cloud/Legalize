@@ -43,7 +43,7 @@ function verifier(nom, condition, detail) {
     const form = new FormData();
     form.append('cle', cle); form.append('code', code);
     for (const [k, v] of Object.entries(extra)) form.append(k, String(v));
-    form.append('fichier', new Blob([Buffer.from('%PDF-1.4 test')], { type: 'application/pdf' }), `${cle.replace(':', '-')}.pdf`);
+    form.append('fichier', new Blob([require('fs').readFileSync(require('path').join(__dirname, 'fixtures/piece-test.pdf'))], { type: 'application/pdf' }), `${cle.replace(':', '-')}.pdf`);
     return appel('POST', `/parcours/${id}/pieces`, null, form);
   };
 

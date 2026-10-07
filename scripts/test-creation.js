@@ -181,10 +181,15 @@ function dossier(forme, extra = {}) {
   for (const [op, valeurs] of Object.entries(modele.reponses)) lu = (await appel('PUT', `/parcours/${id}/reponses`, { [op]: valeurs })).corps;
   verifier('informations complètes', lu.etat.champs_manquants.length === 0, lu.etat.champs_manquants);
   verifier('en-tête : dénomination saisie', lu.societe.denomination === 'ESSAI SAS' && lu.societe.creation === true);
+  const abime = new FormData();
+  abime.append('cle', 'PJ_01'); abime.append('code', 'PJ_01');
+  abime.append('fichier', new Blob([Buffer.from('%PDF-1.4 abîmé')], { type: 'application/pdf' }), 'statuts.pdf');
+  const refus = await appel('POST', `/parcours/${id}/pieces`, null, abime);
+  verifier('PDF abîmé refusé dès le chargement', refus.statut === 422 && /illisible/.test(refus.corps?.error || ''), refus.corps);
   for (const p2 of lu.pieces.obligatoires) {
     const form = new FormData();
     form.append('cle', p2.cle); form.append('code', p2.code);
-    form.append('fichier', new Blob([Buffer.from('%PDF-1.4 test')], { type: 'application/pdf' }), `${p2.cle.replace(':', '-')}.pdf`);
+    form.append('fichier', new Blob([require('fs').readFileSync(require('path').join(__dirname, 'fixtures/piece-test.pdf'))], { type: 'application/pdf' }), `${p2.cle.replace(':', '-')}.pdf`);
     lu = (await appel('POST', `/parcours/${id}/pieces`, null, form)).corps;
   }
   verifier('prêt à déposer', lu.etat.pret, lu.etat);

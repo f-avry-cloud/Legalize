@@ -102,7 +102,7 @@ function verifier(nom, condition, detail) {
     const form = new FormData();
     form.append('code', code);
     form.append('libelle', code);
-    form.append('fichier', new Blob([Buffer.from('%PDF-1.4 test')], { type: 'application/pdf' }), `${code}.pdf`);
+    form.append('fichier', new Blob([require('fs').readFileSync(require('path').join(__dirname, 'fixtures/piece-test.pdf'))], { type: 'application/pdf' }), `${code}.pdf`);
     const rep = await appel('POST', `/formalites/${id}/pieces`, null, form);
     if (rep.statut !== 201) throw new Error(`pièce ${code} refusée : ${JSON.stringify(rep.corps)}`);
   }

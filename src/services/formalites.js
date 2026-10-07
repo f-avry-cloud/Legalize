@@ -17,6 +17,7 @@
  */
 
 const { supabase, q, uploadFile, downloadFile, removeFiles } = require('../supa');
+const { pdfLisible, MESSAGE_ILLISIBLE } = require('../inpi/pdf');
 const rne = require('../inpi/rne');
 const guichet = require('../inpi/guichet');
 const { definition, piecesExigees, champsDecrits } = require('../inpi/catalogue');
@@ -263,6 +264,7 @@ async function enregistrerReponses(id, reponses) {
 
 async function ajouterPiece(id, { code, libelle, fichier }) {
   const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
+  if (!(await pdfLisible(fichier.buffer))) throw Object.assign(new Error(MESSAGE_ILLISIBLE), { status: 422 });
   const nomFichier = fichier.originalname.replace(/[^\w.\-]+/g, '_');
   const chemin = `formalites/${formalite.id}/${code}_${Date.now()}_${nomFichier}`;
   await uploadFile(chemin, fichier.buffer, fichier.mimetype || 'application/pdf');

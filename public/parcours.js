@@ -221,7 +221,7 @@ function pcQuestion(q) {
       <div class="pc-liste-actions">
         <button type="button" class="btn-ghost pc-ajouter">+ Ajouter une personne</button>
         <button type="button" class="btn pc-enregistrer">Enregistrer</button>
-        ${Array.isArray(q.valeur) ? '' : '<button type="button" class="btn-ghost pc-personne-aucune">Aucune</button>'}
+        ${Array.isArray(q.valeur) || q.creation ? '' : '<button type="button" class="btn-ghost pc-personne-aucune">Aucune</button>'}
       </div>
     </div>
   </div>`;

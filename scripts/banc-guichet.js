@@ -124,7 +124,9 @@ function scenarios(fiche) {
   return l;
 }
 
-(async () => {
+module.exports = { sonde, creation, modification, scenarios, PP, PM, ADR, SIREN_DEMO };
+
+if (require.main === module) (async () => {
   const brut = (await sonde({ api: 'rne', chemin: `/api/companies/${SIREN_DEMO}` })).reponse;
   const fiche = { ...normaliserEntreprise(brut), brut };
   const filtre = process.argv[2] || '';
