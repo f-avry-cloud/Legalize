@@ -23,6 +23,15 @@ async function apiParcours(method, url, body, isForm) {
 
 let pcDossier = null;
 let pcEtape = null;
+let pcRef = null;
+
+/** Listes du guichet (journaux, nationalités, catégories d'activité), chargées une fois. */
+async function pcReferentiels() {
+  if (!pcRef) pcRef = await apiParcours('GET', '/parcours/referentiels').catch(() => ({ journaux: [], nationalites: [], types_voie: [], categories: [] }));
+  return pcRef;
+}
+
+const pcSansAccent = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /* ------------------------------------------------------ nouveau dossier */
 
@@ -104,7 +113,7 @@ const PC_ETAPES = [
 ];
 
 async function vueParcours(id) {
-  [pcDossier] = await Promise.all([apiParcours('GET', `/parcours/${id}`), getEtatInpi()]);
+  [pcDossier] = await Promise.all([apiParcours('GET', `/parcours/${id}`), getEtatInpi(), pcReferentiels()]);
   if (!pcEtape || pcEtape.id !== id) pcEtape = { id, nom: etapeConseillee(pcDossier) };
   pcAfficher();
 }
@@ -148,7 +157,7 @@ function pcAfficher() {
     </nav>
     <div id="pc-contenu"></div>`;
   $main.querySelectorAll('.pc-etapes button').forEach((b) => {
-    b.onclick = () => { pcEtape.nom = b.dataset.etape; pcAfficher(); };
+    b.onclick = async () => { await pcSauverSiBesoin(); pcEtape.nom = b.dataset.etape; pcAfficher(); };
   });
   ({ situation: pcSituation, pieces: pcPieces, informations: pcInformations, depot: pcDepot })[pcEtape.nom]();
 }
@@ -189,7 +198,8 @@ function pcSituation() {
 }
 
 function pcQuestion(q) {
-  const pour = q.pour.length ? `<span class="pc-pour">${esc(q.pour.join(' · '))}</span>` : '';
+  // Le rappel de l'opération n'a d'intérêt que s'il y en a plusieurs.
+  const pour = q.pour.length && pcDossier.operations.length > 1 ? `<span class="pc-pour">${esc(q.pour.join(' · '))}</span>` : '';
   if (q.type === 'choix') {
     return `<div class="pc-question">
       <div class="pc-q-libelle">${esc(q.libelle)} ${pour}</div>
@@ -197,6 +207,9 @@ function pcQuestion(q) {
       <div class="segments pc-choix">${q.options.map(([v, l]) => `<button type="button" data-choix="${q.id}" data-valeur="${esc(String(v))}"
         class="${q.valeur === v ? 'actif' : ''}">${esc(l)}</button>`).join('')}</div>
     </div>`;
+  }
+  if (q.attente) {
+    return `<div class="pc-question pc-attente"><div class="pc-q-libelle">${esc(q.libelle)} ${pour}</div><div class="pc-aide muted">${esc(q.attente)}</div></div>`;
   }
   const lignes = Array.isArray(q.valeur) && q.valeur.length ? q.valeur : [{}];
   return `<div class="pc-question">
@@ -229,7 +242,8 @@ function pcLignePersonne(q, l) {
       <option value="PM" ${l.nature === 'PM' ? 'selected' : ''}>Personne morale</option>
     </select>
     <select class="pc-fonction">${q.options.map(([v, lab]) => `<option value="${v}" ${l.fonction === v ? 'selected' : ''}>${esc(lab)}</option>`).join('')}</select>
-    <label class="pc-inscrit" ${l.fonction === 'cac' ? '' : 'hidden'}><input type="checkbox" class="pc-inscrit-case" ${l.inscrit === false ? '' : 'checked'}> déjà inscrit sur la liste des CAC</label>
+    <label class="pc-inscrit" ${pcEstCac(l.fonction) ? '' : 'hidden'}><input type="checkbox" class="pc-inscrit-case" ${l.inscrit === false ? '' : 'checked'}> déjà inscrit sur la liste des CAC</label>
+    <label class="pc-hors-ue" ${l.nature === 'PM' || pcEstCac(l.fonction) ? 'hidden' : ''} title="Un titre de séjour peut être demandé"><input type="checkbox" class="pc-hors-ue-case" ${l.hors_ue ? 'checked' : ''}> nationalité hors Union européenne</label>
     <button type="button" class="btn-ghost pc-retirer" title="Retirer">×</button>
   </div>`;
 }
@@ -239,9 +253,12 @@ function pcListePersonnes($l) {
   const $lignes = $l.querySelector('.pc-lignes');
   const brancher = () => {
     $lignes.querySelectorAll('.pc-retirer').forEach((b) => { b.onclick = () => b.closest('.pc-ligne').remove(); });
-    $lignes.querySelectorAll('.pc-fonction').forEach((s) => {
-      s.onchange = () => { s.closest('.pc-ligne').querySelector('.pc-inscrit').hidden = s.value !== 'cac'; };
-    });
+    const visibilite = (ligne) => {
+      const fonction = ligne.querySelector('.pc-fonction').value;
+      ligne.querySelector('.pc-inscrit').hidden = !pcEstCac(fonction);
+      ligne.querySelector('.pc-hors-ue').hidden = pcEstCac(fonction) || ligne.querySelector('.pc-nature').value === 'PM';
+    };
+    $lignes.querySelectorAll('.pc-fonction, .pc-nature').forEach((s) => { s.onchange = () => visibilite(s.closest('.pc-ligne')); });
   };
   brancher();
   $l.querySelector('.pc-ajouter').onclick = () => { $lignes.insertAdjacentHTML('beforeend', pcLignePersonne(q, {})); brancher(); };
@@ -253,17 +270,40 @@ function pcListePersonnes($l) {
       if (!nom) return null;
       if (q.type === 'sortants') return { nom, motif: ligne.querySelector('.pc-motif').value };
       const fonction = ligne.querySelector('.pc-fonction').value;
+      const nature = ligne.querySelector('.pc-nature').value;
       return {
-        nom, nature: ligne.querySelector('.pc-nature').value, fonction,
-        ...(fonction === 'cac' ? { inscrit: ligne.querySelector('.pc-inscrit-case').checked } : {}),
+        nom, nature, fonction,
+        ...(pcEstCac(fonction) ? { inscrit: ligne.querySelector('.pc-inscrit-case').checked } : {}),
+        ...(nature === 'PP' && !pcEstCac(fonction) && ligne.querySelector('.pc-hors-ue-case').checked ? { hors_ue: true } : {}),
       };
     }).filter(Boolean);
     pcMaj('PUT', `/parcours/${pcDossier.id}/typologie`, { [q.id]: valeurs });
   };
 }
 
+function pcEstCac(fonction) { return ['cac', '71', '72'].includes(String(fonction || '')); }
+
 function pcAllerVers($c) {
-  $c.querySelectorAll('[data-aller]').forEach((b) => { b.onclick = () => { pcEtape.nom = b.dataset.aller; pcAfficher(); }; });
+  $c.querySelectorAll('[data-aller]').forEach((b) => { b.onclick = async () => { await pcSauverSiBesoin(); pcEtape.nom = b.dataset.aller; pcAfficher(); }; });
+}
+
+/* Saisies de l'étape « Informations » pas encore enregistrées. */
+let pcSale = false;
+
+/** Toutes les rubriques en une fois : rien ne se perd en changeant d'étape. */
+async function pcSauverInformations() {
+  const valeurs = {};
+  document.querySelectorAll('#pc-contenu .pc-groupe').forEach(($g) => {
+    const v = {};
+    $g.querySelectorAll('[data-champ]').forEach(($f) => { v[$f.dataset.champ] = pcLireChamp($f); });
+    if (Object.keys(v).length) valeurs[$g.dataset.op] = v;
+  });
+  pcSale = false;
+  await pcMaj('PUT', `/parcours/${pcDossier.id}/reponses`, valeurs);
+}
+
+async function pcSauverSiBesoin() {
+  if (pcSale && pcEtape?.nom === 'informations') await pcSauverInformations();
 }
 
 /* ------------------------------------------------------ étape 2 : pièces */
@@ -319,7 +359,7 @@ function pcPiece(p) {
   const precision = p.categorie === 'a_preciser'
     ? (p.question
       ? `<button class="lien" data-question-lien="${esc(p.question)}">Répondre à la question qui en décide</button>`
-      : `<span class="pc-concerne">Concerné ? <button class="btn-ghost" data-concerne="oui" data-code="${esc(p.code)}">Oui</button><button class="btn-ghost" data-concerne="non" data-code="${esc(p.code)}">Non</button></span>`)
+      : `<span class="pc-concerne">Concerné ? <button class="btn-ghost" data-concerne="oui" data-code="${esc(p.cle)}">Oui</button><button class="btn-ghost" data-concerne="non" data-code="${esc(p.cle)}">Non</button></span>`)
     : '';
   return `<div class="pc-piece ${fait ? 'fait' : ''}" data-cle="${esc(p.cle)}" data-code="${esc(p.code)}">
     <div class="pc-piece-tete">
@@ -376,7 +416,8 @@ function pcInformations() {
       <button class="btn" id="pc-apercu">Afficher le dossier complet</button>
       <pre id="pc-json" class="pc-json" hidden></pre>
     </details>
-    <div class="pc-pied-actions"><button class="btn btn-primary" data-aller="depot">Vérifier le dossier</button></div>`;
+    <div class="pc-pied-actions"><button class="btn btn-primary" data-aller="depot">Vérifier le dossier</button></div>
+    <div class="pc-barre-enregistrer" id="pc-barre-enregistrer"><span>Modifications non enregistrées</span><button class="btn btn-primary" id="pc-enregistrer-tout">Enregistrer</button></div>`;
   pcAllerVers($c);
 
   const $an = document.getElementById('pc-analyser');
@@ -393,13 +434,13 @@ function pcInformations() {
       $j.textContent = JSON.stringify(corps, null, 2); $j.hidden = false;
     } catch (e) { $j.textContent = e.message; $j.hidden = false; }
   };
-  $c.querySelectorAll('.pc-groupe').forEach(($g) => {
-    $g.querySelector('.pc-enregistrer-groupe').onclick = () => {
-      const valeurs = {};
-      $g.querySelectorAll('[data-champ]').forEach(($f) => { valeurs[$f.dataset.champ] = pcLireChamp($f); });
-      pcMaj('PUT', `/parcours/${d.id}/reponses`, { [$g.dataset.op]: valeurs });
-    };
-  });
+  pcSuggestionsActivite($c.querySelector('.pc-groupe[data-op="c_activite"]'));
+  pcSale = false;
+  const salir = () => { pcSale = true; document.getElementById('pc-barre-enregistrer')?.classList.add('visible'); };
+  $c.addEventListener('input', salir);
+  $c.addEventListener('change', salir);
+  $c.addEventListener('click', (e) => { if (e.target.closest('.segments button, .pc-cat-res button, .pc-suggestions button, .pc-be-retirer, .pc-be-ajouter, .pc-be-reprendre')) salir(); });
+  $c.querySelectorAll('.pc-enregistrer-groupe, #pc-enregistrer-tout').forEach((b) => { b.onclick = () => pcSauverInformations(); });
 }
 
 function pcGroupe(g) {
@@ -416,7 +457,9 @@ function pcChamp(c) {
   const v = c.valeur;
   const tete = `<div class="pc-champ-tete"><span>${esc(c.label)}${c.requis ? ' <span class="pc-requis">obligatoire</span>' : ''}</span>
     ${c.origine === 'analyse' ? '<span class="badge pc-badge-analyse">proposé par l’analyse</span>' : ''}</div>
-    ${c.actuel ? `<div class="pc-actuel">Actuellement au registre : ${esc(c.actuel)}</div>` : ''}`;
+    ${c.actuel ? `<div class="pc-actuel">Actuellement au registre : ${esc(c.actuel)}</div>` : ''}
+    ${c.aide ? `<div class="pc-aide muted">${esc(c.aide)}</div>` : ''}`;
+  const manque = c.manquants?.length ? `<div class="pc-manque">À compléter : ${c.manquants.map(esc).join(' · ')}</div>` : '';
   const attr = `data-champ="${esc(c.name)}" data-type="${esc(c.type)}"`;
   switch (c.type) {
     case 'renvoi':
@@ -434,63 +477,322 @@ function pcChamp(c) {
       return `<label class="pc-champ">${tete}<select ${attr}><option value=""></option>${(c.options || []).map(([o, l]) => `<option value="${esc(o)}" ${String(v) === String(o) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
     case 'forme':
       return `<label class="pc-champ">${tete}<select ${attr}><option value=""></option>${(etatInpi?.formes_juridiques || []).map((f) => `<option value="${esc(f.code)}" ${v === f.code ? 'selected' : ''}>${esc(f.libelle)}</option>`).join('')}</select></label>`;
+    case 'journal':
+      return `<label class="pc-champ">${tete}<input ${attr} value="${esc(v || '')}" list="pc-journaux" placeholder="Tapez le nom du journal…" autocomplete="off">
+        ${pcDatalistes()}</label>`;
+    case 'categorie':
+      return `<div class="pc-champ">${tete}${pcCategorie(c, v)}</div>`;
     case 'adresse':
       return `<div class="pc-champ">${tete}<div class="pc-sous" ${attr}>${pcAdresse(v || {})}</div></div>`;
     case 'personne':
-      return `<div class="pc-champ">${tete}<div class="pc-sous" ${attr}>${pcPersonne(v || {})}</div></div>`;
+      return `<div class="pc-champ">${tete}${manque}<div class="pc-sous" ${attr}>${pcPersonne(v || {}, '', c)}</div></div>`;
     case 'personne_morale':
-      return `<div class="pc-champ">${tete}<div class="pc-sous" ${attr}>${pcPersonneMorale(v || {})}</div></div>`;
+      return `<div class="pc-champ">${tete}${manque}<div class="pc-sous" ${attr}>${pcPersonneMorale(v || {}, c)}</div></div>`;
+    case 'beneficiaires':
+      return `<div class="pc-champ">${tete}${manque}${pcBeneficiaires(c, v)}</div>`;
     default:
       return `<label class="pc-champ">${tete}<input ${attr} value="${esc(v || '')}"></label>`;
   }
 }
 
-const pcIn = (k, label, v, extra = '') => `<label class="field">${label}<input data-k="${k}" value="${esc(v || '')}" ${extra}></label>`;
+/** Listes de suggestions partagées par les champs : journaux, nationalités. */
+function pcDatalistes() {
+  if (document.getElementById('pc-journaux')) return '';
+  return `<datalist id="pc-journaux">${(pcRef?.journaux || []).map((j) => `<option value="${esc(j)}">`).join('')}</datalist>
+    <datalist id="pc-nationalites">${(pcRef?.nationalites || []).map(([, l]) => `<option value="${esc(l)}">`).join('')}</datalist>`;
+}
 
+const pcIn = (k, label, v, extra = '') => `<label class="field">${label}<input data-k="${k}" value="${esc(v ?? '')}" ${extra}></label>`;
+
+/**
+ * Adresse : une recherche dans la base adresse nationale remplit les champs
+ * (voie, code postal, commune, code INSEE). Ils restent modifiables.
+ */
 function pcAdresse(a, prefixe = '') {
-  return `<div class="row">${pcIn(`${prefixe}numVoie`, 'N°', a.numVoie, 'maxlength="6"')}${pcIn(`${prefixe}typeVoie`, 'Type de voie', a.typeVoie, 'placeholder="RUE, AV, BD…"')}${pcIn(`${prefixe}voie`, 'Voie', a.voie)}</div>
-    <div class="row">${pcIn(`${prefixe}complementLocalisation`, 'Complément', a.complementLocalisation)}${pcIn(`${prefixe}codePostal`, 'Code postal', a.codePostal, 'maxlength="5"')}${pcIn(`${prefixe}commune`, 'Commune', a.commune)}</div>`;
+  return `<div class="pc-adr" data-prefixe="${esc(prefixe)}"><div class="pc-adr-recherche"><input class="pc-adr-q" placeholder="Rechercher l’adresse (ex. 10 rue de la Paix Paris)" autocomplete="off">
+      <div class="pc-suggestions" hidden></div></div>
+    <div class="row">${pcIn(`${prefixe}numVoie`, 'N°', a.numVoie, 'maxlength="6"')}${pcIn(`${prefixe}typeVoie`, 'Type de voie', a.typeVoie, 'placeholder="RUE, AV, BD…"')}${pcIn(`${prefixe}voie`, 'Voie', a.voie)}</div>
+    <div class="row">${pcIn(`${prefixe}complementLocalisation`, 'Complément', a.complementLocalisation)}${pcIn(`${prefixe}codePostal`, 'Code postal', a.codePostal, 'maxlength="5"')}${pcIn(`${prefixe}commune`, 'Commune', a.commune)}</div>
+    <input type="hidden" data-k="${prefixe}codeInseeCommune" value="${esc(a.codeInseeCommune || '')}"></div>`;
 }
 
 function pcSelect(k, label, v, options) {
   return `<label class="field">${label}<select data-k="${k}"><option value=""></option>${options.map(([o, l]) => `<option value="${o}" ${String(v ?? '') === o ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
 }
 
-function pcPersonne(p) {
-  return `<div class="row">${pcIn('nom', 'Nom', p.nom)}${pcIn('prenoms', 'Prénoms', Array.isArray(p.prenoms) ? p.prenoms.join(' ') : p.prenoms)}${pcIn('qualite', 'Fonction exacte', p.qualite, 'placeholder="Président, Directeur général…"')}</div>
-    <div class="row">${pcSelect('genre', 'Sexe', p.genre, [['1', 'Masculin'], ['2', 'Féminin']])}${pcIn('date_naissance', 'Date de naissance', p.date_naissance, 'type="date"')}${pcIn('lieu_naissance', 'Commune de naissance', p.lieu_naissance)}${pcIn('code_insee_naissance', 'Code INSEE de la commune', p.code_insee_naissance, 'maxlength="5"')}</div>
-    <div class="row">${pcIn('nationalite', 'Nationalité', p.nationalite || 'Française')}${pcSelect('forme_sociale', 'Affiliation sociale', p.forme_sociale, [['0', 'Non applicable'], ['1', 'Sans affiliation sociale'], ['3', 'Avec affiliation sociale']])}${pcSelect('situation_matrimoniale', 'Situation matrimoniale (gérant de SARL)', p.situation_matrimoniale, [['1', 'Célibataire'], ['4', 'Marié(e)'], ['5', 'Pacsé(e)'], ['6', 'En concubinage'], ['2', 'Divorcé(e)'], ['3', 'Veuf(ve)']])}</div>
-    <div class="pc-sous-titre">Domicile</div>${pcAdresse(p.adresse || {}, 'adresse.')}`;
+const PC_AFFILIATION = [['3', 'Affilié au titre de ce mandat (assimilé salarié ou TNS)'], ['1', 'Non affilié (mandat non rémunéré…)'], ['0', 'Sans objet']];
+const PC_SITUATIONS = [['1', 'Célibataire'], ['4', 'Marié(e)'], ['5', 'Pacsé(e)'], ['6', 'En concubinage'], ['2', 'Divorcé(e)'], ['3', 'Veuf(ve)']];
+
+/** Identité d'une personne physique. `p` préfixe les clés (représentant permanent). */
+function pcPersonne(p, prefixe = '', c = {}) {
+  const k = (x) => `${prefixe}${x}`;
+  const sarl = (c.sous_requis || []).includes('situation_matrimoniale');
+  const identite = `<div class="row">${pcIn(k('nom'), 'Nom', p.nom)}${pcIn(k('prenoms'), 'Prénoms', Array.isArray(p.prenoms) ? p.prenoms.join(' ') : p.prenoms)}
+      ${c.sans_qualite || prefixe ? '' : pcIn(k('qualite'), 'Fonction exacte', p.qualite, 'placeholder="Président, Directeur général…"')}
+      ${pcSelect(k('genre'), 'Sexe', p.genre, [['1', 'Masculin'], ['2', 'Féminin']])}</div>
+    <div class="row">${pcIn(k('date_naissance'), 'Date de naissance', p.date_naissance, 'type="date"')}
+      <label class="field">Commune de naissance<span class="pc-commune"><input data-k="${k('lieu_naissance')}" value="${esc(p.lieu_naissance || '')}" class="pc-commune-q" autocomplete="off"><span class="pc-suggestions" hidden></span></span></label>
+      ${pcIn(k('code_insee_naissance'), 'Code INSEE', p.code_insee_naissance, 'maxlength="5" class="pc-insee" placeholder="trouvé automatiquement"')}
+      ${pcIn(k('pays_naissance'), 'Pays de naissance', p.pays_naissance || 'FRANCE')}</div>
+    <div class="row">${pcIn(k('nationalite'), 'Nationalité', p.nationalite || 'Française', 'list="pc-nationalites"')}
+      ${prefixe ? '' : pcSelect(k('forme_sociale'), 'Affiliation sociale', p.forme_sociale, PC_AFFILIATION)}
+      ${prefixe ? '' : pcIn(k('numero_secu'), 'N° de sécurité sociale (si affilié)', p.numero_secu, 'maxlength="21" inputmode="numeric"')}
+      ${prefixe || !sarl ? '' : pcSelect(k('situation_matrimoniale'), 'Situation matrimoniale', p.situation_matrimoniale, PC_SITUATIONS)}</div>
+    <div class="pc-sous-titre">Domicile</div>${pcAdresse(p.adresse || {}, k('adresse.'))}`;
+  return identite + pcDatalistes();
 }
 
-function pcPersonneMorale(p) {
-  return `<div class="row">${pcIn('denomination', 'Dénomination', p.denomination || p.nom)}${pcIn('siren', 'SIREN', p.siren)}${pcIn('greffe', 'Greffe d’immatriculation', p.greffe)}</div>
-    <div class="row">${pcIn('representant', 'Représentant permanent (le cas échéant)', p.representant)}</div>
-    <div class="pc-sous-titre">Siège</div>${pcAdresse(p.adresse || {}, 'adresse.')}`;
+function pcPersonneMorale(p, c = {}) {
+  return `<div class="row">${pcIn('denomination', 'Dénomination', p.denomination || p.nom)}${pcIn('siren', 'SIREN', p.siren, 'inputmode="numeric"')}${pcIn('greffe', 'Greffe d’immatriculation', p.greffe, 'placeholder="PARIS, NANTERRE…"')}</div>
+    <div class="pc-sous-titre">Siège</div>${pcAdresse(p.adresse || {}, 'adresse.')}
+    ${c.representant_requis ? `<div class="pc-sous-titre">Représentant permanent</div>${pcPersonne(p.representant || {}, 'representant.')}` : ''}`;
+}
+
+/* ---- catégorie d'activité : recherche dans la nomenclature du guichet ---- */
+
+const PC_FORMES_EXERCICE = {
+  COMMERCIALE: 'commerciale', ARTISANALE: 'artisanale', ARTISANALE_REGLEMENTEE: 'artisanale réglementée', LIBERALE_REGLEMENTEE: 'libérale réglementée',
+  INDEPENDANTE: 'libérale non réglementée', AGENT_COMMERCIAL: 'agent commercial', GESTION_DE_BIENS: 'gestion de biens',
+  ACTIF_AGRICOLE: 'agricole', AGRICOLE_NON_ACTIF: 'agricole (non actif)',
+};
+
+function pcCategorie(c, v) {
+  const choisie = (pcRef?.categories || []).find((x) => x.code === v);
+  return `<div class="pc-cat" data-champ="${esc(c.name)}" data-type="categorie" data-valeur="${esc(v || '')}">
+    <div class="pc-cat-choisie" ${choisie ? '' : 'hidden'}>${choisie ? `<strong>${esc(pcNomCategorie(choisie))}</strong>
+      <div class="muted">${esc(choisie.chemin)} · activité ${esc(PC_FORMES_EXERCICE[choisie.forme] || choisie.forme)}</div>` : ''}</div>
+    <input class="pc-cat-q" placeholder="${choisie ? 'Changer : ' : ''}conseil, holding, restauration, location…" autocomplete="off">
+    <div class="pc-cat-res"></div>
+  </div>`;
+}
+
+const PC_MOTS_VIDES = new Set(['dans', 'pour', 'avec', 'sans', 'tous', 'toutes', 'autres', 'autre', 'activite', 'activites', 'societe', 'entreprises', 'entreprise', 'service', 'services', 'general', 'generale', 'ainsi', 'ceux', 'celles']);
+
+/* Mots courants des cabinets que la nomenclature exprime autrement. */
+const PC_SYNONYMES = { holding: ['siege'], strategie: ['affaire'], management: ['affaire'], organisation: ['affaire'], restaurant: ['restauration'], informatique: ['programmation'] };
+
+/** Catégories proches d'un texte libre (l'activité exercée) : au moins un mot en commun, les plus riches d'abord. */
+function pcSuggererCategories(texte) {
+  const base = [...new Set(pcSansAccent(texte).split(/[^a-z]+/).filter((m) => m.length > 3 && !PC_MOTS_VIDES.has(m)))]
+    .map((m) => m.replace(/s$/, ''));
+  const mots = [...new Set([...base, ...base.flatMap((m) => PC_SYNONYMES[m] || [])])];
+  if (!mots.length) return [];
+  return (pcRef?.categories || [])
+    .map((c) => {
+      const niveaux = c.chemin.split(' › ');
+      const proche = pcSansAccent(niveaux.slice(-2).join(' '));
+      const score = mots.reduce((n, m) => n + (proche.includes(m) ? 2 : pcSansAccent(c.chemin).includes(m) ? 0.5 : 0), 0);
+      return { c, score };
+    })
+    .filter((x) => x.score >= 2)
+    .sort((a, b) => b.score - a.score || a.c.chemin.length - b.c.chemin.length)
+    .slice(0, 6)
+    .map((x) => x.c);
+}
+
+/** Intitulé lisible : une feuille trop vague (« Commerciale », « A titre indépendant ») garde son parent. */
+function pcNomCategorie(c) {
+  const n = c.chemin.split(' › ');
+  const feuille = n[n.length - 1];
+  return n.length > 2 && (feuille.length < 25 || /^(a titre|proposant|secteur)/i.test(feuille)) ? `${n[n.length - 2]} — ${feuille}` : feuille;
+}
+
+function pcBoutonsCategories(liste) {
+  return liste.map((c) => `<button type="button" data-code="${esc(c.code)}"><strong>${esc(pcNomCategorie(c))}</strong>
+      <span class="muted">${esc(c.chemin.split(' › ').slice(0, -1).join(' › '))} · ${esc(PC_FORMES_EXERCICE[c.forme] || c.forme)}</span></button>`).join('');
+}
+
+/** Affiche une liste de catégories dans le bloc et branche le choix. */
+function pcProposerCategories($cat, liste, titre = '') {
+  const $res = $cat.querySelector('.pc-cat-res');
+  $res.innerHTML = (liste.length && titre ? `<div class="muted pc-cat-titre">${esc(titre)}</div>` : '') + pcBoutonsCategories(liste);
+  $res.querySelectorAll('button').forEach((b) => {
+    b.onclick = () => {
+      $cat.dataset.valeur = b.dataset.code;
+      const c = pcRef.categories.find((x) => x.code === b.dataset.code);
+      const $ch = $cat.querySelector('.pc-cat-choisie');
+      $ch.innerHTML = `<strong>${esc(pcNomCategorie(c))}</strong><div class="muted">${esc(c.chemin)} · activité ${esc(PC_FORMES_EXERCICE[c.forme] || c.forme)}</div>`;
+      $ch.hidden = false; $cat.querySelector('.pc-cat-q').value = ''; $res.innerHTML = '';
+    };
+  });
+}
+
+/** Sans catégorie choisie, propose celles qui collent à l'activité exercée. */
+function pcSuggestionsActivite($groupe) {
+  const $cat = $groupe?.querySelector('.pc-cat');
+  if (!$cat || $cat.dataset.valeur || $cat.querySelector('.pc-cat-q').value.trim()) return;
+  const texte = $groupe.querySelector('[data-champ="activite_principale"]')?.value || '';
+  pcProposerCategories($cat, pcSuggererCategories(texte), 'D’après l’activité exercée :');
+}
+
+/**
+ * Recherche dans la nomenclature : tous les mots doivent figurer dans le
+ * chemin ; on classe d'abord ce qui les porte dans l'intitulé lui-même (et son
+ * niveau parent), puis les intitulés courts.
+ */
+function pcChercherCategories(q) {
+  const mots = pcSansAccent(q).split(/\s+/).filter((m) => m.length > 1);
+  if (!mots.length) return [];
+  return (pcRef?.categories || [])
+    .map((c) => {
+      const t = pcSansAccent(c.chemin);
+      if (!mots.every((m) => t.includes(m))) return null;
+      const niveaux = c.chemin.split(' › ');
+      const proche = pcSansAccent(niveaux.slice(-2).join(' '));
+      const feuille = pcSansAccent(niveaux[niveaux.length - 1]);
+      const score = mots.reduce((n, m) => n + (feuille.includes(m) ? 3 : proche.includes(m) ? 2 : 0)
+        + (new RegExp(`(^|[^a-z])${m}`).test(proche) ? 1 : 0), 0);
+      return { c, score };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score || a.c.chemin.length - b.c.chemin.length)
+    .slice(0, 12)
+    .map((x) => x.c);
+}
+
+/* ------------------------- bénéficiaires effectifs : une ligne par personne */
+
+const PC_MODALITES = [
+  ['3', 'Plus de 25 % du capital'], ['1', 'Plus de 25 % des droits de vote'],
+  ['5', 'Pouvoir de nommer ou révoquer la majorité des dirigeants'], ['6', 'Autre moyen de contrôle'],
+  ['0', 'Représentant légal, à défaut d’autre bénéficiaire'],
+];
+
+function pcBeneficiaires(c, v) {
+  const liste = Array.isArray(v) && v.length ? v : [];
+  return `<div class="pc-be" data-champ="${esc(c.name)}" data-type="beneficiaires">
+    <div class="pc-be-lignes">${liste.map(pcBeneficiaire).join('')}</div>
+    <div class="pc-liste-actions">
+      ${(c.suggestions || []).filter((n) => !liste.some((b) => pcSansAccent(`${b.prenoms || ''} ${b.nom || ''}`).includes(pcSansAccent(n.split(' ').pop())))).map((n) => `<button type="button" class="btn-ghost pc-be-reprendre" data-nom="${esc(n)}">+ ${esc(n)} (dirigeant)</button>`).join('')}
+      <button type="button" class="btn-ghost pc-be-ajouter">+ Autre bénéficiaire</button>
+    </div>
+  </div>`;
+}
+
+function pcBeneficiaire(b = {}) {
+  const m = new Set([].concat(b.modalites || []).map(String));
+  return `<div class="pc-be-ligne pc-sous">
+    <div class="pc-be-tete"><strong>${esc(`${b.prenoms || ''} ${b.nom || ''}`.trim() || 'Nouveau bénéficiaire')}</strong><button type="button" class="btn-ghost pc-be-retirer" title="Retirer">×</button></div>
+    ${pcPersonne(b, '', { sans_qualite: true }).replace(/<label class="field">Affiliation sociale[\s\S]*?<\/label>/, '').replace(/<label class="field">N° de sécurité sociale[\s\S]*?<\/label>/, '')}
+    <div class="pc-sous-titre">Contrôle exercé</div>
+    <div class="pc-be-modalites">${PC_MODALITES.map(([code, l]) => `<label><input type="checkbox" class="pc-be-modalite" value="${code}" ${m.has(code) ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div>
+    <div class="row">${pcIn('pourcentage_capital', '% du capital', b.pourcentage_capital, 'type="number" step="0.01" min="0" max="100"')}
+      ${pcIn('pourcentage_votes', '% des droits de vote', b.pourcentage_votes, 'type="number" step="0.01" min="0" max="100"')}
+      ${pcSelect('detention', 'Détention', b.detention || 'directe', [['directe', 'Directe'], ['indirecte', 'Indirecte (par une société)'], ['les_deux', 'Directe et indirecte']])}</div>
+  </div>`;
+}
+
+/** Lit un bloc de sous-champs `data-k` (chemins « a.b.c ») en objet. */
+function pcLireSous($bloc) {
+  const o = {};
+  $bloc.querySelectorAll('[data-k]').forEach(($i) => {
+    if ($i.closest('.pc-be-ligne') && !$bloc.classList.contains('pc-be-ligne')) return;
+    const v = $i.value.trim();
+    if (!v) return;
+    const parts = $i.dataset.k.split('.');
+    let cible = o;
+    parts.slice(0, -1).forEach((p) => { cible[p] = cible[p] || {}; cible = cible[p]; });
+    cible[parts[parts.length - 1]] = v;
+  });
+  return o;
 }
 
 function pcLireChamp($f) {
   const type = $f.dataset.type;
   if (type === 'ouinon') return $f.dataset.valeur === 'true' ? true : $f.dataset.valeur === 'false' ? false : null;
-  if (['adresse', 'personne', 'personne_morale'].includes(type)) {
-    const o = {};
-    $f.querySelectorAll('[data-k]').forEach(($i) => {
-      const v = $i.value.trim();
-      if (!v) return;
-      const parts = $i.dataset.k.split('.');
-      if (parts.length === 2) { o[parts[0]] = o[parts[0]] || {}; o[parts[0]][parts[1]] = v; } else o[parts[0]] = v;
-    });
-    return o;
+  if (type === 'categorie') return $f.dataset.valeur || null;
+  if (type === 'beneficiaires') {
+    return [...$f.querySelectorAll('.pc-be-ligne')].map(($l) => ({
+      ...pcLireSous($l),
+      modalites: [...$l.querySelectorAll('.pc-be-modalite:checked')].map((x) => x.value),
+    })).filter((b) => b.nom);
   }
+  if (['adresse', 'personne', 'personne_morale'].includes(type)) return pcLireSous($f);
   return $f.value === '' ? null : $f.value;
 }
 
+/* ------------------------------------------- recherches : adresse, commune */
+
+let pcMinuteur = null;
+function pcDiffere(fn) { clearTimeout(pcMinuteur); pcMinuteur = setTimeout(fn, 280); }
+
+function pcSuggestions($zone, items, choisir) {
+  $zone.innerHTML = items.map((it, i) => `<button type="button" data-i="${i}">${esc(it.label)}</button>`).join('');
+  $zone.hidden = !items.length;
+  $zone.querySelectorAll('button').forEach((b) => { b.onclick = () => { choisir(items[Number(b.dataset.i)]); $zone.hidden = true; }; });
+}
+
+/** Type de voie au référentiel du guichet (« Rue » → RUE, « Avenue » → AV). */
+function pcTypeVoie(rue) {
+  const premier = pcSansAccent(String(rue || '').split(/\s+/)[0]).toUpperCase();
+  const t = (pcRef?.types_voie || []).find(([code, l]) => pcSansAccent(l).toUpperCase() === premier || code === premier);
+  return t ? { typeVoie: t[0], voie: String(rue).split(/\s+/).slice(1).join(' ') } : { typeVoie: '', voie: rue };
+}
+
+document.addEventListener('input', (e) => {
+  const $q = e.target;
+  if ($q.classList.contains('pc-adr-q')) {
+    const $zone = $q.nextElementSibling;
+    const bloc = $q.closest('.pc-adr');
+    pcDiffere(async () => {
+      if ($q.value.trim().length < 4) { $zone.hidden = true; return; }
+      try {
+        const r = await fetch(`https://data.geopf.fr/geocodage/search?q=${encodeURIComponent($q.value)}&limit=6`).then((x) => x.json());
+        pcSuggestions($zone, (r.features || []).map((f) => ({ label: f.properties.label, p: f.properties })), ({ p }) => {
+          const { prefixe } = bloc.dataset;
+          const set = (k, v) => { const $i = bloc.querySelector(`[data-k="${prefixe}${k}"]`); if ($i) $i.value = v || ''; };
+          const voie = pcTypeVoie(p.street || p.name);
+          set('numVoie', p.housenumber); set('typeVoie', voie.typeVoie); set('voie', voie.voie);
+          set('codePostal', p.postcode); set('commune', p.city); set('codeInseeCommune', p.citycode);
+        });
+      } catch { $zone.hidden = true; }
+    });
+  }
+  if ($q.classList.contains('pc-commune-q')) {
+    const $zone = $q.nextElementSibling;
+    const $insee = $q.closest('.row').querySelector('.pc-insee');
+    pcDiffere(async () => {
+      if ($q.value.trim().length < 2) { $zone.hidden = true; return; }
+      try {
+        const r = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent($q.value)}&fields=nom,code,departement&boost=population&limit=6`).then((x) => x.json());
+        pcSuggestions($zone, r.map((c) => ({ label: `${c.nom} (${c.departement?.code || ''})`, c })), ({ c }) => { $q.value = c.nom; if ($insee) $insee.value = c.code; });
+      } catch { $zone.hidden = true; }
+    });
+  }
+  if ($q.classList.contains('pc-cat-q')) {
+    const $cat = $q.closest('.pc-cat');
+    if (!$q.value.trim()) { pcSuggestionsActivite($cat.closest('.pc-groupe')); return; }
+    const res = pcChercherCategories($q.value);
+    pcProposerCategories($cat, res);
+    if (!res.length && $q.value.trim().length > 2) {
+      $cat.querySelector('.pc-cat-res').innerHTML = '<div class="muted">Aucune catégorie : essayez un autre mot (ex. « conseil », « immobilier », « commerce »).</div>';
+    }
+  }
+  if ($q.dataset?.champ === 'activite_principale') pcDiffere(() => pcSuggestionsActivite($q.closest('.pc-groupe')));
+});
+
 document.addEventListener('click', (e) => {
   const b = e.target.closest('.pc-champ .segments button');
-  if (!b) return;
-  const $s = b.closest('.segments');
-  $s.dataset.valeur = b.dataset.v;
-  $s.querySelectorAll('button').forEach((x) => x.classList.toggle('actif', x === b));
+  if (b) {
+    const $s = b.closest('.segments');
+    $s.dataset.valeur = b.dataset.v;
+    $s.querySelectorAll('button').forEach((x) => x.classList.toggle('actif', x === b));
+    return;
+  }
+  const $be = e.target.closest('.pc-be');
+  if (!$be) return;
+  if (e.target.closest('.pc-be-retirer')) { e.target.closest('.pc-be-ligne').remove(); return; }
+  if (e.target.closest('.pc-be-ajouter')) { $be.querySelector('.pc-be-lignes').insertAdjacentHTML('beforeend', pcBeneficiaire({})); return; }
+  const rep = e.target.closest('.pc-be-reprendre');
+  if (rep) {
+    // Reprend l'identité déjà saisie pour ce dirigeant, s'il y en a une.
+    const groupe = pcDossier.champs.find((g) => g.op === 'c_dirigeants');
+    const dirigeant = groupe?.champs.find((c) => c.label.startsWith(`${rep.dataset.nom} —`))?.valeur || {};
+    const base = dirigeant.nom ? { ...dirigeant } : { nom: rep.dataset.nom };
+    delete base.forme_sociale; delete base.numero_secu; delete base.situation_matrimoniale;
+    $be.querySelector('.pc-be-lignes').insertAdjacentHTML('beforeend', pcBeneficiaire({ ...base, modalites: [] }));
+    rep.remove();
+  }
 });
 
 /* ---------------------------------------------- étape 4 : vérifier, déposer */

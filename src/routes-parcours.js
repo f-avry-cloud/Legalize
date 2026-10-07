@@ -14,6 +14,10 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
 
 router.get('/parcours/operations', (req, res) => res.json(operationsProposees()));
+router.get('/parcours/referentiels', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.json(parcours.referentiels());
+});
 router.post('/parcours', async (req, res) => res.status(201).json(await parcours.creer(req.body || {})));
 router.get('/parcours/:id', async (req, res) => res.json(await parcours.lire(req.params.id)));
 router.put('/parcours/:id/operations', async (req, res) => res.json(await parcours.majOperations(req.params.id, req.body?.operations || [])));

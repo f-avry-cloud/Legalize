@@ -14,9 +14,10 @@
  * dossier dont on sait qu'il serait refusé.
  */
 
-const { contenuAnterieur, dateInpi, clotureInpi, adresseInpi } = require('./payload');
-const { TYPES_FORMALITE, TYPES_PERSONNE, rolePrincipal, roleDepuisFonction } = require('./referentiels');
+const { contenuAnterieur, dateInpi, clotureInpi, adresseInpi, construirePayload, nettoyer, codeNationalite } = require('./payload');
+const { TYPES_FORMALITE, TYPES_PERSONNE, STATUT_BLOC, rolePrincipal, roleDepuisFonction } = require('./referentiels');
 const { nettoyerSiren } = require('./normalize');
+const creation = require('./parcours-creation');
 
 // Codes de « statutPourLaFormalite » des pouvoirs : 1 ajout, 3 suppression.
 const AJOUT = '1';
@@ -48,10 +49,33 @@ function socle(content) {
 
 /** Rôle INPI d'une personne nommée. */
 function roleEntrant(e, r, forme) {
+  // À la création, la fonction choisie est déjà un code de rôle.
+  if (/^\d+$/.test(String(e.fonction || ''))) return String(e.fonction);
   if (e.fonction === 'liquidateur') return '40';
   if (e.fonction === 'cac') return '71';
   if (e.fonction === 'administrateur') return '65';
   return roleDepuisFonction(r.qualite)?.code || rolePrincipal(forme)?.code || '30';
+}
+
+/** Identité d'une personne physique au format du guichet. */
+function descriptionIndividu(r, role) {
+  const prenoms = String(r.prenoms || '').split(/[\s,]+/).filter(Boolean);
+  return {
+    role,
+    nom: r.nom,
+    prenoms: prenoms.length ? prenoms : undefined,
+    genre: r.genre || undefined,
+    dateDeNaissance: dateInpi(r.date_naissance),
+    lieuDeNaissance: r.lieu_naissance || undefined,
+    codeInseeGeographique: r.code_insee_naissance || undefined,
+    paysNaissance: String(r.pays_naissance || 'FRANCE').toUpperCase(),
+    nationalite: r.nationalite || 'Française',
+    codeNationalite: codeNationalite(r.nationalite || 'Française'),
+    formeSociale: r.forme_sociale || undefined,
+    // Exigé par le guichet pour un dirigeant affilié de nationalité française.
+    numeroSecu: r.numero_secu ? String(r.numero_secu).replace(/\s/g, '') : undefined,
+    situationMatrimoniale: r.situation_matrimoniale || undefined,
+  };
 }
 
 /** Bloc pouvoir d'une personne nommée, d'après le formulaire ciblé. */
@@ -71,28 +95,19 @@ function pouvoirEntrant(e, r, forme, dateEffet) {
         lieuRegistre: r.greffe ? String(r.greffe).toUpperCase() : undefined,
       },
       adresseEntreprise: adresseInpi(r.adresse),
+      // Personne morale administrateur : le guichet exige son représentant permanent.
+      representant: r.representant?.nom ? {
+        descriptionPersonne: { ...descriptionIndividu(r.representant, role), statutVisAVisFormalite: '1' },
+        adresseDomicile: adresseInpi(r.representant.adresse),
+      } : undefined,
     };
   }
-  const prenoms = String(r.prenoms || '').split(/[\s,]+/).filter(Boolean);
   return {
     ...base,
     typeDePersonne: 'INDIVIDU',
     beneficiaireEffectif: Boolean(r.beneficiaire_effectif),
     individu: {
-      descriptionPersonne: {
-        role,
-        nom: r.nom || e.nom,
-        prenoms: prenoms.length ? prenoms : undefined,
-        genre: r.genre || undefined,
-        dateDeNaissance: dateInpi(r.date_naissance),
-        lieuDeNaissance: r.lieu_naissance || undefined,
-        codeInseeGeographique: r.code_insee_naissance || undefined,
-        paysNaissance: String(r.pays_naissance || 'FRANCE').toUpperCase(),
-        codePaysNaissance: r.code_pays_naissance || 'FRA',
-        nationalite: r.nationalite || 'Française',
-        formeSociale: r.forme_sociale || undefined,
-        situationMatrimoniale: r.situation_matrimoniale || undefined,
-      },
+      descriptionPersonne: descriptionIndividu({ ...r, nom: r.nom || e.nom }, role),
       adresseDomicile: adresseInpi(r.adresse),
     },
   };
@@ -188,7 +203,115 @@ function completerRegistre(content, r) {
 }
 
 /** Opérations déposables automatiquement aujourd'hui. */
-function deposable(op) { return Boolean(APPLIQUER[op]); }
+function deposable(op) { return Boolean(APPLIQUER[op]) || ['01M', '02M'].includes(op); }
+
+/* --------------------------------------------------------------- création */
+
+/** Les réponses du parcours, à plat, au format du générateur de création. */
+function reponsesCreation(dossier) {
+  const t = dossier.typologie || {};
+  const rep = dossier.reponses || {};
+  const f = creation.forme(t) || {};
+  const s = rep.c_societe || {};
+  const a = rep.c_activite || {};
+  const fisc = rep.c_fiscal || {};
+  const pub = rep.c_publication || {};
+  const sansActivite = (dossier.operations || []).includes('02M');
+  return {
+    ...s,
+    forme_juridique_code: f.code,
+    associe_unique: Boolean(f.unique),
+    adresse_siege: rep.c_siege?.adresse_siege,
+    domiciliation: t.siege_occupation === 'domiciliation',
+    siege_domicile_dirigeant: t.siege_occupation === 'domicile',
+    succursale_ou_filiale: 'AVEC_ETABLISSEMENT',
+    activite_principale: sansActivite ? undefined : a.activite_principale,
+    date_debut_activite: a.date_debut_activite,
+    exercice_activite: a.exercice_activite || 'P',
+    origine_activite: creation.ORIGINE_FONDS[t.fonds_origine] || '1',
+    forme_exercice: creation.formeExercice(creation.categorie(a.categorie), f),
+    emploi_salaries: a.emploi_salaries === true,
+    date_premiere_embauche: a.date_premiere_embauche,
+    effectif_salarie: a.effectif_salarie,
+    regime_benefices: fisc.regime_benefices,
+    regime_tva: fisc.regime_tva,
+    // La clôture comptable suit la clôture statutaire (format JJMM).
+    date_cloture_comptable: s.date_cloture,
+    journal_publication: pub.journal_publication,
+    date_publication: pub.date_publication,
+    acre: pub.acre === true,
+    beneficiaires_effectifs: (rep.c_be?.beneficiaires || []).map((b) => ({
+      personne: b, modalites: b.modalites, pourcentage_capital: b.pourcentage_capital, pourcentage_votes: b.pourcentage_votes,
+    })),
+  };
+}
+
+const nomCle = (nom, prenoms) => `${String(prenoms || '').trim()} ${String(nom || '').trim()}`.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** Bloc pouvoir d'un dirigeant à la création : comme une nomination, sans drapeau de modification. */
+function pouvoirCreation(e, r, f, beneficiaires) {
+  const p = pouvoirEntrant(e, r, f.code);
+  delete p.is34Or35MAdjonctionTriggered;
+  delete p.dateEffet34Or35M;
+  p.statutPourLaFormalite = STATUT_BLOC.ADJONCTION;
+  p.isRepresentantLegal = creation.categorieFonction(e.fonction) === 'dirigeant';
+  if (p.individu) {
+    p.beneficiaireEffectif = beneficiaires.has(nomCle(r.nom || e.nom, r.prenoms));
+  }
+  return p;
+}
+
+/**
+ * Formalité de création issue du parcours. Le générateur de création fait le
+ * gros du travail ; s'y ajoutent ce que seul le parcours connaît : les
+ * dirigeants personnes morales, la catégorie d'activité, le domiciliataire.
+ */
+function construireCreation(dossier) {
+  const t = dossier.typologie || {};
+  const rep = dossier.reponses || {};
+  const f = creation.forme(t);
+  if (!f) throw Object.assign(new Error('Choisissez la forme de la société.'), { status: 422 });
+  const r = reponsesCreation(dossier);
+  const { corps } = construirePayload({
+    type: 'creation_societe', siren: '', fiche: {}, reference: dossier.reference, libelle: dossier.libelle,
+    reponses: r, pieces: dossier.pieces || [],
+  });
+  const c = corps.content;
+  const pm = c.personneMorale;
+  if ((dossier.operations || []).includes('02M')) {
+    // Société sans activité : le siège est un établissement sans activité,
+    // qui ne peut pas être « principal » (règles du serveur, constatées).
+    const siege = pm.etablissementPrincipal || {};
+    delete pm.etablissementPrincipal;
+    siege.descriptionEtablissement = { ...(siege.descriptionEtablissement || {}), rolePourEntreprise: '1', statutPourFormalite: '1', indicateurEtablissementPrincipal: false };
+    delete siege.activites;
+    pm.autresEtablissements = [siege];
+    pm.structureEntreprise = { aucuneActivite: true, indicateurPrincipalIdemSiege: false, dateAucuneActivite: dateInpi(r.date_debut_activite) };
+    delete c.formeExerciceActivitePrincipale;
+  }
+
+  const beneficiaires = new Set((rep.c_be?.beneficiaires || []).map((b) => nomCle(b.nom, b.prenoms)));
+  pm.composition = {
+    pouvoirs: (t.entrants || [])
+      .map((e, i) => (e?.nom ? pouvoirCreation(e, rep.c_dirigeants?.[`entrant_${i}`] || {}, f, beneficiaires) : null))
+      .filter(Boolean),
+  };
+
+  const cat = creation.categorie(rep.c_activite?.categorie);
+  for (const act of pm.etablissementPrincipal?.activites || []) {
+    if (cat) {
+      cat.code.split('-').forEach((v, i) => { act[`categorisationActivite${i + 1}`] = v; });
+    }
+  }
+  if (r.domiciliation) {
+    pm.adresseEntreprise.entrepriseDomiciliataire = {
+      denomination: rep.c_siege?.domiciliataire_denomination,
+      siren: nettoyerSiren(rep.c_siege?.domiciliataire_siren),
+    };
+  }
+  corps.content = nettoyer(c);
+  return { endpoint: 'formalites', methode: 'POST', corps };
+}
 
 /**
  * @param {object} dossier { operations, typologie, reponses: { commun, [op] }, fiche, siren, reference, libelle, pieces }
@@ -196,6 +319,7 @@ function deposable(op) { return Boolean(APPLIQUER[op]); }
  */
 function construireParcours(dossier) {
   const ops = dossier.operations || [];
+  if (ops.some((op) => ['01M', '02M'].includes(op))) return construireCreation(dossier);
   const nonGeres = ops.filter((op) => !deposable(op));
   if (nonGeres.length) {
     throw Object.assign(new Error(`Dépôt automatique pas encore disponible pour : ${nonGeres.join(', ')}.`), { status: 422, non_geres: nonGeres });
@@ -239,4 +363,4 @@ function construireParcours(dossier) {
   };
 }
 
-module.exports = { construireParcours, deposable, socle, pouvoirEntrant, APPLIQUER };
+module.exports = { construireParcours, construireCreation, reponsesCreation, deposable, socle, pouvoirEntrant, APPLIQUER };

@@ -23,6 +23,7 @@
  */
 
 const catalogue = require('./catalogue-evenements');
+const creation = require('./parcours-creation');
 
 /* ------------------------------------------------------------- opérations */
 
@@ -64,6 +65,7 @@ const OUI_NON = [[true, 'Oui'], [false, 'Non']];
  * un effet ; `type` « personnes » ouvre une liste (une ligne par personne).
  */
 const QUESTIONS = {
+  ...creation.QUESTIONS,
   entrants: {
     libelle: 'Qui est nommé ?',
     aide: 'Une ligne par personne nommée : dirigeant, administrateur, commissaire aux comptes ou liquidateur.',
@@ -142,6 +144,7 @@ const QUESTIONS = {
       ['achat', 'Achat'],
       ['apport', 'Apport'],
       ['location', 'Prise en location-gérance'],
+      ['gerance_mandat', 'Gérance-mandat'],
     ],
   },
 };
@@ -151,14 +154,15 @@ const QUESTIONS = {
 /** Pièces d'une personne nommée, selon sa nature et sa fonction. */
 function piecesEntrant(e, forme) {
   const p = [];
-  if (e.fonction === 'cac') {
+  const fonction = creation.categorieFonction(e.fonction);
+  if (fonction === 'cac') {
     p.push('PJ_41');
     if (e.inscrit === false) p.push('PJ_40');
     return p;
   }
   if (e.nature === 'PM') {
     p.push('PJ_20');
-    if (e.fonction === 'administrateur' && /^55|^56/.test(forme || '')) p.push('PJ_80');
+    if (fonction === 'administrateur' && /^55|^56/.test(forme || '')) p.push('PJ_80');
   } else {
     p.push('PJ_11', 'PJ_17');
   }
@@ -171,20 +175,30 @@ function piecesEntrant(e, forme) {
  * (la pièce est due), false (elle ne l'est pas) ou undefined (la réponse
  * manque encore). Les pièces par personne sont produites par `personnes`.
  */
+const PIECES_CREATION = {
+  PJ_25: (t) => def(t.siege_occupation, () => t.siege_occupation === 'locaux'),
+  PJ_26: (t) => def(t.siege_occupation, () => t.siege_occupation === 'domicile'),
+  PJ_29: (t) => def(t.siege_occupation, () => t.siege_occupation === 'domiciliation'),
+  PJ_45: (t) => def(t.siege_occupation, () => t.siege_occupation === 'domiciliation' && def(t.domiciliataire_meme_greffe, () => t.domiciliataire_meme_greffe === false)),
+  PJ_06: (t) => def(t.apports_numeraire, () => t.apports_numeraire === true),
+  PJ_03: (t) => def(t.premiers_dirigeants_statuts, () => t.premiers_dirigeants_statuts === false),
+  PJ_04: (t) => def(t.apports_nature, () => t.apports_nature === true && def(t.commissaire_apports, () => t.commissaire_apports === true)),
+  PJ_05: (t) => def(t.apports_nature, () => t.apports_nature === true),
+  PJ_31: (t) => def(t.activite_reglementee, () => t.activite_reglementee === true),
+};
+
 const REGLES = {
   '01M': {
-    questions: ['siege_occupation', 'domiciliataire_meme_greffe', 'entrants', 'premiers_dirigeants_statuts', 'apports_nature', 'commissaire_apports', 'activite_reglementee'],
-    pieces: {
-      PJ_25: (t) => def(t.siege_occupation, () => t.siege_occupation === 'locaux'),
-      PJ_26: (t) => def(t.siege_occupation, () => t.siege_occupation === 'domicile'),
-      PJ_29: (t) => def(t.siege_occupation, () => t.siege_occupation === 'domiciliation'),
-      PJ_45: (t) => def(t.siege_occupation, () => t.siege_occupation === 'domiciliation' && t.domiciliataire_meme_greffe === false),
-      PJ_06: () => true,
-      PJ_03: (t) => def(t.premiers_dirigeants_statuts, () => t.premiers_dirigeants_statuts === false),
-      PJ_04: (t) => def(t.apports_nature, () => t.apports_nature === true && t.commissaire_apports !== false),
-      PJ_05: (t) => def(t.apports_nature, () => t.apports_nature === true),
-      PJ_31: (t) => def(t.activite_reglementee, () => t.activite_reglementee === true),
-    },
+    questions: ['forme_creation', 'associe_unique_nature', 'entrants', 'premiers_dirigeants_statuts', 'siege_occupation', 'domiciliataire_meme_greffe',
+      'apports_numeraire', 'apports_nature', 'commissaire_apports', 'fonds_origine', 'activite_reglementee'],
+    pieces: PIECES_CREATION,
+    ajouts: creation.AJOUTS,
+    personnes: true,
+  },
+  '02M': {
+    questions: ['forme_creation', 'associe_unique_nature', 'entrants', 'premiers_dirigeants_statuts', 'siege_occupation', 'domiciliataire_meme_greffe',
+      'apports_numeraire', 'apports_nature', 'commissaire_apports'],
+    pieces: PIECES_CREATION,
     personnes: true,
   },
   '11M': {
@@ -279,9 +293,10 @@ const MOTIFS_DEPART = [
  * @param {object} t réponses de typologie (dont `manuel` : pièces cochées à la main)
  * @param {object} fiche fiche normalisée de la société (forme, dirigeants…)
  */
-function resoudre(operations, t = {}, fiche = {}) {
+function resoudre(operations, t = {}, fiche = {}, rep = {}) {
   const ops = operations.filter((c) => catalogue.fiche(c));
-  const forme = fiche.forme_juridique_code || '';
+  const estCreation = ops.some((c) => OPERATIONS[c]?.creation);
+  const forme = (estCreation ? creation.forme(t)?.code : fiche.forme_juridique_code) || '';
   const manuel = t.manuel || {};
 
   // Questions : union ordonnée, filtrée par leur condition d'utilité.
@@ -294,9 +309,15 @@ function resoudre(operations, t = {}, fiche = {}) {
       if (!entree) {
         entree = {
           id, libelle: q.libelle, aide: q.aide || null, type: q.type,
-          options: q.options || (id === 'entrants' ? FONCTIONS : id === 'sortants' ? MOTIFS_DEPART : null),
+          options: q.options || (id === 'entrants' ? (estCreation ? creation.rolesCreation(t) : FONCTIONS) : id === 'sortants' ? MOTIFS_DEPART : null),
           valeur: t[id] ?? null, pour: [],
         };
+        if (id === 'entrants' && estCreation) {
+          entree.libelle = 'Qui sont les dirigeants (et le commissaire aux comptes, s’il y en a un) ?';
+          entree.aide = 'Une ligne par personne, avec sa fonction : les pièces à réunir en dépendent.';
+          entree.creation = true;
+          if (!creation.forme(t)) entree.attente = 'Choisissez d’abord la forme de la société.';
+        }
         if (id === 'sortants') {
           entree.dirigeants_actuels = (fiche.dirigeants || []).map((d) => d.nom_complet).filter(Boolean);
         }
@@ -353,12 +374,30 @@ function resoudre(operations, t = {}, fiche = {}) {
         ajouter(p.code, p.code, 'a_preciser', op, { condition: p.condition, manuel: true });
       }
     }
+    // Pièces que la situation rend nécessaires sans que la fiche les porte
+    // (origine du fonds à la création, par exemple).
+    for (const [code, a] of Object.entries(regles.ajouts || {})) {
+      const due = a.regle(t);
+      if (due === true) ajouter(code, code, 'obligatoire', op, { raison: a.condition });
+      else if (due === undefined) ajouter(code, code, 'a_preciser', op, { condition: a.condition, question: questionAjout(a) });
+    }
+    if (OPERATIONS[op]?.creation && creation.forme(t)?.unique && t.associe_unique_nature === 'PM') {
+      ajouter('PJ_188', 'PJ_188', 'facultative', op, { raison: 'proposée par le guichet quand l’associé unique est une société' });
+    }
     if (regles.personnes) {
       for (const [i, e] of (t.entrants || []).entries()) {
         if (!e || !e.nom) continue;
         if (op === '22M' && e.fonction !== 'liquidateur') continue;
         for (const code of piecesEntrant(e, forme)) {
           ajouter(`${code}:e${i}`, code, 'obligatoire', op, { personne: e.nom });
+        }
+        // Ressortissant d'un État hors Union européenne : titre de séjour,
+        // s'il réside en France. Seul l'intéressé sait s'il y réside.
+        if (e.nature !== 'PM' && e.hors_ue && creation.categorieFonction(e.fonction) !== 'cac') {
+          const cle = `PJ_14:e${i}`;
+          const condition = 'titre de séjour (carte de séjour ou de résident) si la personne réside en France';
+          if (manuel[cle] === true) ajouter(cle, 'PJ_14', 'obligatoire', op, { personne: e.nom, raison: condition, manuel: true });
+          else if (manuel[cle] !== false) ajouter(cle, 'PJ_14', 'a_preciser', op, { personne: e.nom, condition, manuel: true });
         }
       }
       for (const [i, s] of (t.sortants || []).entries()) {
@@ -385,7 +424,7 @@ function resoudre(operations, t = {}, fiche = {}) {
       a_preciser: liste.filter((p) => p.categorie === 'a_preciser'),
       facultatives: liste.filter((p) => p.categorie === 'facultative'),
     },
-    champs: champs(ops, t, fiche),
+    champs: champs(ops, t, fiche, rep),
     incompatibilites: incompatibilites(ops),
   };
 }
@@ -398,6 +437,11 @@ function evenementAttendu(code, forme = '') {
 
 function nomOperation(code) {
   return OPERATIONS[code]?.nom || catalogue.fiche(code)?.libelle || code;
+}
+
+function questionAjout(a) {
+  const m = String(a.regle).match(/t\.(\w+)/);
+  return m ? m[1] : null;
 }
 
 /** La question dont dépend une pièce, pour l'afficher à côté d'elle. */
@@ -419,6 +463,7 @@ function incompatibilites(ops) {
   const creations = ops.filter((c) => OPERATIONS[c]?.creation);
   const cessations = ops.filter((c) => OPERATIONS[c]?.cessation);
   const modifs = ops.filter((c) => !OPERATIONS[c]?.creation && !OPERATIONS[c]?.cessation);
+  if (creations.length > 1) out.push('Une seule création par dossier.');
   if (creations.length && (modifs.length || cessations.length)) {
     out.push('Une création se dépose seule : les modifications viendront après l’immatriculation.');
   }
@@ -442,7 +487,9 @@ function incompatibilites(ops) {
  * Les clés reprennent celles des questionnaires existants, afin que le dépôt
  * réutilise les générateurs déjà éprouvés.
  */
-function champs(ops, t, fiche) {
+function champs(ops, t, fiche, rep = {}) {
+  const creations = ops.filter((c) => OPERATIONS[c]?.creation);
+  if (creations.length) return creation.champsCreation(creations[0], t, rep);
   const groupes = [];
   const modifs = ops.filter((c) => !OPERATIONS[c]?.creation);
   if (modifs.length) {
@@ -484,7 +531,12 @@ function champs(ops, t, fiche) {
     if (REGLES[op]?.personnes && op !== '01M') {
       for (const [i, e] of (t.entrants || []).entries()) {
         if (!e?.nom || (op === '22M' && e.fonction !== 'liquidateur')) continue;
-        liste.push({ name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: e.nature === 'PM' ? 'personne_morale' : 'personne', requis: true, prerempli: e.nature === 'PM' ? { denomination: e.nom } : separerNom(e.nom) });
+        // Les mêmes exigences qu'à la création : le guichet revalide chaque pouvoir ajouté.
+        liste.push(e.nature === 'PM'
+          ? { name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: 'personne_morale', requis: true, prerempli: { denomination: e.nom },
+            sous_requis: ['denomination', 'greffe', 'adresse.codePostal', 'adresse.commune'] }
+          : { name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: 'personne', requis: true, prerempli: separerNom(e.nom),
+            sous_requis: ['nom', 'prenoms', 'genre', 'date_naissance', 'lieu_naissance', 'adresse.codePostal', 'adresse.commune', 'forme_sociale'] });
       }
     }
     if (OPERATIONS[op]?.creation) {

@@ -509,7 +509,11 @@
           null
         ],
         [
-          "Formes testées : SAS, SARL, EURL, SA, SNC, société civile immobilière",
+          "Formes déposées depuis le parcours et acceptées : SAS, SASU, SARL, EURL, SA (avec administrateurs et commissaires aux comptes), SNC, SCI, société civile",
+          null
+        ],
+        [
+          "Cas acceptés : président personne morale, DG et DGD, siège au domicile du dirigeant, domiciliation, achat de fonds, salariés, société sans activité (02M)",
           null
         ]
       ],
@@ -521,10 +525,14 @@
         [
           "IBP01",
           2796
+        ],
+        [
+          "BE001",
+          2034
         ]
       ],
       "acte_attendu": true,
-      "note": "Formes testées avec le générateur de l’application, accepté du premier coup après corrections : SAS, SASU, SARL, société civile immobilière ; SA, EURL et SNC acceptées après complétion. La SASU se déclare en SAS (5710) avec associé unique : le code 5720 est refusé. Pour une SA, le serveur accepte un seul dirigeant et ne vérifie pas le nombre légal d’administrateurs. Frais : 35,59 € pour une société commerciale, 63,54 € pour une société civile immobilière."
+      "note": "Dépôts de test du 7 octobre 2026, construits par le parcours de l’application : toutes les formes et tous les cas ci-dessus acceptés. La SASU et l’EURL se déclarent en SAS (5710) et en SARL (5499) avec l’indicateur d’associé unique (tarif IB711) : 5720 est refusé et 5498 désigne une société d’attribution d’immeuble en jouissance à temps partagé, pas une EURL. Règles du serveur constatées : journal d’annonces légales pris dans le référentiel (sinon « Autre » et son nom) ; numéro de sécurité sociale, à la clé contrôlée, pour un dirigeant affilié de nationalité française ; représentant permanent (nationalité codée, statut « ajout ») pour une société administrateur de SA ; option de domiciliation validée pour un siège au domicile du dirigeant ; premier emploi salarié déclaré dès qu’il y a des salariés ; bénéficiaires effectifs en statut « 1 » avec la ventilation du capital détenu. Les bénéficiaires effectifs ne sont pas exigés par le serveur (déclaration facturée BE001, 20,34 €) mais le sont par la loi : le parcours les exige. Pour une SA, le serveur n’accepte que les rôles 51, 53, 60, 64, 65, 66, 67, 70, 71, 72, 99, 130 ou 135. Frais : 35,59 € pour une société commerciale, 63,54 € pour une société civile, 58,46 € avec achat de fonds, plus 20,34 € de déclaration des bénéficiaires effectifs."
     },
     "02M": {
       "statut": "verifie",
@@ -1200,7 +1208,8 @@
     "RB701": "Radiation",
     "IBP01": "Immatriculation d’une société commerciale",
     "IB711": "Immatriculation d’une société commerciale",
-    "IDP01": "Immatriculation d’une société civile"
+    "IDP01": "Immatriculation d’une société civile",
+    "BE001": "Déclaration des bénéficiaires effectifs"
   },
   "socle_creation": [
     [

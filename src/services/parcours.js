@@ -13,6 +13,7 @@ const { supabase, q, uploadFile, downloadFile } = require('../supa');
 const rne = require('../inpi/rne');
 const guichet = require('../inpi/guichet');
 const parcours = require('../inpi/parcours');
+const creationPc = require('../inpi/parcours-creation');
 const { construireParcours, deposable } = require('../inpi/payload-parcours');
 const { nettoyerSiren, formaterSiren } = require('../inpi/normalize');
 const analyse = require('./analyse');
@@ -92,7 +93,7 @@ async function lire(id) {
   const f = await charger(id);
   const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
   const fiche = f.fiche || {};
-  const res = parcours.resoudre(f.operations || [], f.typologie || {}, fiche);
+  const res = parcours.resoudre(f.operations || [], f.typologie || {}, fiche, f.reponses || {});
 
   // Rattache les fichiers chargés à leur ligne de la liste.
   const parCle = new Map();
@@ -116,12 +117,16 @@ async function lire(id) {
     ...g,
     champs: g.champs.map((c) => {
       const v = rep[g.op]?.[c.name] ?? (c.defaut !== undefined ? c.defaut : (c.prerempli || null));
-      return { ...c, valeur: v, rempli: rempli(v, c), origine: rep._origine?.[`${g.op}.${c.name}`] || null };
+      const manque = rempli(v, c) ? creationPc.manquants(c, v) : [];
+      return { ...c, valeur: v, rempli: rempli(v, c) && !manque.length, manquants: manque, origine: rep._origine?.[`${g.op}.${c.name}`] || null };
     }),
   }));
 
   const manquantes = listes.obligatoires.filter((p) => !p.fichiers.length);
-  const champsManquants = groupes.flatMap((g) => g.champs.filter((c) => c.requis && !c.rempli).map((c) => `${g.titre} : ${c.label}`));
+  const champsManquants = groupes.flatMap((g) => g.champs.filter((c) => c.requis && !c.rempli)
+    .map((c) => `${g.titre} : ${c.label}${c.manquants?.length ? ` (${c.manquants.join(', ')})` : ''}`));
+  const creation = res.operations.some((o) => parcours.OPERATIONS[o.code]?.creation);
+  const nouvelle = creation ? (rep.c_societe || {}) : {};
   const nonDeposables = res.operations.filter((o) => !deposable(o.code)).map((o) => o.nom);
 
   return {
@@ -133,7 +138,9 @@ async function lire(id) {
     numero_liasse: f.numero_liasse,
     montant: f.montant,
     simule: f.simule,
-    societe: { denomination: fiche.denomination || '', siren: fiche.siren_formate || formaterSiren(f.siren || ''), forme: fiche.forme_juridique || '', adresse: fiche.adresse?.texte || '' },
+    societe: creation
+      ? { denomination: nouvelle.denomination || '', siren: '', forme: creationPc.forme(f.typologie)?.libelle || '', adresse: '', creation: true }
+      : { denomination: fiche.denomination || '', siren: fiche.siren_formate || formaterSiren(f.siren || ''), forme: fiche.forme_juridique || '', adresse: fiche.adresse?.texte || '' },
     operations: res.operations,
     questions: res.questions,
     typologie: f.typologie || {},
@@ -165,8 +172,9 @@ function rempli(v, c) {
   if (v === null || v === undefined || v === '') return false;
   if (c.type === 'ouinon') return typeof v === 'boolean';
   if (c.type === 'adresse') return Boolean(v.codePostal && v.commune);
-  if (c.type === 'personne') return Boolean(v.nom && v.date_naissance);
+  if (c.type === 'personne') return Boolean(v.nom && (c.sous_requis || v.date_naissance));
   if (c.type === 'personne_morale') return Boolean(v.denomination || v.nom);
+  if (c.type === 'beneficiaires') return Array.isArray(v) && v.length > 0;
   return true;
 }
 
@@ -244,7 +252,7 @@ async function retirerPiece(pieceId) {
 async function analyser(id) {
   const f = await charger(id); verifierOuvert(f);
   const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
-  const res = parcours.resoudre(f.operations || [], f.typologie || {}, f.fiche || {});
+  const res = parcours.resoudre(f.operations || [], f.typologie || {}, f.fiche || {}, f.reponses || {});
   const documents = await Promise.all(pieces.slice(0, 12).map(async (p) => ({ nom: p.filename, buffer: await downloadFile(p.filepath) })));
   const r = await analyse.extraire({
     documents, groupes: res.champs, fiche: f.fiche || {}, operations: res.operations.map((o) => o.nom),
@@ -324,7 +332,22 @@ async function deposer(id) {
   return lire(id);
 }
 
+/** Listes de référence du guichet pour les écrans : journaux, nationalités, catégories d'activité. */
+let REFERENTIELS = null;
+function referentiels() {
+  if (!REFERENTIELS) {
+    const { enumeration } = require('../inpi/referentiels');
+    REFERENTIELS = {
+      journaux: Object.keys(enumeration('journalPublication')).filter((j) => j !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr')),
+      nationalites: Object.entries(enumeration('codeNationalite')).map(([code, libelle]) => [code, libelle]).sort((a, b) => a[1].localeCompare(b[1], 'fr')),
+      types_voie: Object.entries(enumeration('typeVoie')),
+      categories: creationPc.feuillesCategories().map((c) => ({ code: c.code, chemin: c.chemin.join(' › '), forme: creationPc.formeExercice(c) })),
+    };
+  }
+  return REFERENTIELS;
+}
+
 module.exports = {
-  TYPE, creer, lire, majOperations, majTypologie, majReponses,
+  TYPE, creer, referentiels, lire, majOperations, majTypologie, majReponses,
   ajouterPiece, majPiece, retirerPiece, analyser, apercu, deposer,
 };

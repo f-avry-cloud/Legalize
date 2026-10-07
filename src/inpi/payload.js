@@ -29,7 +29,7 @@
 
 const {
   TYPES_FORMALITE, TYPES_PERSONNE, ROLE_ETABLISSEMENT, STATUT_BLOC,
-  formeJuridique, roleDepuisFonction, rolePrincipal, codeFormeDepuisLibelle,
+  formeJuridique, roleDepuisFonction, rolePrincipal, codeFormeDepuisLibelle, enumeration,
 } = require('./referentiels');
 const { definition } = require('./catalogue');
 const { nettoyerSiren } = require('./normalize');
@@ -125,18 +125,56 @@ function etablissementInpi(o) {
 function beneficiairesInpi(liste) {
   const beneficiaires = (liste || [])
     .filter((b) => b.personne?.nom)
-    .map((b, i) => ({
-      // Le dictionnaire déclare cet identifiant en chaîne, pas en entier.
-      beneficiaireId: String(i + 1),
-      beneficiaire: { descriptionPersonne: descriptionPersonne(b.personne) },
-      modalite: {
-        modalitesDeControle: b.modalite_controle ? [b.modalite_controle] : undefined,
-        detentionPartTotale: nombre(b.pourcentage_capital),
-        detentionVoteTotal: nombre(b.pourcentage_votes),
-      },
-      statutPourLaFormalite: STATUT_BLOC.ADJONCTION,
-    }));
+    .map((b, i) => {
+      const modalites = [].concat(b.modalites || b.modalite_controle || []).map(String).filter(Boolean);
+      const capital = nombre(b.pourcentage_capital);
+      const votes = nombre(b.pourcentage_votes);
+      const indirecte = b.personne?.detention === 'indirecte' || b.personne?.detention === 'les_deux';
+      const directe = b.personne?.detention !== 'indirecte';
+      return {
+        // Le dictionnaire déclare cet identifiant en chaîne, pas en entier.
+        beneficiaireId: String(i + 1),
+        beneficiaire: {
+          descriptionPersonne: descriptionPersonne(b.personne),
+          adresseDomicile: adresseInpi(b.personne?.adresse),
+        },
+        modalite: {
+          modalitesDeControle: modalites.length ? modalites : undefined,
+          detention25pCapital: modalites.includes('3') || (capital !== undefined && capital > 25) || undefined,
+          detention25pDroitVote: modalites.includes('1') || (votes !== undefined && votes > 25) || undefined,
+          detentionPouvoirNommageMembresConseilAdmin: modalites.includes('5') || undefined,
+          detentionAutresMoyensControle: modalites.includes('6') || modalites.includes('2') || undefined,
+          beneficiaireRepresentantLegal: modalites.includes('0') || undefined,
+          // Le guichet contrôle la ventilation : le total doit se retrouver
+          // dans les parts directes ou indirectes (constaté par dépôt de test).
+          detentionPartDirecte: capital !== undefined ? directe : undefined,
+          partsDirectesPleinePropriete: capital !== undefined && directe && !indirecte ? capital : undefined,
+          detentionPartIndirecte: capital !== undefined ? indirecte : undefined,
+          partsIndirectesPmoralesPleinePropriete: capital !== undefined && indirecte && !directe ? capital : undefined,
+          detentionPartTotale: capital,
+          detentionVoteDirecte: votes !== undefined ? directe : undefined,
+          voteDirectePleinePropriete: votes !== undefined && directe && !indirecte ? votes : undefined,
+          detentionVoteIndirecte: votes !== undefined ? indirecte : undefined,
+          voteIndirectePmoralesPleinePropriete: votes !== undefined && indirecte && !directe ? votes : undefined,
+          detentionVoteTotal: votes,
+          dateEffet: dateInpi(b.personne?.date_effet),
+        },
+        // « 1 » (ajout) et non « A » : le guichet traite la liste comme une
+        // déclaration totale des bénéficiaires (mode 38F « 2 »).
+        statutPourLaFormalite: '1',
+      };
+    });
   return beneficiaires.length ? beneficiaires : undefined;
+}
+
+/**
+ * Le journal d'annonces légales doit figurer au référentiel du guichet ; un
+ * titre absent passe en « Autre », avec son nom en clair (règle du serveur).
+ */
+function journalInpi(nom) {
+  const liste = enumeration('journalPublication');
+  const exact = Object.keys(liste).find((j) => j.toLowerCase() === String(nom).trim().toLowerCase());
+  return exact ? { journalPublication: exact } : { journalPublication: 'Autre', journalPublicationAutre: String(nom).trim() };
 }
 
 /** BlocOptionFiscale : régime des bénéfices, TVA, chiffre d'affaires prévisionnel. */
@@ -152,6 +190,17 @@ function optionsFiscalesInpi(r) {
   };
   const rempli = Object.values(o).some((v) => v !== undefined && v !== null);
   return rempli ? { ...o, deviseChiffreAffaire: 'EUR' } : undefined;
+}
+
+/** Code de nationalité du référentiel (« Française » → FRA), à partir du libellé ou du code. */
+function codeNationalite(valeur) {
+  const v = String(valeur || '').trim();
+  if (!v) return undefined;
+  const table = enumeration('codeNationalite');
+  if (table[v.toUpperCase()]) return v.toUpperCase();
+  const sansAccent = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const trouve = Object.entries(table).find(([, l]) => sansAccent(l) === sansAccent(v));
+  return trouve ? trouve[0] : undefined;
 }
 
 /** BlocPouvoir d'une personne physique (dirigeant, liquidateur…). */
@@ -173,11 +222,11 @@ function descriptionPersonne(personne, role) {
     lieuDeNaissance: personne.lieu_naissance || undefined,
     // Le serveur attend le libellé du référentiel (« FRANCE ») et refuse « France ».
     paysNaissance: String(personne.pays_naissance || 'FRANCE').toUpperCase(),
-    codePaysNaissance: personne.code_pays_naissance || (/^france$/i.test(personne.pays_naissance || 'France') ? 'FRA' : undefined),
     codeInseeGeographique: personne.code_insee_naissance || undefined,
     // Affiliation sociale : choix du déclarant, exigé par le serveur (0, 1 ou 3).
     formeSociale: personne.forme_sociale || undefined,
     nationalite: personne.nationalite || 'Française',
+    codeNationalite: codeNationalite(personne.nationalite || 'Française'),
   };
 }
 
@@ -308,7 +357,7 @@ const CONTENUS = {
             formeJuridique: codeForme || undefined,
           },
           publicationLegale: r.journal_publication ? {
-            journalPublication: r.journal_publication,
+            ...journalInpi(r.journal_publication),
             datePublication: dateInpi(r.date_publication),
           } : undefined,
           description: {
@@ -325,7 +374,14 @@ const CONTENUS = {
         },
         adresseEntreprise: {
           adresse,
-          caracteristiques: { ambulant: false, domiciliataire: Boolean(r.domiciliation), indicateurDomicileEntrepreneur: Boolean(r.siege_domicile_dirigeant) },
+          caracteristiques: {
+            ambulant: false,
+            domiciliataire: Boolean(r.domiciliation),
+            indicateurDomicileEntrepreneur: Boolean(r.siege_domicile_dirigeant),
+            // Siège au domicile du représentant légal : le guichet exige la
+            // validation de cette option (art. L. 123-11-1 du code de commerce).
+            ...(r.siege_domicile_dirigeant ? { indicateurDomicileEntrepreneurValidation: true } : {}),
+          },
         },
         composition: { pouvoirs },
         beneficiairesEffectifs: beneficiairesInpi(r.beneficiaires_effectifs),
@@ -342,6 +398,8 @@ const CONTENUS = {
           origine: r.origine_activite,
           salaries: salaries ? {
             presenceSalarie: true,
+            // Exigé à la création dès qu'il y a des salariés (constaté par dépôt de test).
+            emploiPremierSalarie: true,
             nombreSalarie: nombre(r.effectif_salarie),
             dateEffetDebutEmploiSalarie: dateInpi(r.date_premiere_embauche),
           } : undefined,
@@ -642,5 +700,5 @@ function indicateursEvenement(valeur, chemin = '', acc = []) {
 
 module.exports = {
   construirePayload, indicateursEvenement,
-  dateInpi, clotureInpi, adresseInpi, pouvoirIndividu, contenuAnterieur,
+  dateInpi, clotureInpi, adresseInpi, pouvoirIndividu, contenuAnterieur, nettoyer, codeNationalite,
 };
