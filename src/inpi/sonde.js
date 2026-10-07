@@ -23,6 +23,8 @@ const CHEMINS_AUTORISES = [
   /^\/api\/attachments\/\d+(\/file)?$/,
   /^\/api\/regularization_requests(\/\d+)?$/,
   /^\/api\/signatures$/,
+  // Référentiels publics du dictionnaire (catégories d'activité…), en lecture.
+  /^\/api\/data_dictionary(\/[a-z_]+)*$/,
 ];
 
 // Côté RNE, seule la lecture d'une fiche publique : c'est l'état antérieur
@@ -63,7 +65,8 @@ async function sonder({ api = 'guichet', methode = 'GET', chemin, params, corps 
   if (!['GET', 'POST', 'PUT', 'DELETE'].includes(methode)) {
     throw new ErreurInpi(`Méthode refusée : ${methode}.`, { status: 400 });
   }
-  if (!CHEMINS_AUTORISES.some((re) => re.test(String(chemin)))) {
+  if (!CHEMINS_AUTORISES.some((re) => re.test(String(chemin)))
+    || (/^\/api\/data_dictionary/.test(String(chemin)) && methode !== 'GET')) {
     throw new ErreurInpi(`Chemin refusé par la sonde : ${chemin}.`, { status: 400 });
   }
 
