@@ -1258,3 +1258,5 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
   padding: 10px 14px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--a2); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
 .pc-barre-enregistrer.visible { display: flex; }
 .pc-cat-titre { font-size: .78rem; margin: 2px 0 6px; }
+.pc-variante { max-width: 260px; padding: 8px 10px; font: inherit; font-size: .82rem; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+.pc-piece-actions { flex-wrap: wrap; justify-content: flex-end; }

@@ -225,6 +225,8 @@ function descriptionPersonne(personne, role) {
     codeInseeGeographique: personne.code_insee_naissance || undefined,
     // Affiliation sociale : choix du déclarant, exigé par le serveur (0, 1 ou 3).
     formeSociale: personne.forme_sociale || undefined,
+    // Exigé par le guichet pour une personne affiliée de nationalité française.
+    numeroSecu: personne.numero_secu ? String(personne.numero_secu).replace(/\s/g, '') : undefined,
     nationalite: personne.nationalite || 'Française',
     codeNationalite: codeNationalite(personne.nationalite || 'Française'),
   };

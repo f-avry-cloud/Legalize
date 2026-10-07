@@ -1,0 +1,2067 @@
+{
+ "_source": "INPI, GET /api/data_dictionary (démonstration), 7 octobre 2026 : FormBlocPJ, TypeFormalitePJ, DisplayMandataires, NotaBeneTypeDocument, Commentaires ; typeDocument (codes de pièce acceptés)",
+ "valeurs": {
+  "PJ_01": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_02": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_03": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_04": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_05": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_06": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_07": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_08": {
+   "bloc": "Publications légales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_09": {
+   "bloc": "Publications légales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_10": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_11": {
+   "bloc": "Composition - Entrepreneur - Mandataire",
+   "types": [
+    "PM",
+    "PP",
+    "CA",
+    "DA",
+    "CP",
+    "CO"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota bene : Veuillez ne pas oublier que votre copie de la carte nationale d’identité doit être numérisée, après avoir été préalablement revêtue d'une mention manuscrite d'attestation sur l'honneur de conformité à l'original, d'une date et de la signature manuscrite de la personne qui effectue la déclaration."
+  },
+  "PJ_12": {
+   "bloc": "Composition - Entrepreneur - Mandataire",
+   "types": [
+    "PM",
+    "PP",
+    "CA",
+    "DA",
+    "CP",
+    "CO"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota bene : Veuillez ne pas oublier que votre copie du passeport en cours de validité doit être numérisée, après avoir été préalablement revêtue d'une mention manuscrite d'attestation sur l'honneur de conformité à l'original, d'une date et de la signature manuscrite de la personne qui effectue la déclaration."
+  },
+  "PJ_13": {
+   "bloc": "Composition - Entrepreneur - Mandataire",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_14": {
+   "bloc": "Composition - Entrepreneur - Mandataire",
+   "types": [
+    "PM",
+    "PP",
+    "CP",
+    "CO"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_15": {
+   "bloc": "Composition - Entrepreneur - Mandataire",
+   "types": [
+    "PM",
+    "PP",
+    "CP",
+    "CO"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_16": {
+   "bloc": "Informations générales",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_17": {
+   "bloc": "Composition - Entrepreneur - Mandataire",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_18": {
+   "bloc": "Informations générales",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_19": {
+   "bloc": "Composition - Entrepreneur - Mandataire",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_20": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_22": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_23": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_24": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_25": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_26": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota bene : Veuillez ne pas oublier que votre justificatif doit être daté de moins de trois mois et doit comporter la même adresse postale que votre établissement."
+  },
+  "PJ_29": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_31": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_33": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_34": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_35": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_36": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_37": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_38": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_39": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_40": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_41": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_42": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_43": {
+   "bloc": "Insaisissabilité",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_45": {
+   "bloc": "Informations générales - Entreprise domiciliataire",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_46": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true,
+   "commentaire": "Lié au EPIC, sort du périmètre du GU"
+  },
+  "PJ_47": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true,
+   "commentaire": "Lié au EPIC, sort du périmètre du GU"
+  },
+  "PJ_48": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true,
+   "commentaire": "Lié au EPIC, sort du périmètre du GU"
+  },
+  "PJ_51": {
+   "bloc": "Pièces Jointes : si mandataire",
+   "types": [
+    "PM",
+    "PP",
+    "CA",
+    "DA",
+    "CP",
+    "CO"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota bene : Veuillez ne pas oublier que si vous êtes un mandataire, vous devez obligatoirement attacher un justificatif (procuration). "
+  },
+  "PJ_52": {
+   "bloc": "Informations générales | Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_53": {
+   "bloc": "Informations générales",
+   "types": [],
+   "propose_mandataire": true
+  },
+  "PJ_54": {
+   "bloc": "Informations générales | Composition",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_55": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_56": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_57": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_58": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_59": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_60": {
+   "bloc": "Cessation",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_61": {
+   "bloc": "Contrat d'appui",
+   "types": [
+    "PM",
+    "PP",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_62": {
+   "bloc": "Entrepreneur",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_63": {
+   "bloc": "Composition",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_64": {
+   "bloc": "Composition",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_65": {
+   "bloc": "Insaisissabilité",
+   "types": [],
+   "propose_mandataire": true
+  },
+  "PJ_67": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_68": {
+   "bloc": "Informations générales",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_69": {
+   "bloc": "Informations générales",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_70": {
+   "bloc": "Entrepreneur",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_71": {
+   "bloc": "Pièces jointes : si mandataire",
+   "types": [],
+   "propose_mandataire": true
+  },
+  "PJ_72": {
+   "bloc": "Informations générales | Entrepreneur | Inscriptions d'office",
+   "types": [],
+   "propose_mandataire": true
+  },
+  "PJ_73": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_74": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_75": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_76": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_77": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_78": {
+   "bloc": "Contrat d'appui",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_79": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_80": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_81": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_82": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_83": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_85": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_86": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_90": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_91": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_92": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota bene : Veuillez ne pas oublier que l’attestation bancaire, valant certificat de fonds, doit être signée par le dépositaire."
+  },
+  "PJ_93": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_94": {
+   "bloc": "Composition",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_95": {
+   "bloc": "Non disponible",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_96": {
+   "bloc": "Non disponible",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_98": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_99": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_100": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_101": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_102": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_103": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_104": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_105": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_106": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_107": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_108": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "PM",
+    "CA",
+    "CO"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_109": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_110": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_111": {
+   "bloc": "Non disponible",
+   "types": [
+    "Valideur"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_112": {
+   "bloc": "Non disponible",
+   "types": [
+    "Valideur"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_114": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_115": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_116": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_117": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_118": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_119": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_120": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_121": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_122": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_123": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_124": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_125": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_126": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_127": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_128": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_129": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_130": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_131": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_132": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_133": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_134": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_135": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_136": {
+   "bloc": "Entrepreneur",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_137": {
+   "bloc": "Entrepreneur",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_138": {
+   "bloc": "Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_139": {
+   "bloc": "Toutes pièces jointes",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_140": {
+   "bloc": "si societeEtrangere : true ET si salarieEnFrance : false ET etablieEnFrance : false",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_141": {
+   "bloc": "si societeEtrangere : true ET si salarieEnFrance : false ET etablieEnFrance : false",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_142": {
+   "bloc": "si societeEtrangere : true ET si salarieEnFrance : false ET etablieEnFrance : false",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_143": {
+   "bloc": "si societeEtrangere : true ET si salarieEnFrance : false ET etablieEnFrance : false",
+   "types": [
+    "PM",
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_144": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "PM",
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_145": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_146": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_147": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_148": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_149": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_150": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "PP",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_151": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_152": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_153": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_154": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_155": {
+   "bloc": "Augmentation du capital social",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_156": {
+   "bloc": "Diminution du capital social",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_157": {
+   "bloc": "Cession parts sociales/actions",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_158": {
+   "bloc": "Transformation",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_159": {
+   "bloc": "Transformation",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_160": {
+   "bloc": "Transformation",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_161": {
+   "bloc": "Fusion/scission apport partiel",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_162": {
+   "bloc": "Fusion/scission apport partiel",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_163": {
+   "bloc": "Fusion/scission apport partiel",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_164": {
+   "bloc": "Fusion transfrontalière en vue de l’obtention de l’attestation de conformité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_165": {
+   "bloc": "Fusion transfrontalière en vue de l’obtention de l’attestation de conformité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_166": {
+   "bloc": "Fusion transfrontalière en vue de l’obtention de l’attestation de conformité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_167": {
+   "bloc": "Fusion transfrontalière en vue de l’obtention de l’attestation de conformité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_168": {
+   "bloc": "Fusion transfrontalière en vue de l’obtention de l’attestation de conformité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_169": {
+   "bloc": "Fusion transfrontalière pour obtenir un certificat de légalité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_170": {
+   "bloc": "Fusion transfrontalière pour obtenir un certificat de légalité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_171": {
+   "bloc": "Fusion transfrontalière pour obtenir un certificat de légalité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_172": {
+   "bloc": "Fusion transfrontalière pour obtenir un certificat de légalité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_173": {
+   "bloc": "Fusion transfrontalière pour obtenir un certificat de légalité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_174": {
+   "bloc": "Fusion transfrontalière pour obtenir un certificat de légalité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_175": {
+   "bloc": "Fusion transfrontalière pour obtenir un certificat de légalité",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_176": {
+   "bloc": "Informations générales",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_177": {
+   "bloc": "Informations générales",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_178": {
+   "bloc": "Informations générales",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_179": {
+   "bloc": "Informations générales",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_180": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_181": {
+   "bloc": "Informations générales",
+   "types": [
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_182": {
+   "bloc": "si societeEtrangere : true ET si salarieEnFrance : false ET etablieEnFrance : false ET detentionParticipationSocieteFrancaise : true",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_183": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_184": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_185": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_186": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_187": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_188": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_189": {
+   "bloc": "Augmentation du capital social | Diminution du capital social | Cession parts sociales/actions | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_190": {
+   "bloc": "Augmentation du capital social | Diminution du capital social | Cession parts sociales/actions | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_191": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_192": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_193": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_194": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_195": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_196": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_197": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_198": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_199": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_200": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_201": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_202": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_203": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_204": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_205": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "PP",
+    "CO"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_206": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "PP",
+    "CO"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_207": {
+   "bloc": "Non disponible",
+   "types": [
+    "GU"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_209": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PP",
+    "CO"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_210": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "PP",
+    "CO"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_211": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "CO"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_212": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_213": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "PP",
+    "CA",
+    "DA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_214": {
+   "bloc": "Informations de l'entreprise",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_215": {
+   "bloc": "Informations de l'entreprise",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_216": {
+   "bloc": "Informations de l'entreprise",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_217": {
+   "bloc": "Informations de l'entreprise",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_218": {
+   "bloc": "Informations de l'entreprise",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_219": {
+   "bloc": "Informations de l'entreprise",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_220": {
+   "bloc": "Documents liés à la confidentialité",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_221": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP",
+    "CA",
+    "DA"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_222": {
+   "bloc": "Inscriptions d'office",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_223": {
+   "bloc": "Inscriptions d'office",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": false
+  },
+  "PJ_225": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_226": {
+   "bloc": "Toutes pièces jointes",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_227": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "CA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_228": {
+   "bloc": "Non disponible",
+   "types": [
+    "PM",
+    "PP",
+    "DCA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_229": {
+   "bloc": "Non disponible",
+   "types": [
+    "PM",
+    "PP",
+    "DCA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_230": {
+   "bloc": "Composition - Description du pouvoir",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_231": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "DCA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_232": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "DCA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_233": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "DCA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_234": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "DCA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_235": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "DCA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_236": {
+   "bloc": "Détails du compte annuel",
+   "types": [
+    "DCA"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_237": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_238": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_239": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_240": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_241": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true
+  },
+  "PJ_242": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota Bene : Ce document ne sera pas diffusé par le Registre National des Entreprises."
+  },
+  "PJ_243": {
+   "bloc": "Etablissement",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota Bene : Ce document sera diffusé par le Registre National des Entreprises en accès libre."
+  },
+  "PJ_244": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota Bene : Ce document ne sera pas diffusé par le Registre National des Entreprises en accès libre"
+  },
+  "PJ_245": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM",
+    "PP",
+    "CO"
+   ],
+   "propose_mandataire": true,
+   "commentaire": "Document générique proposé uniquement pour les formalités de correction afin de ne pas diffuser de documents par le RNE"
+  },
+  "PJ_248": {
+   "bloc": "Informations générales | Toutes pièces jointes",
+   "types": [
+    "PM",
+    "PP",
+    "CO"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota Bene : Ce document ne sera pas diffusé par le Registre National des Entreprises."
+  },
+  "PJ_249": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota Bene : Ce document ne sera pas diffusé par le Registre National des Entreprises.",
+   "commentaire": "À proposer uniquement lors d’un rapport de radiation d’office"
+  },
+  "PJ_250": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true,
+   "commentaire": "À proposer uniquement lors d’un rapport de radiation d’office"
+  },
+  "PJ_251": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true,
+   "commentaire": "À proposer uniquement lors d’un rapport de radiation d’office"
+  },
+  "PJ_252": {
+   "bloc": "Informations générales",
+   "types": [
+    "PM"
+   ],
+   "propose_mandataire": true,
+   "nota": "Nota Bene : Ce document ne sera pas diffusé par le Registre National des Entreprises.",
+   "commentaire": "À proposer uniquement lors d’un rapport de radiation d’office"
+  }
+ },
+ "types_document": [
+  "PJ_01",
+  "PJ_02",
+  "PJ_03",
+  "PJ_04",
+  "PJ_05",
+  "PJ_06",
+  "PJ_07",
+  "PJ_08",
+  "PJ_09",
+  "PJ_10",
+  "PJ_11",
+  "PJ_12",
+  "PJ_13",
+  "PJ_14",
+  "PJ_15",
+  "PJ_16",
+  "PJ_17",
+  "PJ_18",
+  "PJ_19",
+  "PJ_20",
+  "PJ_22",
+  "PJ_23",
+  "PJ_24",
+  "PJ_25",
+  "PJ_26",
+  "PJ_29",
+  "PJ_31",
+  "PJ_33",
+  "PJ_34",
+  "PJ_35",
+  "PJ_36",
+  "PJ_37",
+  "PJ_38",
+  "PJ_39",
+  "PJ_40",
+  "PJ_41",
+  "PJ_42",
+  "PJ_43",
+  "PJ_45",
+  "PJ_46",
+  "PJ_47",
+  "PJ_48",
+  "PJ_49",
+  "PJ_51",
+  "PJ_52",
+  "PJ_53",
+  "PJ_54",
+  "PJ_55",
+  "PJ_56",
+  "PJ_57",
+  "PJ_58",
+  "PJ_59",
+  "PJ_60",
+  "PJ_61",
+  "PJ_62",
+  "PJ_63",
+  "PJ_64",
+  "PJ_65",
+  "PJ_67",
+  "PJ_68",
+  "PJ_69",
+  "PJ_70",
+  "PJ_72",
+  "PJ_73",
+  "PJ_74",
+  "PJ_75",
+  "PJ_76",
+  "PJ_77",
+  "PJ_78",
+  "PJ_79",
+  "PJ_80",
+  "PJ_81",
+  "PJ_82",
+  "PJ_83",
+  "PJ_85",
+  "PJ_86",
+  "PJ_87",
+  "PJ_90",
+  "PJ_91",
+  "PJ_92",
+  "PJ_93",
+  "PJ_94",
+  "PJ_95",
+  "PJ_96",
+  "PJ_97",
+  "PJ_98",
+  "PJ_99",
+  "PJ_100",
+  "PJ_101",
+  "PJ_102",
+  "PJ_103",
+  "PJ_104",
+  "PJ_105",
+  "PJ_106",
+  "PJ_107",
+  "PJ_108",
+  "PJ_109",
+  "PJ_110",
+  "PJ_111",
+  "PJ_112",
+  "PJ_113",
+  "PJ_114",
+  "PJ_115",
+  "PJ_116",
+  "PJ_117",
+  "PJ_118",
+  "PJ_119",
+  "PJ_120",
+  "PJ_121",
+  "PJ_122",
+  "PJ_123",
+  "PJ_124",
+  "PJ_125",
+  "PJ_126",
+  "PJ_127",
+  "PJ_128",
+  "PJ_129",
+  "PJ_130",
+  "PJ_131",
+  "PJ_132",
+  "PJ_133",
+  "PJ_134",
+  "PJ_135",
+  "PJ_136",
+  "PJ_137",
+  "PJ_138",
+  "PJ_139",
+  "PJ_140",
+  "PJ_141",
+  "PJ_142",
+  "PJ_143",
+  "PJ_144",
+  "PJ_145",
+  "PJ_146",
+  "PJ_147",
+  "PJ_148",
+  "PJ_149",
+  "PJ_150",
+  "PJ_151",
+  "PJ_152",
+  "PJ_153",
+  "PJ_154",
+  "PJ_155",
+  "PJ_156",
+  "PJ_157",
+  "PJ_158",
+  "PJ_159",
+  "PJ_160",
+  "PJ_161",
+  "PJ_162",
+  "PJ_163",
+  "PJ_164",
+  "PJ_165",
+  "PJ_166",
+  "PJ_167",
+  "PJ_168",
+  "PJ_169",
+  "PJ_170",
+  "PJ_171",
+  "PJ_172",
+  "PJ_173",
+  "PJ_174",
+  "PJ_175",
+  "PJ_176",
+  "PJ_177",
+  "PJ_178",
+  "PJ_179",
+  "PJ_180",
+  "PJ_181",
+  "PJ_182",
+  "PJ_183",
+  "PJ_184",
+  "PJ_185",
+  "PJ_186",
+  "PJ_187",
+  "PJ_188",
+  "PJ_189",
+  "PJ_190",
+  "PJ_191",
+  "PJ_192",
+  "PJ_193",
+  "PJ_194",
+  "PJ_195",
+  "PJ_196",
+  "PJ_197",
+  "PJ_198",
+  "PJ_199",
+  "PJ_200",
+  "PJ_201",
+  "PJ_202",
+  "PJ_203",
+  "PJ_204",
+  "PJ_205",
+  "PJ_206",
+  "PJ_207",
+  "PJ_209",
+  "PJ_210",
+  "PJ_211",
+  "PJ_212",
+  "PJ_213",
+  "PJ_214",
+  "PJ_215",
+  "PJ_216",
+  "PJ_217",
+  "PJ_218",
+  "PJ_219",
+  "PJ_220",
+  "PJ_221",
+  "PJ_222",
+  "PJ_223",
+  "PJ_224",
+  "PJ_225",
+  "PJ_226",
+  "PJ_227",
+  "PJ_228",
+  "PJ_229",
+  "PJ_230",
+  "PJ_231",
+  "PJ_232",
+  "PJ_233",
+  "PJ_234",
+  "PJ_235",
+  "PJ_236",
+  "PJ_237",
+  "PJ_238",
+  "PJ_239",
+  "PJ_240",
+  "PJ_241",
+  "PJ_242",
+  "PJ_243",
+  "PJ_244",
+  "PJ_245",
+  "PJ_246",
+  "PJ_247",
+  "PJ_248",
+  "PJ_249",
+  "PJ_250",
+  "PJ_251",
+  "PJ_252",
+  "PJ_1001",
+  "PJ_1002",
+  "PJ_1003",
+  "PJ_1004",
+  "PJ_1005",
+  "PJ_1006",
+  "PJ_1007",
+  "PJ_1034",
+  "PJ_1035",
+  "PJ_1052",
+  "PJ_1054",
+  "PJ_1055",
+  "PJ_1056",
+  "PJ_1061",
+  "PJ_1062",
+  "PJ_1068",
+  "PJ_1069",
+  "PJ_1074",
+  "PJ_1078",
+  "PJ_1079",
+  "PJ_1082",
+  "PJ_1085",
+  "PJ_1086",
+  "PJ_1087",
+  "PJ_1091",
+  "PJ_1092",
+  "PJ_1093",
+  "PJ_1094",
+  "PJ_1097",
+  "PJ_1133",
+  "PJ_1134",
+  "PJ_1135",
+  "PJ_1138",
+  "PJ_1142",
+  "PJ_1150",
+  "PJ_1151",
+  "PJ_1152",
+  "PJ_1153",
+  "PJ_1154",
+  "PJ_1155",
+  "PJ_1156",
+  "PJ_1157",
+  "PJ_1158",
+  "PJ_1159",
+  "PJ_1160",
+  "PJ_1161",
+  "PJ_1163",
+  "PJ_1164",
+  "PJ_1169",
+  "PJ_1170",
+  "PJ_1173",
+  "PJ_1175",
+  "PJ_1177",
+  "PJ_1178",
+  "PJ_1179",
+  "PJ_1180",
+  "PJ_1185",
+  "PJ_1189",
+  "PJ_1190",
+  "PJ_1192",
+  "PJ_1193",
+  "PJ_1194",
+  "PJ_1195",
+  "PJ_1196",
+  "PJ_1197",
+  "PJ_1198",
+  "PJ_1199",
+  "PJ_1200",
+  "PJ_1201",
+  "PJ_1202",
+  "PJ_1203",
+  "PJ_1204",
+  "PJ_1220",
+  "PJ_1230",
+  "PJ_1243",
+  "PJ_1247"
+ ]
+}

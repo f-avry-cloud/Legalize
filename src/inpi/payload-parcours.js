@@ -78,6 +78,31 @@ function descriptionIndividu(r, role) {
   };
 }
 
+/**
+ * Volet social d'un dirigeant travailleur non salarié (affiliation « 3 ») :
+ * régime d'assurance maladie actuel, activité simultanée, activité
+ * antérieure. Exigé par le guichet (constaté par dépôt de test).
+ */
+function voletSocial(v, dateEffet) {
+  const oui = (x) => x === true || x === 'true';
+  return {
+    natureVoletSocial: 'TNS',
+    dateEffetVoletSocial: dateEffet || undefined,
+    indicateurRegimeAssuranceMaladie: Boolean(v.organisme_maladie) && v.organisme_maladie !== 'aucun',
+    organismeAssuranceMaladieActuelle: v.organisme_maladie && v.organisme_maladie !== 'aucun' ? v.organisme_maladie : undefined,
+    autreOrganisme: v.organisme_maladie === 'X' ? v.autre_organisme : undefined,
+    // « aucune » : pas d'activité exercée en parallèle.
+    activiteSimultanee: Boolean(v.activite_simultanee) && v.activite_simultanee !== 'aucune',
+    statutExerciceActiviteSimultanee: v.activite_simultanee && v.activite_simultanee !== 'aucune' ? v.activite_simultanee : undefined,
+    autreActiviteExercee: v.activite_simultanee === '9' ? v.autre_activite : undefined,
+    indicateurActiviteAnterieure: Boolean(v.activite_anterieure),
+    activiteAnterieureActivite: v.activite_anterieure || undefined,
+    activiteAnterieureDateFin: dateInpi(v.activite_anterieure_fin),
+    activiteAnterieureCodeGeo: v.activite_anterieure_insee || undefined,
+    demandeAcre: oui(v.acre),
+  };
+}
+
 /** Bloc pouvoir d'une personne nommée, d'après le formulaire ciblé. */
 function pouvoirEntrant(e, r, forme, dateEffet) {
   const role = roleEntrant(e, r, forme);
@@ -109,6 +134,7 @@ function pouvoirEntrant(e, r, forme, dateEffet) {
     individu: {
       descriptionPersonne: descriptionIndividu({ ...r, nom: r.nom || e.nom }, role),
       adresseDomicile: adresseInpi(r.adresse),
+      voletSocial: String(r.forme_sociale) === '3' ? voletSocial(r.volet || {}, dateEffet) : undefined,
     },
   };
 }

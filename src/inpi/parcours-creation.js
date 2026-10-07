@@ -123,7 +123,7 @@ function sousRequisPersonne(role, f) {
   if (f?.famille === 'sarl' && role === '30') l.push('situation_matrimoniale');
   return l;
 }
-const SOUS_REQUIS_PM = ['denomination', 'siren', 'greffe', 'adresse.codePostal', 'adresse.commune'];
+const SOUS_REQUIS_PM = ['denomination', 'siren', 'forme_juridique_code', 'greffe', 'adresse.codePostal', 'adresse.commune'];
 const SOUS_REQUIS_BE = ['nom', 'prenoms', 'date_naissance', 'lieu_naissance', 'adresse.codePostal', 'adresse.commune', 'modalites'];
 
 /** Régimes d'imposition proposés : ceux qui concernent une société. */
@@ -288,7 +288,8 @@ const LIBELLES_SOUS = {
   code_insee_naissance: 'code INSEE de la commune de naissance', nationalite: 'nationalité', forme_sociale: 'affiliation sociale',
   situation_matrimoniale: 'situation matrimoniale', numero_secu: 'numéro de sécurité sociale', 'adresse.codePostal': 'code postal du domicile',
   'adresse.commune': 'commune du domicile', denomination: 'dénomination', siren: 'SIREN', greffe: 'greffe d’immatriculation',
-  modalites: 'modalités de contrôle', representant: 'représentant permanent',
+  modalites: 'modalités de contrôle', representant: 'représentant permanent', forme_juridique_code: 'forme juridique',
+  'volet.organisme_maladie': 'régime d’assurance maladie actuel', 'volet.activite_simultanee': 'activité exercée en parallèle',
 };
 
 const lire = (o, chemin) => chemin.split('.').reduce((v, k) => (v == null ? v : v[k]), o);
@@ -309,9 +310,13 @@ function manquantsPersonne(p = {}, sousRequis = []) {
   const out = sousRequis.filter((k) => vide(lire(p, k)));
   if (neEnFrance(p) && vide(p.code_insee_naissance)) out.push('code_insee_naissance');
   // Constaté : le guichet exige le NIR d'un dirigeant affilié de nationalité française.
-  if (sousRequis.includes('forme_sociale') && String(p.forme_sociale) === '3' && francais(p)) {
-    if (vide(p.numero_secu)) out.push('numero_secu');
-    else if (!nirValide(p.numero_secu)) return [...out, 'numero_secu (clé invalide)'];
+  if (sousRequis.includes('forme_sociale') && String(p.forme_sociale) === '3') {
+    // Travailleur non salarié : le volet social est dû (régime maladie, activité parallèle).
+    for (const k of ['volet.organisme_maladie', 'volet.activite_simultanee']) if (vide(lire(p, k))) out.push(k);
+    if (francais(p)) {
+      if (vide(p.numero_secu)) out.push('numero_secu');
+      else if (!nirValide(p.numero_secu)) out.push('numero_secu (clé invalide)');
+    }
   }
   return out;
 }

@@ -33,7 +33,7 @@ const ADR = { numVoie: '10', typeVoie: 'RUE', voie: 'de la Paix', codePostal: '7
 const PP = (nom, prenoms) => ({
   nom, prenoms, genre: '1', date_naissance: '1980-03-04', lieu_naissance: 'Lyon', code_insee_naissance: '69123',
   pays_naissance: 'FRANCE', nationalite: 'Française', forme_sociale: '3', numero_secu: '180036912300130',
-  situation_matrimoniale: '1', adresse: ADR,
+  situation_matrimoniale: '1', adresse: ADR, volet: { organisme_maladie: 'R', activite_simultanee: 'aucune' },
 });
 
 /** Un dossier de création complet, prêt à déposer. */
@@ -100,6 +100,7 @@ function dossier(forme, extra = {}) {
   verifier('personne complète : rien ne manque', creation.manquants(gerant, PP('MARTIN', 'Paul')).length === 0, creation.manquants(gerant, PP('MARTIN', 'Paul')));
   verifier('affilié sans NIR : le NIR manque', creation.manquants(gerant, { ...PP('MARTIN', 'Paul'), numero_secu: '' }).includes('numéro de sécurité sociale'));
   verifier('NIR à la clé fausse : signalé', creation.manquants(gerant, { ...PP('MARTIN', 'Paul'), numero_secu: '180036912300100' }).some((m) => /clé invalide/.test(m)));
+  verifier('travailleur non salarié sans volet social : signalé', creation.manquants(gerant, { ...PP('MARTIN', 'Paul'), volet: {} }).includes('régime d’assurance maladie actuel'));
   verifier('non affilié : NIR non exigé', creation.manquants(gerant, { ...PP('MARTIN', 'Paul'), forme_sociale: '1', numero_secu: '' }).length === 0);
   verifier('né à l’étranger : pas de code INSEE exigé', creation.manquants(gerant, { ...PP('MARTIN', 'Paul'), pays_naissance: 'BELGIQUE', code_insee_naissance: '' }).length === 0);
   const be = g.find((x) => x.op === 'c_be').champs[0];
@@ -127,7 +128,7 @@ function dossier(forme, extra = {}) {
       entrants: [{ nom: 'HOLDING FICTIVE', nature: 'PM', fonction: '73' }, { nom: 'Paul MARTIN', nature: 'PP', fonction: '53' }] },
     r: {
       c_siege: { adresse_siege: ADR, domiciliataire_denomination: 'DOMICILIATION', domiciliataire_siren: '794 598 813' },
-      c_dirigeants: { entrant_0: { denomination: 'HOLDING FICTIVE', siren: '794598813', greffe: 'Paris', adresse: ADR }, entrant_1: PP('MARTIN', 'Paul') },
+      c_dirigeants: { entrant_0: { denomination: 'HOLDING FICTIVE', siren: '794598813', forme_juridique_code: '5710', greffe: 'Paris', adresse: ADR }, entrant_1: PP('MARTIN', 'Paul') },
     },
   })).corps.content;
   const p = c.personneMorale;
@@ -137,6 +138,8 @@ function dossier(forme, extra = {}) {
   verifier('catégorie d’activité sur quatre niveaux', ['07', '04', '08', '02'].every((v, i) => p.etablissementPrincipal.activites[0][`categorisationActivite${i + 1}`] === v));
   verifier('fonds acheté : origine « achat »', p.etablissementPrincipal.activites[0].origine.typeOrigine === '3');
   verifier('domiciliataire déclaré', p.adresseEntreprise.entrepriseDomiciliataire?.siren === '794598813' && p.adresseEntreprise.caracteristiques.domiciliataire === true);
+  verifier('volet social du travailleur non salarié transmis', p.composition.pouvoirs[1].individu.voletSocial?.natureVoletSocial === 'TNS'
+    && p.composition.pouvoirs[1].individu.voletSocial.organismeAssuranceMaladieActuelle === 'R' && p.composition.pouvoirs[1].individu.voletSocial.activiteSimultanee === false);
   verifier('NIR transmis sans espaces', p.composition.pouvoirs[1].individu.descriptionPersonne.numeroSecu === '180036912300130');
   verifier('bénéficiaire effectif : statut « ajout », capital ventilé', p.beneficiairesEffectifs[0].statutPourLaFormalite === '1' && p.beneficiairesEffectifs[0].modalite.partsDirectesPleinePropriete === 100);
   verifier('journal du référentiel repris tel quel', p.identite.publicationLegale.journalPublication === 'actu-juridique.fr');

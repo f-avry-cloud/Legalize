@@ -1,6 +1,6 @@
 {
-  "_source": "Dépôts de test sur le serveur de démonstration du Guichet unique (guichet-unique-demo.inpi.fr), 4 octobre 2026 : modifications et cessations sur la fiche réelle d'une SAS connue du serveur, créations sur des sociétés fictives produites par le générateur de l'application. Chaque dossier a été supprimé aussitôt créé.",
-  "date": "2026-10-04",
+  "_source": "Dépôts de test sur le serveur de démonstration du Guichet unique (guichet-unique-demo.inpi.fr), 4 et 7 octobre 2026 : modifications et cessations sur la fiche réelle d'une SAS connue du serveur, créations sur des sociétés fictives produites par le générateur de l'application. Chaque dossier a été supprimé aussitôt créé.",
+  "date": "2026-10-07",
   "constats": [
     "Le serveur ne contrôle aucune pièce jointe : un dossier sans procès-verbal ni statuts est accepté, signé et passe en attente de paiement. Les pièces sont examinées ensuite par le greffe, qui adresse alors une demande de régularisation.",
     "Le serveur revalide toute la société à chaque formalité, pas seulement le point modifié. Même les données déjà inscrites au registre peuvent être refusées (constaté : commissaires aux comptes sans lieu d’immatriculation, code postal incohérent) et bloquer n’importe quelle modification tant qu’elles ne sont pas corrigées.",
@@ -8,7 +8,10 @@
     "Le code de l’événement dépend de la forme sociale : une modification de dirigeant déclarée en 34M sur une SAS est enregistrée en 35M.",
     "Le serveur de démonstration ne connaît qu’un échantillon de sociétés : une société récente, ou même ancienne mais absente de l’échantillon, y est « introuvable ».",
     "La présence du frais DE052 (« dépôt d’actes ») indique que le greffe attend un acte : c’est le seul signal que l’API donne sur les pièces.",
-    "Attention : une erreur interne du serveur (code 500) peut laisser derrière elle un dossier créé. Après une telle erreur, il faut relire la liste des dossiers avant de recommencer, sous peine de doublon."
+    "Attention : une erreur interne du serveur (code 500) peut laisser derrière elle un dossier créé. Après une telle erreur, il faut relire la liste des dossiers avant de recommencer, sous peine de doublon.",
+    "Le journal d’annonces légales doit appartenir au référentiel du guichet (plus de 1 100 titres) ; un titre absent est accepté sous « Autre », avec son nom en clair.",
+    "Un dirigeant affilié comme travailleur non salarié (affiliation « 3 ») doit porter son numéro de sécurité sociale, dont la clé est contrôlée, s’il est de nationalité française ; lors d’une nomination, son volet social (régime d’assurance maladie, activité parallèle) est aussi exigé.",
+    "Un dirigeant personne morale doit porter sa forme juridique ; une société administrateur d’une SA, son représentant permanent."
   ],
   "socle_modification": [
     [
@@ -1251,6 +1254,18 @@
     [
       "Gérant de SARL : situation matrimoniale",
       "pouvoirs[].individu.descriptionPersonne.situationMatrimoniale"
+    ],
+    [
+      "Journal d’annonces légales pris dans le référentiel du guichet",
+      "identite.publicationLegale.journalPublication"
+    ],
+    [
+      "Dirigeant personne morale : forme juridique, greffe, SIREN",
+      "composition.pouvoirs[].entreprise"
+    ],
+    [
+      "Travailleur non salarié : numéro de sécurité sociale",
+      "pouvoirs[].individu.descriptionPersonne.numeroSecu"
     ]
   ]
 }

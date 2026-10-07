@@ -16,7 +16,9 @@
     "test:catalogue": "node scripts/test-catalogue-formalites.js",
     "test:parcours": "node scripts/test-parcours.js",
     "test:suppression": "node scripts/test-suppression.js",
-    "test:creation": "node scripts/test-creation.js"
+    "test:creation": "node scripts/test-creation.js",
+    "test:exhaustivite": "node scripts/test-exhaustivite.js",
+    "banc:guichet": "node scripts/banc-guichet.js"
   },
   "engines": {
     "node": ">=20"

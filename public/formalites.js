@@ -584,6 +584,7 @@ function champCorps(champ, valeur, contexte) {
             ${[['0', 'Non applicable'], ['1', 'Sans affiliation sociale'], ['3', 'Avec affiliation sociale']]
               .map(([v, l]) => `<option value="${v}" ${p.forme_sociale === v ? 'selected' : ''}>${l}</option>`).join('')}
           </select></label>
+          <label class="field">N° de sécurité sociale (si affilié)<input name="${champ.name}.numero_secu" value="${esc(p.numero_secu || '')}" maxlength="21" inputmode="numeric"></label>
         </div>
         <div class="row">
           <label class="field">Adresse — n° et voie<input name="${champ.name}.adresse.voie" value="${esc(a.voie || '')}"></label>

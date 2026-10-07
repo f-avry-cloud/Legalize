@@ -24,6 +24,7 @@
 
 const catalogue = require('./catalogue-evenements');
 const creation = require('./parcours-creation');
+const audit = require('./audit-pieces');
 
 /* ------------------------------------------------------------- opérations */
 
@@ -198,7 +199,9 @@ const REGLES = {
   '02M': {
     questions: ['forme_creation', 'associe_unique_nature', 'entrants', 'premiers_dirigeants_statuts', 'siege_occupation', 'domiciliataire_meme_greffe',
       'apports_numeraire', 'apports_nature', 'commissaire_apports'],
-    pieces: PIECES_CREATION,
+    pieces: Object.fromEntries(Object.entries(PIECES_CREATION).filter(([c]) => !['PJ_05', 'PJ_31'].includes(c))),
+    // L'évaluation des apports en nature vaut aussi sans activité ; la fiche ne la porte pas.
+    ajouts: { PJ_05: { condition: 'en cas d’apports en nature', regle: PIECES_CREATION.PJ_05 } },
     personnes: true,
   },
   '11M': {
@@ -227,7 +230,9 @@ const REGLES = {
     pieces: {
       PJ_180: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'numeraire')),
       PJ_163: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'nature' && t.commissaire_apports !== false)),
-      PJ_191: () => false,
+      // Cas rare (société par actions, apport en nature sans commissaire,
+      // évaluation antérieure) : seul le cabinet sait s'il s'applique.
+      PJ_191: (t) => (t.capital_modalite === 'nature' && t.commissaire_apports === false ? 'manuel' : false),
       PJ_57: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'compensation')),
       PJ_155: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation'),
       PJ_156: (t) => def(t.capital_sens, () => t.capital_sens === 'reduction'),
@@ -251,7 +256,6 @@ const REGLES = {
     questions: ['siege_occupation', 'fonds_origine', 'activite_reglementee'],
     pieces: {
       PJ_25: (t) => def(t.siege_occupation, () => t.siege_occupation === 'locaux'),
-      PJ_29: (t) => def(t.siege_occupation, () => t.siege_occupation === 'domiciliation'),
       PJ_33: (t) => def(t.fonds_origine, () => t.fonds_origine === 'achat'),
       PJ_36: (t) => def(t.fonds_origine, () => t.fonds_origine === 'apport'),
       PJ_37: (t) => def(t.fonds_origine, () => t.fonds_origine === 'location'),
@@ -345,6 +349,8 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
     pieces.set(cle, {
       cle, code, categorie,
       court: base.court, libelle: base.libelle, nota: base.nota || null,
+      // Documents que le guichet accepte à la place (passeport pour la carte d'identité…).
+      variantes: audit.variantes(code),
       par_le_cabinet: base.par_le_cabinet,
       condition: null, question: null,
       pour: [nomOperation(op)],
@@ -362,8 +368,8 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
     for (const p of f.pieces_selon_le_cas) {
       if (regles.personnes && PIECES_PAR_PERSONNE.has(p.code)) continue;
       const regle = regles.pieces?.[p.code];
-      if (regle) {
-        const due = regle(t);
+      const due = regle ? regle(t) : 'manuel';
+      if (due !== 'manuel') {
         if (due === true) ajouter(p.code, p.code, 'obligatoire', op, { raison: p.condition });
         else if (due === undefined) {
           ajouter(p.code, p.code, 'a_preciser', op, { condition: p.condition, question: questionDe(op, p.code) });
@@ -380,6 +386,15 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
       const due = a.regle(t);
       if (due === true) ajouter(code, code, 'obligatoire', op, { raison: a.condition });
       else if (due === undefined) ajouter(code, code, 'a_preciser', op, { condition: a.condition, question: questionAjout(a) });
+    }
+    // Compléments proposés par le guichet selon la situation.
+    if (OPERATIONS[op]?.creation && t.apports_numeraire === true) {
+      ajouter('PJ_138', 'PJ_138', 'facultative', op, { raison: audit.COMPLEMENTS.PJ_138 });
+    }
+    const natureSansCommissaire = (OPERATIONS[op]?.creation && t.apports_nature === true)
+      || (op === '15M' && t.capital_modalite === 'nature');
+    if (natureSansCommissaire && t.commissaire_apports === false) {
+      ajouter('PJ_195', 'PJ_195', 'facultative', op, { raison: audit.COMPLEMENTS.PJ_195 });
     }
     if (OPERATIONS[op]?.creation && creation.forme(t)?.unique && t.associe_unique_nature === 'PM') {
       ajouter('PJ_188', 'PJ_188', 'facultative', op, { raison: 'proposée par le guichet quand l’associé unique est une société' });
@@ -534,7 +549,7 @@ function champs(ops, t, fiche, rep = {}) {
         // Les mêmes exigences qu'à la création : le guichet revalide chaque pouvoir ajouté.
         liste.push(e.nature === 'PM'
           ? { name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: 'personne_morale', requis: true, prerempli: { denomination: e.nom },
-            sous_requis: ['denomination', 'greffe', 'adresse.codePostal', 'adresse.commune'] }
+            sous_requis: ['denomination', 'forme_juridique_code', 'greffe', 'adresse.codePostal', 'adresse.commune'] }
           : { name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: 'personne', requis: true, prerempli: separerNom(e.nom),
             sous_requis: ['nom', 'prenoms', 'genre', 'date_naissance', 'lieu_naissance', 'adresse.codePostal', 'adresse.commune', 'forme_sociale'] });
       }

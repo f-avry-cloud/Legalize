@@ -14,6 +14,7 @@ const { definition, piecesExigees, champsActifs } = require('./catalogue');
 const { sirenValide, formaterSiren } = require('./normalize');
 const { formeJuridique, roleDepuisFonction, enumeration, TYPES_FORMALITE } = require('./referentiels');
 const { config } = require('./config');
+const { manquants } = require('./parcours-creation');
 
 const JOUR_MS = 24 * 3600 * 1000;
 
@@ -98,6 +99,17 @@ function controler(dossier, maintenant = new Date()) {
       if (!p.date_naissance) bloq(`Date de naissance manquante pour « ${champ.label} » (exigée par le RNE).`, champ.name);
       if (!p.nationalite) alerte(`Nationalité manquante pour « ${champ.label} ».`, champ.name);
       if (!p.adresse?.codePostal) alerte(`Adresse personnelle incomplète pour « ${champ.label} ».`, champ.name);
+    }
+    // Ce que le guichet exige de toute personne physique déclarée (constaté
+    // par dépôts de test) : sexe, code INSEE de naissance, affiliation, et le
+    // numéro de sécurité sociale d'une personne affiliée de nationalité française.
+    const personnes = champ.type === 'personne' ? [[champ.label, reponses[champ.name]]]
+      : champ.type === 'liste' ? (reponses[champ.name] || []).flatMap((ligne, i) => (champ.champs || [])
+        .filter((sc) => sc.type === 'personne').map((sc) => [`${champ.label} n° ${i + 1}`, ligne?.[sc.name]])) : [];
+    for (const [libelle, p] of personnes) {
+      if (estVide(p)) continue;
+      const manque = manquants({ type: 'personne', sous_requis: ['genre', 'forme_sociale'] }, p);
+      if (manque.length) bloq(`À compléter pour « ${libelle} » : ${manque.join(', ')} (exigé par le guichet).`, champ.name);
     }
     if (champ.type === 'date' && reponses[champ.name]) {
       const d = new Date(reponses[champ.name]);

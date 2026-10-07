@@ -47,6 +47,8 @@ async function vueCatalogueFormalites() {
       <ul>${d.verifications.socle_creation.map((c) => `<li>${esc(c.libelle)}</li>`).join('')}</ul>` : ''}
     </details>` : ''}
 
+    ${d.couverture_pieces ? catCouverture(d.couverture_pieces) : ''}
+
     <div class="cat-barre">
       <input type="search" id="cat-recherche" placeholder="Chercher une formalité, une pièce, un code (11M, PJ_08, statuts…)"
         value="${esc(catEtat.recherche)}" autocomplete="off">
@@ -66,6 +68,28 @@ async function vueCatalogueFormalites() {
 
   catAfficher();
   catBrancher();
+}
+
+/**
+ * Chaque pièce que le guichet propose pour une société a reçu une décision :
+ * demandée par une opération, acceptée en variante, proposée en complément
+ * ou écartée avec son motif. Rien n'est laissé au hasard.
+ */
+function catCouverture(liste) {
+  const groupe = (decision) => liste.filter((x) => x.decision === decision);
+  const ligne = (x, detail) => `<li><code>${esc(x.code)}</code> ${esc(x.libelle || 'sans libellé')}${detail ? ` <span class="muted">— ${esc(detail)}</span>` : ''}</li>`;
+  return `<details class="cat-source cat-sonde">
+    <summary><strong>Couverture des pièces du guichet</strong>
+      <span class="muted">— ${liste.length} pièces proposées pour une société, toutes traitées</span></summary>
+    <p class="muted">Le dictionnaire du guichet ne dit pas quelle pièce va avec quelle formalité. Chaque pièce qu’il propose pour une personne morale a donc reçu ici une décision, vérifiée par un test automatique.</p>
+    <p><strong>${groupe('utilisee').length} demandées par le parcours</strong>, selon l’opération et la situation.</p>
+    <details><summary><strong>${groupe('variante').length} acceptées à la place d’une autre</strong> (choisies au chargement)</summary>
+      <ul>${groupe('variante').map((x) => ligne(x, `au lieu de ${x.de}`)).join('')}</ul></details>
+    <details><summary><strong>${groupe('complement').length} proposées en complément</strong></summary>
+      <ul>${groupe('complement').map((x) => ligne(x, x.motif)).join('')}</ul></details>
+    <details><summary><strong>${groupe('exclue').length} écartées</strong>, avec leur motif</summary>
+      <ul>${groupe('exclue').map((x) => ligne(x, x.motif)).join('')}</ul></details>
+  </details>`;
 }
 
 /** Les fiches qui correspondent à la recherche, rangées par famille. */

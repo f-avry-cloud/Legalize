@@ -330,7 +330,7 @@ function pcPieces() {
       for (const fichier of input.files) {
         const form = new FormData();
         form.append('cle', ligne.dataset.cle);
-        form.append('code', ligne.dataset.code);
+        form.append('code', ligne.querySelector('.pc-variante')?.value || ligne.dataset.code);
         form.append('version', ligne.querySelector('.pc-provisoire')?.checked ? 'provisoire' : 'definitive');
         form.append('fichier', fichier);
         await pcMaj('POST', `/parcours/${d.id}/pieces`, form, true);
@@ -371,17 +371,19 @@ function pcPiece(p) {
         ${precision}
       </div>
       ${p.categorie !== 'a_preciser' ? `<div class="pc-piece-actions">
+        ${p.variantes?.length ? `<select class="pc-variante" title="Document fourni"><option value="${esc(p.code)}">${esc(p.court)}</option>
+          ${p.variantes.map((v) => `<option value="${esc(v.code)}" title="${esc(v.libelle)}">ou : ${esc(v.court)}</option>`).join('')}</select>` : ''}
         <label class="pc-provisoire-l"><input type="checkbox" class="pc-provisoire"> provisoire</label>
         <label class="btn pc-bouton-charger">${fait ? 'Ajouter' : 'Charger'}<input type="file" accept="application/pdf,.pdf" class="pc-charger" multiple hidden></label>
       </div>` : ''}
     </div>
-    ${p.fichiers.map((f) => pcFichier(f)).join('')}
+    ${p.fichiers.map((f) => pcFichier(f, f.code !== p.code ? [p, ...(p.variantes || [])].find((v) => v.code === f.code)?.court : null)).join('')}
   </div>`;
 }
 
-function pcFichier(f) {
+function pcFichier(f, variante = null) {
   return `<div class="pc-fichier">
-    <a href="/api/formalites/pieces/${f.id}/download" target="_blank" rel="noopener">${esc(f.nom)}</a>
+    <a href="/api/formalites/pieces/${f.id}/download" target="_blank" rel="noopener">${esc(f.nom)}</a>${variante ? ` <span class="badge">${esc(variante)}</span>` : ''}
     ${f.version === 'provisoire'
       ? `<span class="badge pc-badge-provisoire">provisoire</span> <button class="lien" data-version="definitive" data-piece="${f.id}">passer en définitive</button>`
       : `<button class="lien" data-version="provisoire" data-piece="${f.id}">marquer provisoire</button>`}
@@ -520,7 +522,9 @@ function pcSelect(k, label, v, options) {
   return `<label class="field">${label}<select data-k="${k}"><option value=""></option>${options.map(([o, l]) => `<option value="${o}" ${String(v ?? '') === o ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
 }
 
-const PC_AFFILIATION = [['3', 'Affilié au titre de ce mandat (assimilé salarié ou TNS)'], ['1', 'Non affilié (mandat non rémunéré…)'], ['0', 'Sans objet']];
+const PC_AFFILIATION = [['3', 'Travailleur non salarié (gérant majoritaire de SARL, gérant de SNC ou de société civile…)'], ['1', 'Non affilié comme TNS (président de SAS, gérant minoritaire, mandat non rémunéré…)'], ['0', 'Sans objet']];
+const PC_ORGANISMES = [['R', 'Régime général'], ['N', 'Non salarié non agricole (SSI)'], ['A', 'Agricole (MSA)'], ['E', 'ENIM (marins)'], ['X', 'Autre'], ['aucun', 'Aucun']];
+const PC_SIMULTANEE = [['aucune', 'Aucune'], ['1', 'Salarié'], ['2', 'Salarié agricole'], ['A', 'Non salarié non agricole'], ['B', 'Retraité'], ['C', 'Pensionné d’invalidité'], ['9', 'Autre']];
 const PC_SITUATIONS = [['1', 'Célibataire'], ['4', 'Marié(e)'], ['5', 'Pacsé(e)'], ['6', 'En concubinage'], ['2', 'Divorcé(e)'], ['3', 'Veuf(ve)']];
 
 /** Identité d'une personne physique. `p` préfixe les clés (représentant permanent). */
@@ -536,14 +540,21 @@ function pcPersonne(p, prefixe = '', c = {}) {
       ${pcIn(k('pays_naissance'), 'Pays de naissance', p.pays_naissance || 'FRANCE')}</div>
     <div class="row">${pcIn(k('nationalite'), 'Nationalité', p.nationalite || 'Française', 'list="pc-nationalites"')}
       ${prefixe ? '' : pcSelect(k('forme_sociale'), 'Affiliation sociale', p.forme_sociale, PC_AFFILIATION)}
-      ${prefixe ? '' : pcIn(k('numero_secu'), 'N° de sécurité sociale (si affilié)', p.numero_secu, 'maxlength="21" inputmode="numeric"')}
+      ${prefixe ? '' : pcIn(k('numero_secu'), 'N° de sécurité sociale (si TNS)', p.numero_secu, 'maxlength="21" inputmode="numeric"')}
       ${prefixe || !sarl ? '' : pcSelect(k('situation_matrimoniale'), 'Situation matrimoniale', p.situation_matrimoniale, PC_SITUATIONS)}</div>
+    ${prefixe ? '' : `<div class="pc-tns" ${String(p.forme_sociale) === '3' ? '' : 'hidden'}><div class="pc-sous-titre">Volet social du travailleur non salarié</div>
+      <div class="row">${pcSelect(k('volet.organisme_maladie'), 'Régime d’assurance maladie actuel', p.volet?.organisme_maladie, PC_ORGANISMES)}
+        ${pcSelect(k('volet.activite_simultanee'), 'Activité exercée en parallèle', p.volet?.activite_simultanee, PC_SIMULTANEE)}
+        ${pcIn(k('volet.activite_anterieure'), 'Activité non salariée antérieure (le cas échéant)', p.volet?.activite_anterieure)}
+        ${pcIn(k('volet.activite_anterieure_fin'), 'Fin de cette activité', p.volet?.activite_anterieure_fin, 'type="date"')}</div></div>`}
     <div class="pc-sous-titre">Domicile</div>${pcAdresse(p.adresse || {}, k('adresse.'))}`;
   return identite + pcDatalistes();
 }
 
 function pcPersonneMorale(p, c = {}) {
-  return `<div class="row">${pcIn('denomination', 'Dénomination', p.denomination || p.nom)}${pcIn('siren', 'SIREN', p.siren, 'inputmode="numeric"')}${pcIn('greffe', 'Greffe d’immatriculation', p.greffe, 'placeholder="PARIS, NANTERRE…"')}</div>
+  return `<div class="row">${pcIn('denomination', 'Dénomination', p.denomination || p.nom)}${pcIn('siren', 'SIREN', p.siren, 'inputmode="numeric"')}
+      ${pcSelect('forme_juridique_code', 'Forme juridique', p.forme_juridique_code, (etatInpi?.formes_juridiques || []).map((f) => [f.code, esc(f.libelle)]))}
+      ${pcIn('greffe', 'Greffe d’immatriculation', p.greffe, 'placeholder="PARIS, NANTERRE…"')}</div>
     <div class="pc-sous-titre">Siège</div>${pcAdresse(p.adresse || {}, 'adresse.')}
     ${c.representant_requis ? `<div class="pc-sous-titre">Représentant permanent</div>${pcPersonne(p.representant || {}, 'representant.')}` : ''}`;
 }
@@ -769,6 +780,13 @@ document.addEventListener('input', (e) => {
     }
   }
   if ($q.dataset?.champ === 'activite_principale') pcDiffere(() => pcSuggestionsActivite($q.closest('.pc-groupe')));
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.dataset?.k === 'forme_sociale') {
+    const $tns = e.target.closest('.pc-sous')?.querySelector('.pc-tns');
+    if ($tns) $tns.hidden = e.target.value !== '3';
+  }
 });
 
 document.addEventListener('click', (e) => {

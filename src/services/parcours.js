@@ -165,7 +165,7 @@ async function lire(id) {
 }
 
 function resumePiece(p) {
-  return { id: p.id, nom: p.filename, taille: p.taille, version: p.version || 'definitive', a_signer: Boolean(p.a_signer), date: p.created_at, analysee: Boolean(p.extraction) };
+  return { id: p.id, code: p.code, nom: p.filename, taille: p.taille, version: p.version || 'definitive', a_signer: Boolean(p.a_signer), date: p.created_at, analysee: Boolean(p.extraction) };
 }
 
 function rempli(v, c) {

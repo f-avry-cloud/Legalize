@@ -753,6 +753,30 @@ const LIBELLES_COURTS = {
   PJ_85: 'Déclaration de régularité et de conformité',
   PJ_90: 'Convention de gérance-mandat',
   PJ_97: 'Liste des sièges sociaux antérieurs',
+  PJ_12: 'Passeport',
+  PJ_213: 'Extrait d’acte de naissance',
+  PJ_63: 'Déclaration de non-condamnation',
+  PJ_64: 'Attestation de filiation',
+  PJ_14: 'Carte de séjour',
+  PJ_15: 'Carte de résident',
+  PJ_13: 'Visa',
+  PJ_22: 'Extrait d’immatriculation dans un État de l’UE',
+  PJ_23: 'Titre justifiant de l’existence de la société',
+  PJ_24: 'Acte désignant le représentant permanent',
+  PJ_93: 'PV de désignation des administrateurs',
+  PJ_92: 'Certificat de dépôt des fonds',
+  PJ_56: 'Certificat du dépositaire (augmentation de capital)',
+  PJ_09: 'Copie de l’annonce légale',
+  PJ_52: 'Décision certifiée conforme',
+  PJ_152: 'PV de mise à jour des statuts',
+  PJ_91: 'Rapport du commissaire à la transformation',
+  PJ_134: 'PV de clôture de liquidation enregistré',
+  PJ_59: 'Récépissé de dépôt des comptes de liquidation',
+  PJ_74: 'Décision d’inscription par l’autorité compétente',
+  PJ_244: 'Certificat d’adressage',
+  PJ_138: 'Liste des souscripteurs',
+  PJ_195: 'Décision de ne pas désigner de commissaire aux apports',
+  PJ_188: 'Kbis de l’associé unique',
 };
 
 /**
@@ -853,6 +877,7 @@ function catalogueComplet() {
 module.exports = {
   FAMILLES, PIECES_COMMUNES, PIECES_GENEREES, DETAIL,
   fiche, catalogueComplet, verificationsCommunes,
+  decrirePiece: (code, condition) => decrirePiece([code, condition]),
   piecesCommunes: () => PIECES_COMMUNES.map((p) => decrirePiece([p.code, p.condition])),
   piecesGenerees: () => PIECES_GENEREES.map((p) => decrirePiece([p.code, p.condition])),
 };

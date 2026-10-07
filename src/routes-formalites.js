@@ -103,6 +103,7 @@ router.get('/formalites/evenements', (req, res) => {
     pieces_generees: evenements.piecesGenerees(),
     formalites: evenements.catalogueComplet(),
     verifications: evenements.verificationsCommunes(),
+    couverture_pieces: require('./inpi/audit-pieces').couverture(),
     sources: {
       evenements: 'Référentiel INPI — dictionnaire des données mandataire, onglet « events ».',
       informations: 'Déduites du même dictionnaire : drapeaux déclencheurs et champs conditionnés par chaque événement.',
