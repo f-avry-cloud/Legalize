@@ -66,7 +66,7 @@ async function essai(nom, { operations, siren, typologie, reponses }) {
     ['Création d’une SAS présidée par une société, avec un directeur général', { operations: ['01M'], typologie: sas.typologie, reponses: sas.reponses }],
     ['Augmentation de capital et nomination d’un directeur général (société existante)', {
       operations: ['15M', '35M'], siren: banc.SIREN_DEMO,
-      typologie: { ...modif.typologie, capital_sens: 'augmentation', capital_modalite: 'numeraire', statuts_modifies: false },
+      typologie: { ...modif.typologie, capital_sens: 'augmentation', capital_modalite: 'numeraire', statuts_modifies: false, manuel: { PJ_55: false } },
       reponses: { commun: modif.reponses.commun, '15M': modif.reponses['15M'], '35M': modif.reponses['35M'], _registre: modif.reponses._registre },
     }],
   ];
