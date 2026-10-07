@@ -32,6 +32,37 @@ async function getEtatInpi() {
   return etatInpi;
 }
 
+/* --------------------------------------------------------- suppression */
+
+const STATUTS_NON_PAYES = ['RECEIVED', 'SIGNATURE_PENDING', 'SIGNED', 'PAYMENT_PENDING'];
+
+/**
+ * Bouton de suppression, si le dossier peut l'être : brouillon, copie
+ * importée de l'INPI, ou dépôt non encore payé (supprimé aussi chez l'INPI).
+ */
+function boutonSupprimerFormalite(f) {
+  const importe = f.origine === 'inpi' || f.importe;
+  if (f.statut !== 'BROUILLON' && !importe && !STATUTS_NON_PAYES.includes(f.statut)) return '';
+  const avertissement = importe
+    ? 'Retirer la copie locale de ce dossier ? Il reste sur le guichet unique ; un nouvel import le ramènerait.'
+    : (f.statut === 'BROUILLON'
+      ? 'Supprimer ce brouillon et ses pièces ?'
+      : 'Ce dossier est déposé mais pas encore payé : il sera supprimé ici ET sur le guichet unique. Continuer ?');
+  return `<button class="btn-sm btn-danger" data-suppr-formalite="${f.id}" data-avertissement="${esc(avertissement)}">Supprimer le dossier</button>`;
+}
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-suppr-formalite]');
+  if (!b) return;
+  e.stopPropagation();
+  if (!confirm(b.dataset.avertissement)) return;
+  try {
+    const r = await api('DELETE', `/formalites/${b.dataset.supprFormalite}`);
+    toast(r.message || 'Dossier supprimé.');
+    if (location.hash === '#/formalites') render(); else location.hash = '#/formalites';
+  } catch (err) { toast(err.message, true); }
+});
+
 function badgeStatut(f) {
   const classe = COULEUR_BADGE[f.statut_couleur] || 'brouillon';
   return `<span class="badge ${classe}">${esc(f.statut_libelle || f.statut)}</span>`;
@@ -208,7 +239,7 @@ function listeHtml(dossiers) {
 function lignesListeHtml(dossiers) {
   if (!dossiers.length) return '<div class="empty">Aucun dossier ne correspond</div>';
   return `<table>
-    <thead><tr><th>Dossier</th><th>Société</th><th>Statut</th><th>Liasse</th><th>Échéance</th></tr></thead>
+    <thead><tr><th>Dossier</th><th>Société</th><th>Statut</th><th>Liasse</th><th>Échéance</th><th></th></tr></thead>
     <tbody>${dossiers.map((f) => `
       <tr class="clickable" onclick="location.hash='#/formalites/${f.id}'">
         <td><strong>${esc(f.type_libelle)}</strong>
@@ -217,6 +248,7 @@ function lignesListeHtml(dossiers) {
         <td>${badgeStatut(f)}</td>
         <td class="nowrap"><span class="ref">${esc(f.numero_liasse || '—')}</span></td>
         <td>${echeanceHtml(f)}</td>
+        <td class="right">${boutonSupprimerFormalite(f)}</td>
       </tr>`).join('')}</tbody></table>`;
 }
 
@@ -667,7 +699,7 @@ async function formaliteDetail(id) {
         <div class="muted">${esc(f.societe_nom || '')} ${f.siren ? `· ${esc(f.fiche?.siren_formate || f.siren)}` : ''}
           ${def?.evenement ? `· évènement ${esc(def.evenement)}` : ''}</div>
       </div>
-      <div>${badgeStatut(f)}${f.simule ? ' <span class="badge brouillon">simulation</span>' : ''}</div>
+      <div>${badgeStatut(f)}${f.simule ? ' <span class="badge brouillon">simulation</span>' : ''} ${boutonSupprimerFormalite(f)}</div>
     </div>
 
     ${f.regularisations?.length ? `<div class="alerte alerte-bloquant">
@@ -933,7 +965,7 @@ function detailImporte(f, etat) {
         <h1>${esc(f.type_libelle || 'Formalité')}</h1>
         <div class="muted">${esc(f.libelle || '')}${f.siren ? ` · ${esc(f.siren)}` : ''}</div>
       </div>
-      <div>${badgeStatut(f)}<span class="badge non_applicable">importée</span></div>
+      <div>${badgeStatut(f)}<span class="badge non_applicable">importée</span> ${boutonSupprimerFormalite(f)}</div>
     </div>
 
     <div class="alerte alerte-info">

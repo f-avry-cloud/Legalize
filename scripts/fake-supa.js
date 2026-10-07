@@ -95,6 +95,7 @@ const faux = {
   async qCount() { return 0; },
   async uploadFile(chemin, buffer) { fichiers.set(chemin, buffer); },
   async downloadFile(chemin) { return fichiers.get(chemin) || Buffer.from(''); },
+  async removeFiles(chemins) { (chemins || []).forEach((c) => fichiers.delete(c)); return (chemins || []).length; },
   BUCKET: 'documents',
 };
 

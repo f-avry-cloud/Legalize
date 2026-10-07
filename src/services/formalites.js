@@ -16,7 +16,7 @@
  * de plus à tenir à jour, il se construit tout seul.
  */
 
-const { supabase, q, uploadFile, downloadFile } = require('../supa');
+const { supabase, q, uploadFile, downloadFile, removeFiles } = require('../supa');
 const rne = require('../inpi/rne');
 const guichet = require('../inpi/guichet');
 const { definition, piecesExigees, champsDecrits } = require('../inpi/catalogue');
@@ -529,14 +529,37 @@ async function tableauDeBord() {
   };
 }
 
+/** Statuts d'un dépôt qui n'a pas encore été payé : l'INPI permet de le supprimer. */
+const STATUTS_NON_PAYES = ['RECEIVED', 'SIGNATURE_PENDING', 'SIGNED', 'PAYMENT_PENDING'];
+
+/**
+ * Supprime un dossier.
+ *  - brouillon : supprimé, avec ses pièces ;
+ *  - dossier importé de l'INPI : seule la copie locale est retirée (un nouvel
+ *    import la ramènerait) ;
+ *  - dossier déposé non payé : supprimé aussi chez l'INPI ;
+ *  - dossier payé, en cours d'instruction ou terminé : conservé, un dépôt
+ *    effectif reste tracé.
+ */
 async function supprimer(id) {
-  const formalite = await db(supabase.from('formalites').select('statut').eq('id', id).single());
-  if (formalite.statut !== 'BROUILLON') {
-    const e = new Error('Seul un brouillon peut être supprimé ; un dossier déposé reste tracé.');
-    e.status = 409; throw e;
+  const formalite = await db(supabase.from('formalites').select('id, statut, origine, inpi_id, simule').eq('id', id).single());
+  let message = 'Dossier supprimé.';
+  if (formalite.statut !== 'BROUILLON' && formalite.origine !== 'inpi') {
+    if (!STATUTS_NON_PAYES.includes(formalite.statut)) {
+      const e = new Error('Ce dossier a été payé ou est en cours d’instruction au greffe : il est conservé pour la traçabilité.');
+      e.status = 409; throw e;
+    }
+    if (formalite.inpi_id && !formalite.simule) {
+      await guichet.supprimer(formalite.inpi_id);
+      message = 'Dossier supprimé, ici et sur le guichet unique.';
+    }
+  } else if (formalite.origine === 'inpi') {
+    message = 'Copie locale supprimée. Le dossier existe toujours sur le guichet unique ; un nouvel import le ramènerait.';
   }
+  const pieces = await db(supabase.from('formalite_pieces').select('filepath').eq('formalite_id', id));
   await db(supabase.from('formalites').delete().eq('id', id).select());
-  return { ok: true };
+  try { await removeFiles(pieces.map((p) => p.filepath)); } catch { /* fichier orphelin sans conséquence */ }
+  return { ok: true, message };
 }
 
 /* ------------------------------------------- import du compte mandataire */

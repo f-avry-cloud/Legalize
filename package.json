@@ -14,7 +14,8 @@
     "inpi:test": "node scripts/inpi-connexion.js",
     "test:rmt": "node scripts/test-rmt.js",
     "test:catalogue": "node scripts/test-catalogue-formalites.js",
-    "test:parcours": "node scripts/test-parcours.js"
+    "test:parcours": "node scripts/test-parcours.js",
+    "test:suppression": "node scripts/test-suppression.js"
   },
   "engines": {
     "node": ">=20"

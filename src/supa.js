@@ -59,4 +59,14 @@ async function downloadFile(path) {
   return Buffer.from(await data.arrayBuffer());
 }
 
-module.exports = { supabase, q, qCount, uploadFile, downloadFile, BUCKET };
+/** Retire des fichiers du bucket ; un fichier déjà absent n'est pas une erreur. */
+async function removeFiles(paths) {
+  const liste = [...new Set((paths || []).filter(Boolean))];
+  for (let i = 0; i < liste.length; i += 100) {
+    const { error } = await supabase.storage.from(BUCKET).remove(liste.slice(i, i + 100));
+    if (error) throw new Error(`Stockage : ${error.message}`);
+  }
+  return liste.length;
+}
+
+module.exports = { supabase, q, qCount, uploadFile, downloadFile, removeFiles, BUCKET };

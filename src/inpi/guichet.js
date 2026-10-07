@@ -296,6 +296,16 @@ async function listerTout({ service = 'formalites', itemsPerPage = 50, maxPages 
   return tout;
 }
 
+/**
+ * Supprime une formalité non payée chez l'INPI (contrat d'interface, § 3.17).
+ * Une formalité payée ne se supprime pas : elle s'abandonne ou se régularise.
+ */
+async function supprimer(id) {
+  if (String(id).startsWith('SIM-')) return { ok: true, simule: true };
+  await appel('guichet', { methode: 'DELETE', chemin: chemin(config.guichet.paths.formalite, { id }) });
+  return { ok: true };
+}
+
 async function listerPieces(id) {
   if (String(id).startsWith('SIM-')) return [];
   const rep = await appel('guichet', { chemin: chemin(config.guichet.paths.piecesFormalite, { id }) });
@@ -306,6 +316,6 @@ async function listerPieces(id) {
 
 module.exports = {
   deposer, mettreAJour, lire, lister, listerTout, regularisations, historique,
-  signer, synthese, payer, ajouterPiece, listerPieces,
+  signer, synthese, payer, ajouterPiece, listerPieces, supprimer,
   normaliserFormalite, simulationActive, motifSimulation,
 };

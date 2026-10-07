@@ -8,6 +8,7 @@ const { supabase, q, qCount, uploadFile, downloadFile } = require('./supa');
 const { OPERATION_TYPES } = require('./definitions');
 const { genererDocuments, operationDir } = require('./services/generation');
 const { comparerVersions } = require('./services/compare');
+const suppression = require('./services/suppression');
 
 const router = express.Router();
 
@@ -153,9 +154,14 @@ router.put('/societes/:id', async (req, res) => {
   res.json(societe);
 });
 
+// Suppression en deux temps : ce qui disparaîtra, puis la confirmation par
+// la dénomination retapée (voir services/suppression.js).
+router.get('/societes/:id/suppression', async (req, res) => {
+  res.json(await suppression.impact(Number(req.params.id)));
+});
+
 router.delete('/societes/:id', async (req, res) => {
-  await q(supabase.from('societes').delete().eq('id', req.params.id).select());
-  res.json({ ok: true });
+  res.json(await suppression.supprimerSociete(Number(req.params.id), { confirmation: req.body?.confirmation }));
 });
 
 router.post('/societes/:id/dirigeants', async (req, res) => {

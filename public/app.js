@@ -263,7 +263,7 @@ async function societesList() {
       <button class="btn-primary" id="btn-new">Nouvelle société</button></div>
     <div class="card">
       ${societes.length ? `<table>
-        <thead><tr><th>Dénomination</th><th>Forme</th><th>Capital</th><th>Groupe</th><th>Statut</th><th>Opérations en cours</th></tr></thead>
+        <thead><tr><th>Dénomination</th><th>Forme</th><th>Capital</th><th>Groupe</th><th>Statut</th><th>Opérations en cours</th><th></th></tr></thead>
         <tbody>${societes.map((s) => `
           <tr class="clickable" onclick="location.hash='#/societes/${s.id}'">
             <td><strong>${esc(s.denomination)}</strong><div class="sub">${esc(s.siren || 'SIREN à renseigner')} ${s.rcs_ville ? `RCS ${esc(s.rcs_ville)}` : ''}</div></td>
@@ -272,9 +272,51 @@ async function societesList() {
             <td>${esc(s.groupe_nom || '—')}</td>
             <td>${badge(s.statut, { active: 'Active', en_constitution: 'En constitution', radiee: 'Radiée' })}</td>
             <td>${s.operations_en_cours || '—'}</td>
+            <td class="right"><button class="btn-sm btn-danger" data-suppr-societe="${s.id}" title="Supprimer la société">Supprimer</button></td>
           </tr>`).join('')}</tbody></table>` : '<div class="empty">Aucune société. Créez la première fiche.</div>'}
     </div>`;
   document.getElementById('btn-new').onclick = () => societeDialog(groupes);
+  document.querySelectorAll('[data-suppr-societe]').forEach((b) => {
+    b.onclick = (e) => { e.stopPropagation(); supprimerSocieteDialog(Number(b.dataset.supprSociete)); };
+  });
+}
+
+/**
+ * Suppression d'une société : ce qui disparaîtra, ce qui reste, puis la
+ * confirmation par la dénomination retapée.
+ */
+async function supprimerSocieteDialog(id) {
+  const im = await api('GET', `/societes/${id}/suppression`);
+  const n = im.supprime;
+  const ligne = (nb, un, plusieurs) => (nb ? `<li>${nb} ${nb > 1 ? plusieurs : un}</li>` : '');
+  const efface = [
+    ligne(n.dirigeants, 'dirigeant', 'dirigeants'),
+    ligne(n.associes, 'associé', 'associés'),
+    ligne(n.operations, 'opération', 'opérations'),
+    ligne(n.documents, 'document généré', 'documents générés'),
+    ligne(n.factures, 'facture', 'factures'),
+    ligne(n.ecritures_registre, 'écriture du registre des titres', 'écritures du registre des titres'),
+    ligne(n.extraits_certifies, 'extrait certifié du registre', 'extraits certifiés du registre'),
+  ].join('');
+  openDialog(`
+    <h3>Supprimer ${esc(im.denomination)} ?</h3>
+    <form id="f">
+      <p>${efface ? 'Seront définitivement effacés, avec la fiche :' : 'Seule la fiche de la société sera effacée.'}</p>
+      ${efface ? `<ul class="suppr-liste">${efface}</ul>` : ''}
+      ${n.extraits_certifies ? '<div class="alerte alerte-bloquant">Des extraits certifiés du registre ont été émis : leurs liens de vérification ne fonctionneront plus.</div>' : ''}
+      ${im.conserve.formalites ? `<p class="muted">${im.conserve.formalites} dossier(s) de formalité sont conservés, détachés de la société.</p>` : ''}
+      ${im.conserve.participations ? `<p class="muted">${im.conserve.participations} participation(s) d’autres sociétés dans celle-ci gardent leur dénomination, sans le lien vers la fiche.</p>` : ''}
+      <label class="field">Pour confirmer, tapez la dénomination : <strong>${esc(im.denomination)}</strong>
+        <input name="confirmation" autocomplete="off" required></label>
+      <div class="dialog-actions">
+        <button type="button" onclick="this.closest('dialog').close()">Annuler</button>
+        <button class="btn-danger" type="submit">Supprimer définitivement</button>
+      </div>
+    </form>`, async (form) => {
+    await api('DELETE', `/societes/${id}`, { confirmation: form.confirmation.value });
+    toast(`${im.denomination} supprimée.`);
+    if (location.hash === '#/societes') render(); else location.hash = '#/societes';
+  });
 }
 
 function societeDialog(groupes, societe) {
@@ -331,6 +373,7 @@ async function societeDetail(id) {
         <h1>${esc(s.denomination)}</h1></div>
       <div>
         <button id="btn-edit">Modifier</button>
+        <button id="btn-supprimer-societe" class="btn-danger">Supprimer</button>
         <button id="btn-registre" class="btn-primary">Registre des titres</button>
         <a class="btn btn-primary" href="#/operations/new?societe=${s.id}">Nouvelle opération</a>
       </div>
@@ -376,6 +419,7 @@ async function societeDetail(id) {
     </div>`;
 
   document.getElementById('btn-edit').onclick = () => societeDialog(groupes, s);
+  document.getElementById('btn-supprimer-societe').onclick = () => supprimerSocieteDialog(s.id);
   const btnRegistre = document.getElementById('btn-registre');
   if (btnRegistre) btnRegistre.onclick = () => { location.hash = `#/societes/${s.id}/registre`; };
   document.getElementById('btn-dirigeant').onclick = () => openDialog(`

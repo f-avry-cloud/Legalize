@@ -139,6 +139,7 @@ function pcAfficher() {
         <h1 class="titre-page">${esc(d.operations.map((o) => o.nom).join(' + '))}</h1>
         <p class="muted">${esc(d.societe.denomination || 'Nouvelle société')}${d.societe.siren ? ` · ${esc(d.societe.siren)}` : ''}${d.societe.forme ? ` · ${esc(d.societe.forme)}` : ''}</p>
       </div>
+      <div>${boutonSupprimerFormalite({ id: d.id, statut: d.statut })}</div>
     </div>
     ${d.incompatibilites.length ? `<div class="alerte alerte-bloquant">${d.incompatibilites.map(esc).join('<br>')}</div>` : ''}
     <nav class="pc-etapes" role="tablist">

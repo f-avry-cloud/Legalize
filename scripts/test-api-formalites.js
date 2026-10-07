@@ -152,8 +152,16 @@ function verifier(nom, condition, detail) {
     etat.corps.formes_juridiques.length > 100 && Object.keys(etat.corps.types_voie).length > 100,
     { formes: etat.corps.formes_juridiques.length, voies: Object.keys(etat.corps.types_voie || {}).length });
 
+  // Un dossier payé ou instruit reste tracé ; un dépôt non payé se supprime
+  // (et l'INPI le supprime aussi, contrat d'interface § 3.17).
+  const ligne = tables.formalites.find((f) => String(f.id) === String(id));
+  const statutReel = ligne.statut;
+  ligne.statut = 'VALIDATED';
+  const refusSuppression = await appel('DELETE', `/formalites/${id}`);
+  verifier('un dossier validé n’est pas supprimable', refusSuppression.statut === 409, refusSuppression.corps);
+  ligne.statut = statutReel;
   const suppression = await appel('DELETE', `/formalites/${id}`);
-  verifier('un dossier déposé n’est pas supprimable', suppression.statut === 409, suppression.corps);
+  verifier('un dépôt non payé est supprimable', suppression.statut === 200 && statutReel === 'PAYMENT_PENDING', { statut: statutReel, corps: suppression.corps });
 
   console.log('\nImport des formalités déjà présentes sur le compte INPI');
 
