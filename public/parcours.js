@@ -391,6 +391,15 @@ function pcPieces() {
   $c.querySelectorAll('[data-retirer]').forEach((b) => {
     b.onclick = () => { if (confirm('Retirer cette pièce ?')) pcMaj('DELETE', `/parcours/pieces/${b.dataset.retirer}`); };
   });
+  $c.querySelectorAll('.pc-rediger-pouvoir').forEach((b) => {
+    b.onclick = () => {
+      const $d = b.closest('.pc-pouvoir');
+      const mandataire = { nom: $d.querySelector('.pc-mand-nom').value.trim(), adresse: $d.querySelector('.pc-mand-adresse').value.trim() };
+      if (!mandataire.nom) { toast('Indiquez le nom du mandataire.', true); return; }
+      try { localStorage.setItem('legalize.mandataire', JSON.stringify(mandataire)); } catch { /* sans mémoire, tant pis */ }
+      pcMaj('POST', `/parcours/${d.id}/pouvoir`, { mandataire });
+    };
+  });
   $c.querySelectorAll('[data-concerne]').forEach((b) => {
     b.onclick = () => pcMaj('PUT', `/parcours/${d.id}/typologie`, { manuel: { [b.dataset.code]: b.dataset.concerne === 'oui' } });
   });
@@ -422,8 +431,27 @@ function pcPiece(p) {
         <label class="btn pc-bouton-charger">${fait ? 'Ajouter' : 'Charger'}<input type="file" accept="application/pdf,.pdf" class="pc-charger" multiple hidden></label>
       </div>` : ''}
     </div>
+    ${p.redigeable ? pcRedactionPouvoir(p) : ''}
     ${p.fichiers.map((f) => pcFichier(f, f.code !== p.code ? [p, ...(p.variantes || [])].find((v) => v.code === f.code)?.court : null)).join('')}
   </div>`;
+}
+
+/** Le cabinet, mémorisé sur ce poste pour les pouvoirs suivants. */
+function pcMandataire() {
+  try { return JSON.parse(localStorage.getItem('legalize.mandataire') || '{}'); } catch { return {}; }
+}
+
+function pcRedactionPouvoir(p) {
+  const m = pcMandataire();
+  return `<details class="pc-pouvoir" ${p.fichiers.length ? '' : 'open'}>
+    <summary>Rédiger le pouvoir automatiquement</summary>
+    <p class="muted pc-aide">Prérempli avec la société, son représentant légal et les formalités du dossier. Il est joint en version provisoire, « à faire signer » : chargez ensuite la version signée.</p>
+    <div class="row">
+      <label class="field">Mandataire (cabinet ou avocat)<input class="pc-mand-nom" value="${esc(m.nom || '')}" placeholder="Cabinet …, avocats"></label>
+      <label class="field">Adresse du mandataire<input class="pc-mand-adresse" value="${esc(m.adresse || '')}" placeholder="N°, voie, code postal, ville"></label>
+    </div>
+    <button type="button" class="btn pc-rediger-pouvoir">Rédiger le pouvoir</button>
+  </details>`;
 }
 
 function pcFichier(f, variante = null) {

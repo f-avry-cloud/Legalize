@@ -330,7 +330,7 @@ function def(reponse, regle) {
 const PIECES_PAR_PERSONNE = new Set(['PJ_11', 'PJ_12', 'PJ_17', 'PJ_20', 'PJ_80', 'PJ_40', 'PJ_41', 'PJ_230']);
 
 /** Pièces jamais exigées, mais utiles à déposer selon le dossier. */
-const FACULTATIVES = ['PJ_51'];
+const FACULTATIVES = [];
 
 const FONCTIONS = [
   ['dirigeant', 'Dirigeant (président, gérant, directeur général…)'],
@@ -496,6 +496,12 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
     for (const code of FACULTATIVES) ajouter(code, code, 'facultative', op);
   }
 
+  // Le cabinet dépose toujours comme mandataire (« mandataire ayant
+  // procuration ») : le pouvoir signé par le représentant légal est dû.
+  if (ops.length) {
+    ajouter('PJ_51', 'PJ_51', 'obligatoire', ops[0], { raison: 'le cabinet dépose en qualité de mandataire : pouvoir signé par le représentant légal', redigeable: true });
+    pieces.get('PJ_51').pour = ops.map(nomOperation);
+  }
   const liste = [...pieces.values()];
   return {
     operations: ops.map((code) => ({ code, nom: nomOperation(code), libelle_inpi: ficheOp(code).libelle })),

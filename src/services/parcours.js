@@ -234,6 +234,15 @@ async function ajouterPiece(id, { cle, code, version = 'definitive', a_signer = 
     taille: fichier.size, version: version === 'provisoire' ? 'provisoire' : 'definitive', a_signer: a_signer === true || a_signer === 'true',
   }).select().single());
   await journal(id, 'piece', `Pièce chargée : ${code} (${fichier.originalname})${piece.version === 'provisoire' ? ', version provisoire' : ''}.`);
+  // Une version définitive remplace les brouillons de la même pièce (pouvoir rédigé, acte provisoire…).
+  if (piece.version === 'definitive') {
+    const brouillons = (await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).eq('cle', cle || code)))
+      .filter((p) => p.version === 'provisoire' && p.id !== piece.id);
+    for (const p of brouillons) {
+      await db(supabase.from('formalite_pieces').delete().eq('id', p.id).select());
+      await journal(id, 'piece', `Version provisoire remplacée : ${p.filename}.`);
+    }
+  }
   return lire(id);
 }
 
@@ -251,6 +260,27 @@ async function retirerPiece(pieceId) {
   await db(supabase.from('formalite_pieces').delete().eq('id', pieceId).select());
   await journal(p.formalite_id, 'piece', `Pièce retirée : ${p.code} (${p.filename}).`);
   return lire(p.formalite_id);
+}
+
+/**
+ * Rédige le pouvoir du cabinet (PJ_51) à partir du dossier et le joint en
+ * version provisoire, à faire signer : la version signée le remplacera.
+ */
+async function redigerPouvoir(id, { mandataire = {} } = {}) {
+  const f = await charger(id); verifierOuvert(f);
+  const { genererPouvoir } = require('../inpi/pouvoir');
+  const res = parcours.resoudre(f.operations || [], f.typologie || {}, f.fiche || {}, f.reponses || {});
+  const buffer = genererPouvoir({ fiche: f.fiche || {}, typologie: f.typologie || {}, reponses: f.reponses || {} }, {
+    mandataire, operations: res.operations.map((o) => o.nom),
+  });
+  const chemin = `formalites/${id}/PJ_51_${Date.now()}_pouvoir.pdf`;
+  await uploadFile(chemin, buffer, 'application/pdf');
+  await db(supabase.from('formalite_pieces').insert({
+    formalite_id: id, code: 'PJ_51', cle: 'PJ_51', libelle: 'Pouvoir du mandataire', filename: 'pouvoir-a-signer.pdf', filepath: chemin,
+    taille: buffer.length, version: 'provisoire', a_signer: true,
+  }).select().single());
+  await journal(id, 'piece', `Pouvoir rédigé pour ${mandataire.nom || 'le cabinet'} : à faire signer par le représentant légal.`);
+  return lire(id);
 }
 
 /* ---------------------------------------------------------------- analyse */
@@ -354,6 +384,6 @@ function referentiels() {
 }
 
 module.exports = {
-  TYPE, creer, referentiels, lire, majOperations, majTypologie, majReponses,
+  TYPE, creer, referentiels, redigerPouvoir, lire, majOperations, majTypologie, majReponses,
   ajouterPiece, majPiece, retirerPiece, analyser, apercu, deposer,
 };

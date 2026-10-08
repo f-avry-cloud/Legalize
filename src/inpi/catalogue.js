@@ -165,7 +165,7 @@ const FORMALITES = {
       { code: 'PJ_17', obligatoire: true },
       { code: 'PJ_08', obligatoire: true },
       { code: 'PJ_04', obligatoire: true, condition: (r) => Boolean(r.apports_nature) },
-      { code: 'PJ_51', obligatoire: false, aide: 'Si le déposant n’est pas le représentant légal.' },
+      { code: 'PJ_51', obligatoire: true, aide: 'Le cabinet dépose en qualité de mandataire : pouvoir signé par le représentant légal.' },
     ],
     controles(r) {
       const alertes = [];

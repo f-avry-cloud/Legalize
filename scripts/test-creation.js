@@ -186,12 +186,18 @@ function dossier(forme, extra = {}) {
   abime.append('fichier', new Blob([Buffer.from('%PDF-1.4 abîmé')], { type: 'application/pdf' }), 'statuts.pdf');
   const refus = await appel('POST', `/parcours/${id}/pieces`, null, abime);
   verifier('PDF abîmé refusé dès le chargement', refus.statut === 422 && /illisible/.test(refus.corps?.error || ''), refus.corps);
+  verifier('pouvoir du mandataire exigé', lu.pieces.obligatoires.some((x) => x.code === 'PJ_51' && x.redigeable));
+  lu = (await appel('POST', `/parcours/${id}/pouvoir`, { mandataire: { nom: 'Cabinet Essai', adresse: '1 rue de Paris, 75001 Paris' } })).corps;
+  const brouillon = lu.pieces.obligatoires.find((x) => x.code === 'PJ_51')?.fichiers[0];
+  verifier('pouvoir rédigé, joint en provisoire « à faire signer »', brouillon?.version === 'provisoire' && brouillon.a_signer, brouillon);
   for (const p2 of lu.pieces.obligatoires) {
     const form = new FormData();
     form.append('cle', p2.cle); form.append('code', p2.code);
     form.append('fichier', new Blob([require('fs').readFileSync(require('path').join(__dirname, 'fixtures/piece-test.pdf'))], { type: 'application/pdf' }), `${p2.cle.replace(':', '-')}.pdf`);
     lu = (await appel('POST', `/parcours/${id}/pieces`, null, form)).corps;
   }
+  verifier('pouvoir signé chargé : le brouillon est remplacé', lu.pieces.obligatoires.find((x) => x.code === 'PJ_51').fichiers.length === 1
+    && lu.pieces.obligatoires.find((x) => x.code === 'PJ_51').fichiers[0].version === 'definitive');
   verifier('prêt à déposer', lu.etat.pret, lu.etat);
   const depot = await appel('POST', `/parcours/${id}/deposer`);
   verifier('dépôt effectué (simulé sans identifiants INPI)', depot.statut === 200 && depot.corps.inpi_id, depot.corps);

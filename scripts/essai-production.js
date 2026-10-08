@@ -38,10 +38,13 @@ async function essai(nom, { operations, siren, typologie, reponses }) {
   // Pièces « selon le cas » sans question : l'utilisateur indique qu'il n'est pas concerné.
   const manuel = Object.fromEntries(d.pieces.a_preciser.filter((p) => p.manuel).map((p) => [p.cle, false]));
   if (Object.keys(manuel).length) d = (await appel('PUT', `/parcours/${id}/typologie`, { manuel })).corps;
+  // Le pouvoir est rédigé par l'application : on charge ce PDF-là, pour vérifier que le guichet l'accepte.
+  const pouvoir = require('../src/inpi/pouvoir').genererPouvoir({ fiche: {}, typologie: e.typologie, reponses: e.reponses },
+    { mandataire: { nom: 'Cabinet Essai', adresse: '1 rue de Paris, 75001 Paris' }, operations: [nom] });
   for (const p of d.pieces.obligatoires) {
     const form = new FormData();
     form.append('cle', p.cle); form.append('code', p.code);
-    form.append('fichier', new Blob([PDF], { type: 'application/pdf' }), `${p.code}.pdf`);
+    form.append('fichier', new Blob([p.code === 'PJ_51' ? pouvoir : PDF], { type: 'application/pdf' }), `${p.code}.pdf`);
     d = (await appel('POST', `/parcours/${id}/pieces`, null, form)).corps;
   }
   d = (await appel('PUT', `/parcours/${id}/reponses`, reponses)).corps;
