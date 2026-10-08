@@ -35,6 +35,9 @@ async function essai(nom, { operations, siren, typologie, reponses }) {
   out.pieces_a_preciser = d.pieces.a_preciser.map((p) => p.court);
   out.pieces_facultatives = d.pieces.facultatives.map((p) => p.court);
   out.rubriques = d.champs.map((g) => `${g.titre} : ${g.champs.filter((c) => c.requis).length} obligatoire(s) sur ${g.champs.length}`);
+  // Pièces « selon le cas » sans question : l'utilisateur indique qu'il n'est pas concerné.
+  const manuel = Object.fromEntries(d.pieces.a_preciser.filter((p) => p.manuel).map((p) => [p.cle, false]));
+  if (Object.keys(manuel).length) d = (await appel('PUT', `/parcours/${id}/typologie`, { manuel })).corps;
   for (const p of d.pieces.obligatoires) {
     const form = new FormData();
     form.append('cle', p.cle); form.append('code', p.code);
@@ -74,7 +77,7 @@ async function essai(nom, { operations, siren, typologie, reponses }) {
   const seule = (op, nom, typologie = {}) => [nom, { operations: [op], siren: banc.SIREN_DEMO, typologie: { ...typologie },
     reponses: { commun: modif.reponses.commun, _registre: modif.reponses._registre, [op]: modif.reponses[op] } }];
   essais.push(seule('28M', 'Dissolution par l’associé unique (TUP)'), seule('38F', 'Déclaration des bénéficiaires effectifs'),
-    seule('60PMF', 'Nouvelle enseigne d’un établissement'));
+    seule('60PMF', 'Nouvelle enseigne d’un établissement'), seule('80PMF', 'Fermeture d’un établissement'), seule('41M', 'Fusion : radiation de la société absorbée'));
   const filtre = process.env.FILTRE || '';
   const resultats = [];
   for (const [nom, e] of essais.filter(([n]) => n.includes(filtre))) {
