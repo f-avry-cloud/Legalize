@@ -39,7 +39,6 @@ async function vueParcoursNouveau(query = '') {
   const [societes, operations] = await Promise.all([api('GET', '/societes'), apiParcours('GET', '/parcours/operations')]);
   const preselection = new Set((new URLSearchParams(query || '').get('ops') || '').split(',').filter(Boolean));
   const parCode = new Map(operations.map((o) => [o.code, o]));
-  const groupes = (typeof MEMO_OPERATIONS !== 'undefined' ? MEMO_OPERATIONS : [{ groupe: 'Opérations', items: operations.map((o) => [o.code, o.nom]) }]);
 
   $main.innerHTML = `
     <div class="entete-vue"><div>
@@ -63,16 +62,16 @@ async function vueParcoursNouveau(query = '') {
     </section>
 
     <section class="pc-bloc">
-      <h2><span class="memo-num">2</span> Les opérations <span class="muted pc-compte" id="pc-compte"></span></h2>
-      ${groupes.map((g) => `
-        <div class="memo-groupe"><h3 class="pc-sous-titre">${esc(g.groupe)}</h3><div class="memo-tuiles">
-          ${g.items.filter(([c]) => parCode.has(c)).map(([code, nom]) => `
-            <label class="memo-tuile pc-tuile ${preselection.has(code) ? 'choisie' : ''}">
-              <input type="checkbox" value="${esc(code)}" ${preselection.has(code) ? 'checked' : ''}>
-              <span class="memo-tuile-nom">${esc(nom)}</span>
-              <span class="memo-tuile-code">${esc(code)}${parCode.get(code).depot_automatique ? '' : ' · dépôt à finaliser sur le portail'}</span>
-            </label>`).join('')}
-        </div></div>`).join('')}
+      <h2><span class="memo-num">2</span> Les formalités <span class="muted pc-compte" id="pc-compte"></span></h2>
+      <div class="pc-choix-ops" id="pc-choix-ops">
+        <div class="pc-puces" id="pc-puces"></div>
+        <input id="pc-ops-q" type="search" placeholder="Rechercher une formalité : capital, gérant, siège, dissolution, 15M…" autocomplete="off" aria-expanded="false">
+        <div class="pc-ops-liste" id="pc-ops-liste" hidden></div>
+      </div>
+      <p class="muted pc-aide">Plusieurs formalités peuvent être choisies : elles seront déposées ensemble quand c’est possible.
+        <span class="pc-legende"><span class="badge pc-b-guidee">guidée</span> questions, pièces et informations ciblées ·
+        <span class="badge pc-b-fiche">pièces de la fiche</span> liste des pièces, à compléter vous-même ·
+        <span class="badge pc-b-portail">portail INPI</span> dépôt à finaliser sur le portail</span></p>
     </section>
 
     <div class="pc-pied-actions">
@@ -80,16 +79,62 @@ async function vueParcoursNouveau(query = '') {
       <span class="muted" id="pc-msg"></span>
     </div>`;
 
-  const compter = () => {
-    const n = $main.querySelectorAll('.pc-tuile input:checked').length;
-    document.getElementById('pc-compte').textContent = n ? `· ${n} choisie(s)` : '';
+  const choisies = new Set([...preselection].filter((c) => parCode.has(c)));
+  const motsCles = typeof MEMO_MOTS_CLES !== 'undefined' ? MEMO_MOTS_CLES : {};
+  const $q = document.getElementById('pc-ops-q');
+  const $liste = document.getElementById('pc-ops-liste');
+  let actif = -1;
+
+  const badges = (o) => `${o.guidee ? '<span class="badge pc-b-guidee">guidée</span>' : '<span class="badge pc-b-fiche">pièces de la fiche</span>'}
+    ${o.depot_automatique ? '' : '<span class="badge pc-b-portail">portail INPI</span>'}`;
+  const puces = () => {
+    document.getElementById('pc-puces').innerHTML = [...choisies].map((c) => `<span class="pc-puce">${esc(parCode.get(c).nom)}
+      <button type="button" data-retirer-op="${esc(c)}" title="Retirer">×</button></span>`).join('');
+    document.getElementById('pc-compte').textContent = choisies.size ? `· ${choisies.size} choisie(s)` : '';
+    document.querySelectorAll('[data-retirer-op]').forEach((b) => { b.onclick = () => { choisies.delete(b.dataset.retirerOp); puces(); filtrer(); }; });
   };
-  $main.querySelectorAll('.pc-tuile input').forEach((c) => {
-    c.onchange = () => { c.closest('.pc-tuile').classList.toggle('choisie', c.checked); compter(); };
-  });
-  compter();
+  const correspond = (o, mots) => {
+    const texte = pcSansAccent(`${o.nom} ${o.libelle_inpi || ''} ${o.code} ${motsCles[o.code] || ''}`);
+    // Tolère les variantes d'un même mot : « gérant » trouve aussi « gérance ».
+    return mots.every((m) => texte.includes(m.length >= 5 ? m.slice(0, -1) : m));
+  };
+  const filtrer = () => {
+    const mots = pcSansAccent($q.value).split(/\s+/).filter(Boolean);
+    const trouvees = operations.filter((o) => correspond(o, mots))
+      .sort((a, b) => a.ordre - b.ordre || Number(b.guidee) - Number(a.guidee));
+    const groupesVus = [];
+    let html = '';
+    trouvees.forEach((o, i) => {
+      if (!groupesVus.includes(o.groupe)) { groupesVus.push(o.groupe); html += `<div class="pc-ops-groupe">${esc(o.groupe)}</div>`; }
+      html += `<label class="pc-ops-item ${i === actif ? 'actif' : ''}" data-i="${i}">
+        <input type="checkbox" value="${esc(o.code)}" ${choisies.has(o.code) ? 'checked' : ''}>
+        <span class="pc-ops-nom">${esc(o.nom)}${o.libelle_inpi && o.libelle_inpi !== o.nom ? `<span class="muted"> — ${esc(o.libelle_inpi)}</span>` : ''}</span>
+        <span class="pc-ops-badges"><span class="pc-ops-code">${esc(o.code)}</span>${badges(o)}</span></label>`;
+    });
+    $liste.innerHTML = html || '<div class="muted pc-ops-vide">Aucune formalité ne correspond. Essayez un autre mot (capital, dirigeant, siège, dissolution…).</div>';
+    $liste.querySelectorAll('.pc-ops-item input').forEach((c) => {
+      c.onchange = () => { if (c.checked) choisies.add(c.value); else choisies.delete(c.value); puces(); };
+    });
+    return trouvees;
+  };
+  const ouvrir = (oui) => { $liste.hidden = !oui; $q.setAttribute('aria-expanded', String(oui)); };
+  $q.onfocus = () => { filtrer(); ouvrir(true); };
+  $q.oninput = () => { actif = -1; filtrer(); ouvrir(true); };
+  $q.onkeydown = (e) => {
+    const items = $liste.querySelectorAll('.pc-ops-item');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); ouvrir(true);
+      actif = Math.max(0, Math.min(items.length - 1, actif + (e.key === 'ArrowDown' ? 1 : -1)));
+      items.forEach((x, i) => x.classList.toggle('actif', i === actif));
+      items[actif]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && actif >= 0 && items[actif]) {
+      e.preventDefault(); items[actif].querySelector('input').click();
+    } else if (e.key === 'Escape') ouvrir(false);
+  };
+  document.addEventListener('click', (e) => { if (!e.target.closest('#pc-choix-ops') && document.getElementById('pc-ops-liste')) ouvrir(false); });
+  puces();
   document.getElementById('pc-ouvrir').onclick = async () => {
-    const operations = [...$main.querySelectorAll('.pc-tuile input:checked')].map((c) => c.value);
+    const operations = [...choisies];
     const societe_id = document.getElementById('pc-societe').value || null;
     const siren = document.getElementById('pc-siren').value.trim();
     const $msg = document.getElementById('pc-msg');

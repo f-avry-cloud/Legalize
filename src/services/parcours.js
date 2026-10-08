@@ -53,7 +53,7 @@ function verifierOuvert(f) {
 /* --------------------------------------------------------------- création */
 
 async function creer({ societe_id = null, siren = '', operations = [] }) {
-  const ops = [...new Set(operations)].filter((c) => parcours.OPERATIONS[c]);
+  const ops = [...new Set(operations)].filter((c) => parcours.infoOperation(c));
   if (!ops.length) throw erreur('Choisissez au moins une opération.');
 
   let sirenUtilise = nettoyerSiren(siren);
@@ -62,7 +62,7 @@ async function creer({ societe_id = null, siren = '', operations = [] }) {
     societe = await db(supabase.from('societes').select('*').eq('id', societe_id).single());
     if (!sirenUtilise) sirenUtilise = nettoyerSiren(societe.siren);
   }
-  const creation = ops.some((c) => parcours.OPERATIONS[c].creation);
+  const creation = ops.some((c) => parcours.infoOperation(c).creation);
   if (!creation && !sirenUtilise) throw erreur('Indiquez la société concernée (SIREN) : la fiche du registre sert de point de départ.');
 
   let fiche = {};
@@ -126,7 +126,7 @@ async function lire(id) {
   const manquantes = listes.obligatoires.filter((p) => !p.fichiers.length);
   const champsManquants = groupes.flatMap((g) => g.champs.filter((c) => c.requis && !c.rempli)
     .map((c) => `${g.titre} : ${c.label}${c.manquants?.length ? ` (${c.manquants.join(', ')})` : ''}`));
-  const creation = res.operations.some((o) => parcours.OPERATIONS[o.code]?.creation);
+  const creation = res.operations.some((o) => parcours.infoOperation(o.code)?.creation);
   const nouvelle = creation ? (rep.c_societe || {}) : {};
   const nonDeposables = res.operations.filter((o) => !deposable(o.code)).map((o) => o.nom);
 
@@ -186,7 +186,7 @@ function rempli(v, c) {
 
 async function majOperations(id, operations) {
   const f = await charger(id); verifierOuvert(f);
-  const ops = [...new Set(operations)].filter((c) => parcours.OPERATIONS[c]);
+  const ops = [...new Set(operations)].filter((c) => parcours.infoOperation(c));
   if (!ops.length) throw erreur('Gardez au moins une opération.');
   await db(supabase.from('formalites').update({ operations: ops, updated_at: new Date().toISOString() }).eq('id', id).select());
   await journal(id, 'saisie', `Opérations : ${ops.map((c) => parcours.nomOperation(c)).join(', ')}.`);

@@ -1260,3 +1260,27 @@ td .ref { font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--
 .pc-cat-titre { font-size: .78rem; margin: 2px 0 6px; }
 .pc-variante { max-width: 260px; padding: 8px 10px; font: inherit; font-size: .82rem; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
 .pc-piece-actions { flex-wrap: wrap; justify-content: flex-end; }
+
+/* Choix des formalités : recherche et liste déroulante à cases. */
+.pc-choix-ops { position: relative; }
+.pc-puces { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pc-puce { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: var(--accent-soft); border: 1px solid var(--a2); font-size: .85rem; font-weight: 600; }
+.pc-puce button { border: none; background: none; color: inherit; cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 4px; }
+#pc-ops-q { width: 100%; padding: 12px 14px; font: inherit; font-size: 15px; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-2); }
+#pc-ops-q:focus { outline: none; border-color: var(--a2); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pc-ops-liste { position: absolute; z-index: 40; left: 0; right: 0; margin-top: 4px; max-height: 420px; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); box-shadow: 0 14px 40px rgba(0, 0, 0, .35); }
+.pc-ops-liste[hidden] { display: none; }
+.pc-ops-groupe { position: sticky; top: 0; z-index: 1; padding: 8px 12px 6px; font-size: .72rem; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--surface); border-bottom: 1px solid var(--line); }
+.pc-ops-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--line); }
+.pc-ops-item:hover, .pc-ops-item.actif { background: var(--accent-soft); }
+.pc-ops-item input { width: auto; }
+.pc-ops-nom .muted { font-size: .8rem; }
+.pc-ops-badges { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.pc-ops-code { font-family: ui-monospace, monospace; font-size: .75rem; color: var(--ink-3); }
+.pc-ops-vide { padding: 14px; }
+.pc-b-guidee { background: var(--accent-soft); color: var(--a2); }
+.pc-b-fiche { background: var(--glass); }
+.pc-b-portail { background: transparent; border: 1px solid var(--line); }
+.pc-legende { display: block; margin-top: 4px; font-size: .78rem; }
+@media (max-width: 640px) { .pc-ops-item { grid-template-columns: auto 1fr; } .pc-ops-badges { grid-column: 2; justify-content: flex-start; } }
+.pc-bloc:has(.pc-ops-liste:not([hidden])) { position: relative; z-index: 50; }

@@ -57,6 +57,19 @@ const OPERATIONS = {
   '42M': { nom: 'Radier après la clôture de la liquidation', type: 'cessation', cessation: true },
 };
 
+/**
+ * Toute formalité de société du catalogue peut être choisie. Celles qui n'ont
+ * pas de règles dédiées reprennent les pièces de leur fiche (à préciser) et
+ * se finalisent sur le portail ; les entreprises individuelles, les
+ * exploitations agricoles et les événements émis par le registre sont exclus.
+ */
+function infoOperation(code) {
+  if (OPERATIONS[code]) return OPERATIONS[code];
+  const f = catalogue.fiche(code);
+  if (!f || f.famille === 'hors_champ' || /P$/.test(code) || f.emise_par_le_registre) return null;
+  return { nom: f.libelle, generique: true, creation: f.famille === 'creation', cessation: f.famille === 'dissolution' };
+}
+
 /* ------------------------------------------------------------- questions */
 
 const OUI_NON = [[true, 'Oui'], [false, 'Non']];
@@ -299,7 +312,7 @@ const MOTIFS_DEPART = [
  */
 function resoudre(operations, t = {}, fiche = {}, rep = {}) {
   const ops = operations.filter((c) => catalogue.fiche(c));
-  const estCreation = ops.some((c) => OPERATIONS[c]?.creation);
+  const estCreation = ops.some((c) => infoOperation(c)?.creation);
   const forme = (estCreation ? creation.forme(t)?.code : fiche.forme_juridique_code) || '';
   const manuel = t.manuel || {};
 
@@ -388,15 +401,15 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
       else if (due === undefined) ajouter(code, code, 'a_preciser', op, { condition: a.condition, question: questionAjout(a) });
     }
     // Compléments proposés par le guichet selon la situation.
-    if (OPERATIONS[op]?.creation && t.apports_numeraire === true) {
+    if (infoOperation(op)?.creation && t.apports_numeraire === true) {
       ajouter('PJ_138', 'PJ_138', 'facultative', op, { raison: audit.COMPLEMENTS.PJ_138 });
     }
-    const natureSansCommissaire = (OPERATIONS[op]?.creation && t.apports_nature === true)
+    const natureSansCommissaire = (infoOperation(op)?.creation && t.apports_nature === true)
       || (op === '15M' && t.capital_modalite === 'nature');
     if (natureSansCommissaire && t.commissaire_apports === false) {
       ajouter('PJ_195', 'PJ_195', 'facultative', op, { raison: audit.COMPLEMENTS.PJ_195 });
     }
-    if (OPERATIONS[op]?.creation && creation.forme(t)?.unique && t.associe_unique_nature === 'PM') {
+    if (infoOperation(op)?.creation && creation.forme(t)?.unique && t.associe_unique_nature === 'PM') {
       ajouter('PJ_188', 'PJ_188', 'facultative', op, { raison: 'proposée par le guichet quand l’associé unique est une société' });
     }
     if (regles.personnes) {
@@ -451,7 +464,7 @@ function evenementAttendu(code, forme = '') {
 }
 
 function nomOperation(code) {
-  return OPERATIONS[code]?.nom || catalogue.fiche(code)?.libelle || code;
+  return infoOperation(code)?.nom || catalogue.fiche(code)?.libelle || code;
 }
 
 function questionAjout(a) {
@@ -475,9 +488,9 @@ function pieceSeule(code) {
 /** Combinaisons qui ne tiennent pas dans un même dépôt. */
 function incompatibilites(ops) {
   const out = [];
-  const creations = ops.filter((c) => OPERATIONS[c]?.creation);
-  const cessations = ops.filter((c) => OPERATIONS[c]?.cessation);
-  const modifs = ops.filter((c) => !OPERATIONS[c]?.creation && !OPERATIONS[c]?.cessation);
+  const creations = ops.filter((c) => infoOperation(c)?.creation);
+  const cessations = ops.filter((c) => infoOperation(c)?.cessation);
+  const modifs = ops.filter((c) => !infoOperation(c)?.creation && !infoOperation(c)?.cessation);
   if (creations.length > 1) out.push('Une seule création par dossier.');
   if (creations.length && (modifs.length || cessations.length)) {
     out.push('Une création se dépose seule : les modifications viendront après l’immatriculation.');
@@ -506,7 +519,7 @@ function champs(ops, t, fiche, rep = {}) {
   const creations = ops.filter((c) => OPERATIONS[c]?.creation);
   if (creations.length) return creation.champsCreation(creations[0], t, rep);
   const groupes = [];
-  const modifs = ops.filter((c) => !OPERATIONS[c]?.creation);
+  const modifs = ops.filter((c) => !infoOperation(c)?.creation);
   if (modifs.length) {
     groupes.push({
       op: 'commun', titre: 'Pour toutes les opérations',
@@ -554,7 +567,7 @@ function champs(ops, t, fiche, rep = {}) {
             sous_requis: ['nom', 'prenoms', 'genre', 'date_naissance', 'lieu_naissance', 'adresse.codePostal', 'adresse.commune', 'forme_sociale'] });
       }
     }
-    if (OPERATIONS[op]?.creation) {
+    if (infoOperation(op)?.creation) {
       liste = [{ name: '_formulaire_creation', label: 'La création demande l’ensemble des informations de la société', type: 'renvoi', requis: false }];
     }
     if (!liste.length) continue;
@@ -619,10 +632,21 @@ function formaterCloture(jjmm) {
 
 /** Les opérations proposées au choix, rangées comme le mémo. */
 function operationsProposees() {
-  return Object.entries(OPERATIONS).map(([code, o]) => ({
-    code, nom: o.nom, creation: Boolean(o.creation), cessation: Boolean(o.cessation),
-    depot_automatique: require('./payload-parcours').deposable(code),
-  }));
+  const { deposable } = require('./payload-parcours');
+  const codes = [...Object.keys(OPERATIONS), ...catalogue.catalogueComplet().map((f) => f.code).filter((c) => !OPERATIONS[c])];
+  return codes.map((code) => {
+    const o = infoOperation(code);
+    if (!o) return null;
+    const f = catalogue.fiche(code);
+    return {
+      code, nom: o.nom, libelle_inpi: f?.libelle || null,
+      groupe: catalogue.FAMILLES[f?.famille]?.libelle || 'Autres formalités', ordre: catalogue.FAMILLES[f?.famille]?.ordre || 9,
+      creation: Boolean(o.creation), cessation: Boolean(o.cessation),
+      // Courante : règles de pièces et informations ciblées ; sinon pièces de la fiche seulement.
+      guidee: !o.generique,
+      depot_automatique: deposable(code),
+    };
+  }).filter(Boolean);
 }
 
-module.exports = { OPERATIONS, QUESTIONS, REGLES, resoudre, operationsProposees, nomOperation, piecesEntrant, evenementAttendu };
+module.exports = { OPERATIONS, QUESTIONS, REGLES, infoOperation, resoudre, operationsProposees, nomOperation, piecesEntrant, evenementAttendu };
