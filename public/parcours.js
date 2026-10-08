@@ -261,7 +261,7 @@ function pcQuestion(q) {
     <div class="pc-q-libelle">${esc(q.libelle)} ${pour}</div>
     ${q.aide ? `<div class="pc-aide muted">${esc(q.aide)}</div>` : ''}
     <div class="pc-liste" data-type="${q.type}" data-question="${q.id}">
-      ${q.type === 'sortants' && q.dirigeants_actuels?.length ? `<datalist id="pc-dirigeants">${q.dirigeants_actuels.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>` : ''}
+      ${(q.type === 'sortants' || q.type === 'maj') && q.dirigeants_actuels?.length ? `<datalist id="pc-dirigeants">${q.dirigeants_actuels.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>` : ''}
       <div class="pc-lignes">${lignes.map((l) => pcLignePersonne(q, l)).join('')}</div>
       <div class="pc-liste-actions">
         <button type="button" class="btn-ghost pc-ajouter">+ Ajouter une personne</button>
@@ -273,9 +273,9 @@ function pcQuestion(q) {
 }
 
 function pcLignePersonne(q, l) {
-  if (q.type === 'sortants') {
+  if ((q.type === 'sortants' || q.type === 'maj')) {
     return `<div class="pc-ligne">
-      <input class="pc-nom" placeholder="Nom de la personne qui part" value="${esc(l.nom || '')}" list="pc-dirigeants">
+      <input class="pc-nom" placeholder="${q.type === 'maj' ? 'Dirigeant concerné (nom ou dénomination au registre)' : 'Nom de la personne qui part'}" value="${esc(l.nom || '')}" list="pc-dirigeants">
       <select class="pc-motif">${q.options.map(([v, lab]) => `<option value="${v}" ${l.motif === v ? 'selected' : ''}>${esc(lab)}</option>`).join('')}</select>
       <button type="button" class="btn-ghost pc-retirer" title="Retirer">×</button>
     </div>`;
@@ -313,7 +313,7 @@ function pcListePersonnes($l) {
     const valeurs = [...$lignes.querySelectorAll('.pc-ligne')].map((ligne) => {
       const nom = ligne.querySelector('.pc-nom').value.trim();
       if (!nom) return null;
-      if (q.type === 'sortants') return { nom, motif: ligne.querySelector('.pc-motif').value };
+      if ((q.type === 'sortants' || q.type === 'maj')) return { nom, motif: ligne.querySelector('.pc-motif').value };
       const fonction = ligne.querySelector('.pc-fonction').value;
       const nature = ligne.querySelector('.pc-nature').value;
       return {

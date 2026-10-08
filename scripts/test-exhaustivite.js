@@ -42,7 +42,7 @@ console.log(`    ${parDecision('utilisee').length} utilisées, ${parDecision('va
 
 console.log('\nRègles de pièces, opération par opération');
 for (const op of Object.keys(parcours.OPERATIONS)) {
-  const f = catalogue.fiche(op);
+  const f = parcours.ficheOp(op);
   if (!f) { verifier(`${op} : fiche du catalogue`, false); continue; }
   const codesFiche = new Set([...f.pieces_obligatoires, ...f.pieces_selon_le_cas].map((p) => p.code));
   const regles = parcours.REGLES[op] || {};
@@ -71,6 +71,7 @@ const SITUATIONS = {
   '22M': { entrants: [{ nom: 'A B', nature: 'PP', fonction: 'liquidateur' }] },
   '54PMF': { siege_occupation: 'locaux', fonds_origine: 'creation', activite_reglementee: false },
   '61PMF': { activite_reglementee: false },
+  MAJDIR: { mises_a_jour: [{ nom: 'A B', motif: 'adresse' }], statuts_modifies: false },
 };
 for (const [op, t] of Object.entries(SITUATIONS)) {
   const r = parcours.resoudre([op], t, { forme_juridique_code: '5710' });

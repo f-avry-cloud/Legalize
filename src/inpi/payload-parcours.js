@@ -272,6 +272,44 @@ const APPLIQUER = {
     const a = (chemin(c, 'personneMorale', 'etablissementPrincipal').activites || [])[Number(r.activite || 0)];
     if (a) Object.assign(a, { descriptionDetaillee: r.description, is67PMTriggered: true, dateEffet67PM: D });
   },
+  MAJDIR(c, r, D, fiche, t) {
+    const { pouvoirActuel } = require('./parcours');
+    const pouvoirs = chemin(c, 'personneMorale', 'composition').pouvoirs || [];
+    for (const [i, m] of (t.mises_a_jour || []).entries()) {
+      if (!m?.nom) continue;
+      const v = r[`maj_${i}`] || {};
+      // Le pouvoir est retrouvé dans le contenu copié depuis le registre, par sa position.
+      const modele = pouvoirActuel(fiche, m.nom);
+      const rang = (fiche?.brut?.formality?.content?.personneMorale?.composition?.pouvoirs || []).indexOf(modele);
+      const p = pouvoirs[rang];
+      if (!p) continue;
+      const drapeaux = {};
+      if (p.entreprise) {
+        const ancien = { ...p.entreprise };
+        Object.assign(p.entreprise, {
+          denomination: v.denomination || ancien.denomination,
+          siren: nettoyerSiren(v.siren) || ancien.siren,
+          formeJuridique: v.forme_juridique_code || ancien.formeJuridique,
+          lieuRegistre: v.greffe ? String(v.greffe).toUpperCase() : ancien.lieuRegistre,
+        });
+        if (p.entreprise.denomination !== ancien.denomination || p.entreprise.formeJuridique !== ancien.formeJuridique) drapeaux.isModificationIdentitePouvoir = true;
+        if (v.adresse?.codePostal && m.motif === 'adresse') { p.adresseEntreprise = adresseInpi(v.adresse); drapeaux.isModificationAdressePouvoir = true; }
+        if (m.motif === 'representant' && v.representant?.nom) {
+          p.representant = { descriptionPersonne: { ...descriptionIndividu(v.representant, p.roleEntreprise), statutVisAVisFormalite: '1' }, adresseDomicile: adresseInpi(v.representant.adresse) };
+          drapeaux.isModificationRepresentantPermanent = true;
+        }
+      } else if (p.individu) {
+        const d = chemin(p, 'individu', 'descriptionPersonne');
+        if (v.nom && v.nom !== d.nom) { d.nom = v.nom; drapeaux.isModificationIdentitePouvoir = true; }
+        if (v.prenoms) d.prenoms = String(v.prenoms).split(/[\s,]+/).filter(Boolean);
+        if (v.adresse?.codePostal && m.motif === 'adresse') { p.individu.adresseDomicile = adresseInpi(v.adresse); drapeaux.isModificationAdressePouvoir = true; }
+      }
+      // À défaut de différence détectée, on déclare le motif choisi.
+      if (!Object.keys(drapeaux).length) drapeaux[m.motif === 'adresse' ? 'isModificationAdressePouvoir' : m.motif === 'representant' ? 'isModificationRepresentantPermanent' : 'isModificationIdentitePouvoir'] = true;
+      Object.assign(p, { statutPourLaFormalite: '2', is34Or35MAddressOrInfoPouvoirUpdatedTriggered: true, dateEffet34Or35M: D, ...drapeaux });
+    }
+    chemin(c, 'personneMorale', 'composition').isModificationPouvoir = true;
+  },
   '80PMF'(c, r, D) {
     const e = etablissement(c, r.etablissement);
     e.is80PMFTriggered = true;

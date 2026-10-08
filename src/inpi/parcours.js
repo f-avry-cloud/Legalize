@@ -45,6 +45,7 @@ const OPERATIONS = {
   '26M': { nom: 'Capitaux propres reconstitués', type: 'capitaux_propres' },
   '34M': { nom: 'Dirigeants d’une SNC, SCI ou société civile', type: 'changement_dirigeant' },
   '35M': { nom: 'Nommer ou remplacer un dirigeant ou un commissaire aux comptes', type: 'changement_dirigeant' },
+  MAJDIR: { nom: 'Mettre à jour un dirigeant déjà en place (nouvelle dénomination, nouvelle adresse…)', type: null },
   '38F': { nom: 'Déclarer ou modifier les bénéficiaires effectifs', type: null },
   '54PMF': { nom: 'Ouvrir un établissement', type: null },
   '56PMF': { nom: 'Transférer un établissement', type: null },
@@ -73,6 +74,25 @@ const OPERATIONS = {
  * se finalisent sur le portail ; les entreprises individuelles, les
  * exploitations agricoles et les événements émis par le registre sont exclus.
  */
+/**
+ * Opérations du parcours sans événement propre au référentiel : elles se
+ * déposent sous un événement existant (la mise à jour d'un dirigeant en 35M,
+ * constaté par dépôt de test) et ont leur propre liste de pièces.
+ */
+const FICHES_PROPRES = {
+  MAJDIR: () => ({
+    code: 'MAJDIR', libelle: 'Modification relative à un dirigeant déjà inscrit', famille: 'dirigeants',
+    quand: 'Un dirigeant en place change de dénomination ou de nom, d’adresse ou de représentant permanent.',
+    informations: [], pieces_obligatoires: [],
+    pieces_selon_le_cas: [catalogue.decrirePiece('PJ_02', 'si les statuts désignent le dirigeant sous son ancien nom')],
+  }),
+};
+
+/** Fiche d'une opération : celle du catalogue, ou la fiche propre au parcours. */
+function ficheOp(code) {
+  return FICHES_PROPRES[code] ? FICHES_PROPRES[code]() : catalogue.fiche(code);
+}
+
 function infoOperation(code) {
   if (OPERATIONS[code]) return OPERATIONS[code];
   const f = catalogue.fiche(code);
@@ -99,6 +119,11 @@ const QUESTIONS = {
     libelle: 'Qui quitte ses fonctions ?',
     aide: 'Une ligne par personne qui part, avec le motif du départ.',
     type: 'sortants',
+  },
+  mises_a_jour: {
+    libelle: 'Quel dirigeant déjà en place change, et sur quoi ?',
+    aide: 'Une ligne par dirigeant : choisissez-le dans la liste du registre, puis indiquez ce qui change.',
+    type: 'maj',
   },
   statuts_modifies: {
     libelle: 'Les statuts sont-ils modifiés (dirigeant nommé dans les statuts, par exemple) ?',
@@ -266,6 +291,11 @@ const REGLES = {
     pieces: { PJ_02: (t) => def(t.statuts_modifies, () => t.statuts_modifies === true) },
     personnes: true,
   },
+  MAJDIR: {
+    questions: ['mises_a_jour', 'statuts_modifies'],
+    pieces: { PJ_02: (t) => def(t.statuts_modifies, () => t.statuts_modifies === true) },
+    misesAJour: true,
+  },
   '35M': {
     questions: ['entrants', 'sortants', 'statuts_modifies'],
     pieces: { PJ_02: (t) => def(t.statuts_modifies, () => t.statuts_modifies === true) },
@@ -321,7 +351,7 @@ const MOTIFS_DEPART = [
  * @param {object} fiche fiche normalisée de la société (forme, dirigeants…)
  */
 function resoudre(operations, t = {}, fiche = {}, rep = {}) {
-  const ops = operations.filter((c) => catalogue.fiche(c));
+  const ops = operations.filter((c) => ficheOp(c));
   const estCreation = ops.some((c) => infoOperation(c)?.creation);
   const forme = (estCreation ? creation.forme(t)?.code : fiche.forme_juridique_code) || '';
   const manuel = t.manuel || {};
@@ -336,7 +366,7 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
       if (!entree) {
         entree = {
           id, libelle: q.libelle, aide: q.aide || null, type: q.type,
-          options: q.options || (id === 'entrants' ? (estCreation ? creation.rolesCreation(t) : FONCTIONS) : id === 'sortants' ? MOTIFS_DEPART : null),
+          options: q.options || (id === 'entrants' ? (estCreation ? creation.rolesCreation(t) : FONCTIONS) : id === 'sortants' ? MOTIFS_DEPART : id === 'mises_a_jour' ? CHANGEMENTS : null),
           valeur: t[id] ?? null, pour: [],
         };
         if (id === 'entrants' && estCreation) {
@@ -345,7 +375,7 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
           entree.creation = true;
           if (!creation.forme(t)) entree.attente = 'Choisissez d’abord la forme de la société.';
         }
-        if (id === 'sortants') {
+        if (id === 'sortants' || id === 'mises_a_jour') {
           entree.dirigeants_actuels = (fiche.dirigeants || []).map((d) => d.nom_complet).filter(Boolean);
         }
         vues.push(entree);
@@ -358,8 +388,8 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
   // opérations qui la requièrent.
   const pieces = new Map();
   const ajouter = (cle, code, categorie, op, extra = {}) => {
-    const desc = catalogue.fiche(op)
-      ? [...catalogue.fiche(op).pieces_obligatoires, ...catalogue.fiche(op).pieces_selon_le_cas].find((p) => p.code === code)
+    const desc = ficheOp(op)
+      ? [...ficheOp(op).pieces_obligatoires, ...ficheOp(op).pieces_selon_le_cas].find((p) => p.code === code)
       : null;
     const base = desc || catalogue.piecesCommunes().find((p) => p.code === code) || pieceSeule(code);
     const rang = { obligatoire: 0, a_preciser: 1, facultative: 2 };
@@ -382,7 +412,7 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
   };
 
   for (const op of ops) {
-    const f = catalogue.fiche(op);
+    const f = ficheOp(op);
     const regles = REGLES[op] || {};
     for (const p of f.pieces_obligatoires) {
       if (regles.personnes && PIECES_PAR_PERSONNE.has(p.code)) continue;
@@ -409,6 +439,19 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
       const due = a.regle(t);
       if (due === true) ajouter(code, code, 'obligatoire', op, { raison: a.condition });
       else if (due === undefined) ajouter(code, code, 'a_preciser', op, { condition: a.condition, question: questionAjout(a) });
+    }
+    // Mise à jour d'un dirigeant en place : la pièce qui établit le changement.
+    if (regles.misesAJour) {
+      for (const [i, m] of (t.mises_a_jour || []).entries()) {
+        if (!m?.nom) continue;
+        const pm = estPersonneMorale(fiche, m.nom);
+        if (m.motif === 'representant') ajouter(`PJ_80:m${i}`, 'PJ_80', 'obligatoire', op, { personne: m.nom, raison: 'désignation du nouveau représentant permanent' });
+        else if (pm) ajouter(`PJ_20:m${i}`, 'PJ_20', 'obligatoire', op, { personne: m.nom, raison: 'Kbis à jour, sous la nouvelle dénomination ou à la nouvelle adresse' });
+        else if (m.motif === 'denomination') ajouter(`PJ_11:m${i}`, 'PJ_11', 'obligatoire', op, { personne: m.nom, raison: 'pièce d’identité sous le nouveau nom' });
+      }
+      if (!(t.mises_a_jour || []).length) {
+        ajouter(`maj:${op}`, 'PJ_20', 'a_preciser', op, { court: 'Justificatif du changement', condition: 'Kbis à jour pour une société, pièce d’identité pour une personne', question: 'mises_a_jour' });
+      }
     }
     // Compléments proposés par le guichet selon la situation.
     if (infoOperation(op)?.creation && t.apports_numeraire === true) {
@@ -455,7 +498,7 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
 
   const liste = [...pieces.values()];
   return {
-    operations: ops.map((code) => ({ code, nom: nomOperation(code), libelle_inpi: catalogue.fiche(code).libelle })),
+    operations: ops.map((code) => ({ code, nom: nomOperation(code), libelle_inpi: ficheOp(code).libelle })),
     questions: vues,
     pieces: {
       obligatoires: liste.filter((p) => p.categorie === 'obligatoire'),
@@ -470,13 +513,14 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
 /** Code d'événement que le guichet renvoie pour une opération (54PMF → 54M, 34M → 35M sur une société de capitaux…). */
 function evenementAttendu(code, forme = '') {
   if (code === '34M' && /^5[4-7]/.test(forme)) return '35M';
+  if (code === 'MAJDIR') return /^5[4-7]/.test(forme) ? '35M' : '34M';
   // Constaté : la disparition de la société absorbée est enregistrée en 42M.
   if (code === '41M') return '42M';
   return code.replace(/PMF?$|PM$/, 'M');
 }
 
 function nomOperation(code) {
-  return infoOperation(code)?.nom || catalogue.fiche(code)?.libelle || code;
+  return infoOperation(code)?.nom || ficheOp(code)?.libelle || code;
 }
 
 function questionAjout(a) {
@@ -492,9 +536,7 @@ function questionDe(op, code) {
 }
 
 function pieceSeule(code) {
-  const { piece } = require('./referentiels');
-  const p = piece(code);
-  return { court: p?.libelle || code, libelle: p?.libelle || code, par_le_cabinet: false };
+  return catalogue.decrirePiece(code);
 }
 
 /** Combinaisons qui ne tiennent pas dans un même dépôt. */
@@ -608,6 +650,26 @@ function champs(ops, t, fiche, rep = {}) {
   }
   for (const op of ops) {
     let liste = DEF[op] ? DEF[op].map((c) => ({ ...c })) : [];
+    if (REGLES[op]?.misesAJour) {
+      for (const [i, m] of (t.mises_a_jour || []).entries()) {
+        if (!m?.nom) continue;
+        const actuel = pouvoirActuel(fiche, m.nom);
+        const libelle = `${m.nom} — ${(CHANGEMENTS.find(([c]) => c === m.motif) || [null, 'changement'])[1].toLowerCase()}`;
+        liste.push(actuel?.entreprise
+          ? { name: `maj_${i}`, label: libelle, type: 'personne_morale', requis: true, representant_requis: m.motif === 'representant',
+            aide: 'Les données actuelles du registre sont reprises : corrigez ce qui change.', sous_requis: ['denomination', 'adresse.codePostal', 'adresse.commune'],
+            prerempli: {
+              denomination: actuel.entreprise.denomination, siren: actuel.entreprise.siren, forme_juridique_code: actuel.entreprise.formeJuridique,
+              greffe: actuel.entreprise.lieuRegistre, adresse: adresseFiche(actuel.adresseEntreprise),
+            } }
+          : { name: `maj_${i}`, label: libelle, type: 'personne', requis: true, aide: 'Les données actuelles du registre sont reprises : corrigez ce qui change.',
+            sous_requis: ['nom', 'adresse.codePostal', 'adresse.commune'],
+            prerempli: {
+              nom: actuel?.individu?.descriptionPersonne?.nom, prenoms: (actuel?.individu?.descriptionPersonne?.prenoms || []).join(' '),
+              adresse: adresseFiche(actuel?.individu?.adresseDomicile),
+            } });
+      }
+    }
     if (REGLES[op]?.personnes && op !== '01M') {
       for (const [i, e] of (t.entrants || []).entries()) {
         if (!e?.nom || (op === '22M' && e.fonction !== 'liquidateur')) continue;
@@ -681,6 +743,25 @@ function optionsActivites(fiche) {
   return acts.map((a, i) => [String(i), `${String(a.descriptionDetaillee || a.codeApe || `activité n° ${i + 1}`).slice(0, 120)}${a.dateDebut ? ` (depuis ${a.dateDebut})` : ''}`]);
 }
 
+const CHANGEMENTS = [['denomination', 'Nouvelle dénomination (ou nouveau nom)'], ['adresse', 'Nouvelle adresse'], ['representant', 'Nouveau représentant permanent']];
+
+/** Le pouvoir du registre qui correspond au nom choisi (dénomination ou prénom et nom). */
+function pouvoirActuel(fiche, nom) {
+  const cle = String(nom || '').trim().toLowerCase();
+  const pouvoirs = fiche?.brut?.formality?.content?.personneMorale?.composition?.pouvoirs || [];
+  const nomDe = (p) => (p.entreprise ? p.entreprise.denomination
+    : `${(p.individu?.descriptionPersonne?.prenoms || []).join(' ')} ${p.individu?.descriptionPersonne?.nom || ''}`);
+  return pouvoirs.find((p) => String(nomDe(p)).trim().toLowerCase() === cle)
+    || pouvoirs.find((p) => String(nomDe(p)).toLowerCase().includes(cle.split(' ').pop()));
+}
+
+function estPersonneMorale(fiche, nom) { return Boolean(pouvoirActuel(fiche, nom)?.entreprise); }
+
+function adresseFiche(a) {
+  if (!a) return {};
+  return { numVoie: a.numVoie, typeVoie: a.typeVoie, voie: a.voie, complementLocalisation: a.complementLocalisation, codePostal: a.codePostal, commune: a.commune, codeInseeCommune: a.codeInseeCommune };
+}
+
 const AFFILIATION = [['0', 'Non applicable'], ['1', 'Sans affiliation sociale'], ['3', 'Avec affiliation sociale']];
 
 /** « Claire MARTIN » → nom MARTIN, prénoms Claire (le nom s'écrit en capitales). */
@@ -706,7 +787,7 @@ function operationsProposees() {
   return codes.map((code) => {
     const o = infoOperation(code);
     if (!o) return null;
-    const f = catalogue.fiche(code);
+    const f = ficheOp(code);
     return {
       code, nom: o.nom, libelle_inpi: f?.libelle || null,
       groupe: catalogue.FAMILLES[f?.famille]?.libelle || 'Autres formalités', ordre: catalogue.FAMILLES[f?.famille]?.ordre || 9,
@@ -718,4 +799,4 @@ function operationsProposees() {
   }).filter(Boolean);
 }
 
-module.exports = { OPERATIONS, QUESTIONS, REGLES, infoOperation, resoudre, operationsProposees, nomOperation, piecesEntrant, evenementAttendu };
+module.exports = { OPERATIONS, QUESTIONS, REGLES, infoOperation, pouvoirActuel, ficheOp, resoudre, operationsProposees, nomOperation, piecesEntrant, evenementAttendu };

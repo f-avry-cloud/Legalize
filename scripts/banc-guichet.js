@@ -85,7 +85,8 @@ function modification(ops, fiche, extra = {}) {
     endpoint: ops.some((o) => CESSATIONS.includes(o)) ? '/api/formalities' : '/api/formality_updates',
     dossier: {
       operations: ops, fiche, siren: SIREN_DEMO, reference: 'BANC', libelle: `Banc ${ops.join('+')}`,
-      typologie: { entrants: [{ nom: 'Claire DURAND', nature: 'PP', fonction: 'dirigeant' }], sortants: [], ...extra.t },
+      typologie: { entrants: [{ nom: 'Claire DURAND', nature: 'PP', fonction: 'dirigeant' }], sortants: [],
+        mises_a_jour: [{ nom: 'KPMG S.A', motif: 'denomination' }], statuts_modifies: false, ...extra.t },
       reponses: {
         commun: { date_decision: '2026-09-30' },
         // Données de l'échantillon que le serveur refuse lui-même (constaté) : à compléter.
@@ -117,6 +118,8 @@ function modification(ops, fiche, extra = {}) {
         '28M': { date_dissolution: '2026-09-30', associe_unique: PM('ASSOCIE UNIQUE FICTIF', { forme_juridique_code: '5599' }) },
         '40M': { date_cessation: '2026-09-30' },
         '80PMF': { etablissement: '6', date_fermeture: '2026-09-30', destination: 'B' },
+        MAJDIR: { maj_0: { denomination: 'NOUVELLE DENOMINATION FICTIVE', siren: '775726417', forme_juridique_code: '5599', greffe: 'NANTERRE',
+          adresse: { numVoie: '2', typeVoie: 'AV', voie: 'Gambetta', codePostal: '92400', commune: 'Courbevoie' } } },
         '41M': { date_fusion: '2026-09-30', absorbante: PM('ABSORBANTE FICTIVE', { forme_juridique_code: '5599' }) },
       },
       pieces: [],
@@ -142,7 +145,7 @@ function scenarios(fiche) {
   for (const ops of [['15M', '35M'], ['10M', '15M', '35M'], ['12M', '16M'], ['13M', '14M', '25M'], ['12M', '17M']]) {
     l.push([`modification-${ops.join('-')}`, modification(ops, fiche)]);
   }
-  for (const op of ['18M', '19M', '20M', '29M', '38F', '51M', '54PMF', '55PM', '60PMF', '61PMF', '62M', '63M', '67PMF', '84M', '28M', '40M', '80PMF', '41M']) {
+  for (const op of ['18M', '19M', '20M', '29M', '38F', '51M', '54PMF', '55PM', '60PMF', '61PMF', '62M', '63M', '67PMF', '84M', '28M', '40M', '80PMF', '41M', 'MAJDIR']) {
     l.push([`seule-${op}`, modification([op], fiche)]);
   }
   return l;
