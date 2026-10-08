@@ -39,7 +39,7 @@ async function essai(nom, { operations, siren, typologie, reponses }) {
   const manuel = Object.fromEntries(d.pieces.a_preciser.filter((p) => p.manuel).map((p) => [p.cle, false]));
   if (Object.keys(manuel).length) d = (await appel('PUT', `/parcours/${id}/typologie`, { manuel })).corps;
   // Le pouvoir est rédigé par l'application : on charge ce PDF-là, pour vérifier que le guichet l'accepte.
-  const pouvoir = require('../src/inpi/pouvoir').genererPouvoir({ fiche: {}, typologie: e.typologie, reponses: e.reponses },
+  const pouvoir = require('../src/inpi/pouvoir').genererPouvoir({ fiche: {}, typologie, reponses },
     { mandataire: { nom: 'Cabinet Essai', adresse: '1 rue de Paris, 75001 Paris' }, operations: [nom] });
   for (const p of d.pieces.obligatoires) {
     const form = new FormData();

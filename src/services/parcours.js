@@ -270,9 +270,9 @@ async function redigerPouvoir(id, { mandataire = {} } = {}) {
   const f = await charger(id); verifierOuvert(f);
   const { genererPouvoir } = require('../inpi/pouvoir');
   const res = parcours.resoudre(f.operations || [], f.typologie || {}, f.fiche || {}, f.reponses || {});
-  const buffer = genererPouvoir({ fiche: f.fiche || {}, typologie: f.typologie || {}, reponses: f.reponses || {} }, {
-    mandataire, operations: res.operations.map((o) => o.nom),
-  });
+  const dossier = { fiche: f.fiche || {}, typologie: f.typologie || {}, reponses: f.reponses || {}, operations: f.operations || [] };
+  const { libellesOperations } = require('../inpi/pouvoir');
+  const buffer = genererPouvoir(dossier, { mandataire, operations: libellesOperations(dossier, res.operations.map((o) => o.nom)) });
   const chemin = `formalites/${id}/PJ_51_${Date.now()}_pouvoir.pdf`;
   await uploadFile(chemin, buffer, 'application/pdf');
   await db(supabase.from('formalite_pieces').insert({

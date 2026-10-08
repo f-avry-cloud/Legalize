@@ -39,8 +39,10 @@ function representantLegal(dossier) {
 function societe(dossier) {
   const f = dossier.fiche || {};
   if (f.denomination) {
+    // « SAS, société par actions simplifiée » → « société par actions simplifiée ».
+    const forme = String(f.forme_juridique || '').replace(/^[A-Z]{2,6}, /, '');
     return {
-      denomination: f.denomination, forme: f.forme_juridique || '', capital: f.capital,
+      denomination: f.denomination, forme, capital: f.capital,
       siege: f.adresse?.texte || '', siren: f.siren_formate || f.siren || '', greffe: f.greffe || '',
     };
   }
@@ -144,8 +146,22 @@ function pdf(paragraphes) {
   return Buffer.from(out, 'latin1');
 }
 
+/** Libellé de chaque formalité, précisé quand le dossier le permet. */
+function libellesOperations(dossier, noms) {
+  return (dossier.operations || []).flatMap((op, i) => {
+    if (op !== 'MAJDIR') return [noms[i]];
+    return (dossier.typologie?.mises_a_jour || []).filter((m) => m?.nom).map((m, j) => {
+      const v = dossier.reponses?.MAJDIR?.[`maj_${j}`] || {};
+      if (m.motif === 'denomination' && v.denomination && v.denomination !== m.nom) return `Modification relative au dirigeant ${m.nom} : nouvelle dénomination, ${v.denomination}`;
+      if (m.motif === 'adresse') return `Modification relative au dirigeant ${m.nom} : nouvelle adresse`;
+      if (m.motif === 'representant') return `Modification relative au dirigeant ${m.nom} : nouveau représentant permanent`;
+      return `Modification relative au dirigeant ${m.nom}`;
+    });
+  });
+}
+
 function genererPouvoir(dossier, options) {
   return pdf(texte(dossier, options));
 }
 
-module.exports = { genererPouvoir, texte, representantLegal };
+module.exports = { genererPouvoir, texte, representantLegal, libellesOperations };
