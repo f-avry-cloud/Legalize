@@ -77,7 +77,8 @@ async function essai(nom, { operations, siren, typologie, reponses }) {
   const seule = (op, nom, typologie = {}) => [nom, { operations: [op], siren: banc.SIREN_DEMO, typologie: { ...typologie },
     reponses: { commun: modif.reponses.commun, _registre: modif.reponses._registre, [op]: modif.reponses[op] } }];
   essais.push(seule('28M', 'Dissolution par l’associé unique (TUP)'), seule('38F', 'Déclaration des bénéficiaires effectifs'),
-    seule('60PMF', 'Nouvelle enseigne d’un établissement'), seule('80PMF', 'Fermeture d’un établissement'), seule('41M', 'Fusion : radiation de la société absorbée'));
+    seule('60PMF', 'Nouvelle enseigne d’un établissement'), seule('80PMF', 'Fermeture d’un établissement'), seule('41M', 'Fusion : radiation de la société absorbée'),
+    seule('MAJDIR', 'Mise à jour d’un dirigeant personne morale (nouvelle dénomination)', { mises_a_jour: [{ nom: 'KPMG S.A', motif: 'denomination' }], statuts_modifies: false }));
   const filtre = process.env.FILTRE || '';
   const resultats = [];
   for (const [nom, e] of essais.filter(([n]) => n.includes(filtre))) {

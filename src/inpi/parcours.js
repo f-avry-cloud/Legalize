@@ -577,7 +577,10 @@ function champs(ops, t, fiche, rep = {}) {
   if (modifs.length) {
     groupes.push({
       op: 'commun', titre: 'Pour toutes les opérations',
-      champs: [{ name: 'date_decision', label: 'Date de la décision (PV ou décision de l’associé unique)', type: 'date', requis: true }],
+      champs: [{ name: 'date_decision', type: 'date', requis: true,
+        // Une mise à jour (nouvelle dénomination d'un dirigeant…) ne suit pas une décision de la société.
+        label: modifs.every((c) => c === 'MAJDIR') ? 'Date d’effet du changement (par exemple, date de la nouvelle dénomination)'
+          : 'Date de la décision (PV ou décision de l’associé unique)' }],
     });
   }
   const adresse = fiche.adresse?.texte || '';
