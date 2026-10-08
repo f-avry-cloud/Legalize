@@ -78,7 +78,7 @@ function creation(forme, sc = {}) {
   };
 }
 
-const CESSATIONS = ['28M', '40M'];
+const CESSATIONS = ['28M', '40M', '41M'];
 
 function modification(ops, fiche, extra = {}) {
   return {
@@ -116,6 +116,8 @@ function modification(ops, fiche, extra = {}) {
         '84M': { mode: 'D', locataire: PM('LOCATAIRE FICTIF'), date_effet: '2026-09-30' },
         '28M': { date_dissolution: '2026-09-30', associe_unique: PM('ASSOCIE UNIQUE FICTIF', { forme_juridique_code: '5599' }) },
         '40M': { date_cessation: '2026-09-30' },
+        '80PMF': { etablissement: '6', date_fermeture: '2026-09-30', destination: 'B' },
+        '41M': { date_fusion: '2026-09-30', absorbante: PM('ABSORBANTE FICTIVE', { forme_juridique_code: '5599' }) },
       },
       pieces: [],
     },
@@ -140,7 +142,7 @@ function scenarios(fiche) {
   for (const ops of [['15M', '35M'], ['10M', '15M', '35M'], ['12M', '16M'], ['13M', '14M', '25M'], ['12M', '17M']]) {
     l.push([`modification-${ops.join('-')}`, modification(ops, fiche)]);
   }
-  for (const op of ['18M', '19M', '20M', '29M', '38F', '51M', '54PMF', '55PM', '60PMF', '61PMF', '62M', '63M', '67PMF', '84M', '28M', '40M']) {
+  for (const op of ['18M', '19M', '20M', '29M', '38F', '51M', '54PMF', '55PM', '60PMF', '61PMF', '62M', '63M', '67PMF', '84M', '28M', '40M', '80PMF', '41M']) {
     l.push([`seule-${op}`, modification([op], fiche)]);
   }
   return l;

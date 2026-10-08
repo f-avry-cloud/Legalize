@@ -70,8 +70,14 @@ async function essai(nom, { operations, siren, typologie, reponses }) {
       reponses: { commun: modif.reponses.commun, '15M': modif.reponses['15M'], '35M': modif.reponses['35M'], _registre: modif.reponses._registre },
     }],
   ];
+  // Formalités ajoutées : une par une, sur la même société de l'échantillon.
+  const seule = (op, nom, typologie = {}) => [nom, { operations: [op], siren: banc.SIREN_DEMO, typologie: { ...typologie },
+    reponses: { commun: modif.reponses.commun, _registre: modif.reponses._registre, [op]: modif.reponses[op] } }];
+  essais.push(seule('28M', 'Dissolution par l’associé unique (TUP)'), seule('38F', 'Déclaration des bénéficiaires effectifs'),
+    seule('60PMF', 'Nouvelle enseigne d’un établissement'));
+  const filtre = process.env.FILTRE || '';
   const resultats = [];
-  for (const [nom, e] of essais) {
+  for (const [nom, e] of essais.filter(([n]) => n.includes(filtre))) {
     const r = await essai(nom, e);
     resultats.push(r);
     console.log(JSON.stringify(r, null, 1));

@@ -272,6 +272,11 @@ const APPLIQUER = {
     const a = (chemin(c, 'personneMorale', 'etablissementPrincipal').activites || [])[Number(r.activite || 0)];
     if (a) Object.assign(a, { descriptionDetaillee: r.description, is67PMTriggered: true, dateEffet67PM: D });
   },
+  '80PMF'(c, r, D) {
+    const e = etablissement(c, r.etablissement);
+    e.is80PMFTriggered = true;
+    Object.assign(chemin(e, 'descriptionEtablissement'), { statutPourFormalite: '2', destinationEtablissement: r.destination || 'B', dateEffetFermeture: dateInpi(r.date_fermeture) || D });
+  },
   '84M'(c, r, D) {
     const ep = chemin(c, 'personneMorale', 'etablissementPrincipal');
     const l = r.locataire || {};
@@ -321,6 +326,23 @@ const CESSATIONS = {
     // Établissements secondaires : le guichet exige une destination (constaté).
     for (const e of c.personneMorale.autresEtablissements || []) chemin(e, 'descriptionEtablissement').destinationEtablissement = 'B';
   },
+};
+
+CESSATIONS['41M'] = (c, r) => {
+  const d = dateInpi(r.date_fusion);
+  const a = r.absorbante || {};
+  c.personneMorale.detailCessationEntreprise = { indicateurDissolution: true, dateDissolutionDisparition: d, motifCessation: '12', indicateurDisparitionPM: true };
+  c.personneMorale.identite.entreprisesIntervenant = [{
+    entreprise: { siren: nettoyerSiren(a.siren), denomination: a.denomination, formeJuridique: a.forme_juridique_code },
+    adresse: adresseInpi(a.adresse),
+  }];
+  chemin(c, 'personneMorale', 'identite', 'description').indicateurOrigineFusionScission = true;
+  // Les établissements encore ouverts passent à la société absorbante.
+  for (const e of tousEtablissements(c)) {
+    const de = chemin(e, 'descriptionEtablissement');
+    if (/^1[1-6]$/.test(String(de.rolePourEntreprise || ''))) continue;
+    Object.assign(de, { destinationEtablissement: '9', autreDestination: 'Transmis à la société absorbante', dateEffetFermeture: d });
+  }
 };
 
 function tousEtablissements(c) {
@@ -546,4 +568,4 @@ function construireParcours(dossier) {
   };
 }
 
-module.exports = { construireParcours, construireCreation, reponsesCreation, deposable, socle, pouvoirEntrant, APPLIQUER };
+module.exports = { CESSATIONS, construireParcours, construireCreation, reponsesCreation, deposable, socle, pouvoirEntrant, APPLIQUER };

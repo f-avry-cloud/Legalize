@@ -470,6 +470,8 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
 /** Code d'événement que le guichet renvoie pour une opération (54PMF → 54M, 34M → 35M sur une société de capitaux…). */
 function evenementAttendu(code, forme = '') {
   if (code === '34M' && /^5[4-7]/.test(forme)) return '35M';
+  // Constaté : la disparition de la société absorbée est enregistrée en 42M.
+  if (code === '41M') return '42M';
   return code.replace(/PMF?$|PM$/, 'M');
 }
 
@@ -587,6 +589,13 @@ function champs(ops, t, fiche, rep = {}) {
     '28M': [{ name: 'date_dissolution', label: 'Date de la décision de dissolution', type: 'date', requis: true },
       { name: 'associe_unique', label: 'Associé unique qui recueille le patrimoine', type: 'personne_morale', requis: true,
         sous_requis: ['denomination', 'siren', 'forme_juridique_code', 'greffe', 'adresse.codePostal', 'adresse.commune'] }],
+    '80PMF': [{ name: 'etablissement', label: 'Établissement fermé', type: 'choix', requis: true, options: optionsEtablissements(fiche) },
+      { name: 'date_fermeture', label: 'Date de fermeture', type: 'date', requis: true },
+      { name: 'destination', label: 'Devenir de l’établissement', type: 'choix', requis: true, defaut: 'B',
+        options: [['B', 'Fermé'], ['3', 'Vendu'], ['C', 'Supprimé'], ['5', 'Repris par le propriétaire']] }],
+    '41M': [{ name: 'date_fusion', label: 'Date de réalisation de la fusion', type: 'date', requis: true },
+      { name: 'absorbante', label: 'Société absorbante', type: 'personne_morale', requis: true,
+        sous_requis: ['denomination', 'siren', 'forme_juridique_code', 'adresse.codePostal', 'adresse.commune'] }],
     '40M': [{ name: 'date_cessation', label: 'Date de cessation totale d’activité', type: 'date', requis: true }],
   };
   const complements = complementsRegistre(fiche, t._rejets || []);
