@@ -14,7 +14,7 @@
  * dossier dont on sait qu'il serait refusé.
  */
 
-const { contenuAnterieur, dateInpi, clotureInpi, adresseInpi, construirePayload, nettoyer, codeNationalite } = require('./payload');
+const { contenuAnterieur, dateInpi, clotureInpi, adresseInpi, construirePayload, nettoyer, codeNationalite, beneficiairesInpi } = require('./payload');
 const { TYPES_FORMALITE, TYPES_PERSONNE, STATUT_BLOC, rolePrincipal, roleDepuisFonction } = require('./referentiels');
 const { nettoyerSiren } = require('./normalize');
 const creation = require('./parcours-creation');
@@ -194,8 +194,163 @@ const APPLIQUER = {
     Object.assign(chemin(c, 'personneMorale', 'identite', 'description'), { reconstitutionCapitauxPropres: true, dateEffet26M: D });
   },
   '35M'(c, r, D, fiche, t) { dirigeants(c, r, D, fiche, t); },
+  '18M'(c, r, D) {
+    Object.assign(chemin(c, 'personneMorale', 'identite', 'description'), { ess: oui(r.ess), is18MTriggered: true, dateEffet18M: D });
+  },
+  '19M'(c, r, D) {
+    Object.assign(chemin(c, 'personneMorale', 'identite', 'description'), { natureGerance: r.nature_gerance, is19MTriggered: true, dateEffet19M: D });
+  },
+  '20M'(c, r) {
+    const d = dateInpi(r.date_debut_activite);
+    for (const a of chemin(c, 'personneMorale', 'etablissementPrincipal').activites || []) Object.assign(a, { dateDebut: d, is20MTriggered: true });
+  },
+  '29M'(c, r, D) {
+    Object.assign(chemin(c, 'personneMorale', 'identite', 'description'), {
+      societeMission: oui(r.societe_mission), is29MQualiteSocieteMissionTriggered: true, dateEffet29MQualiteSocieteMission: D,
+    });
+  },
+  '38F'(c, r, D) {
+    // Déclaration totale : la liste remplace la précédente, chaque bénéficiaire en « ajout ».
+    Object.assign(chemin(c, 'personneMorale'), {
+      is38FTriggered: true, dateEffet38F: D, mode38F: 2,
+      beneficiairesEffectifs: beneficiairesInpi((r.beneficiaires || []).map((b) => ({
+        personne: b, modalites: b.modalites, pourcentage_capital: b.pourcentage_capital, pourcentage_votes: b.pourcentage_votes,
+      }))),
+    });
+  },
+  '51M'(c, r) {
+    Object.assign(chemin(c, 'personneMorale', 'structureEntreprise'), { is51Or52MTriggered: true, dateEffet51M: dateInpi(r.date_debut) });
+  },
+  '54PMF'(c, r, D, fiche, t) {
+    const pm = chemin(c, 'personneMorale');
+    const modele = (pm.etablissementPrincipal?.activites || [])[0] || {};
+    const cat = creation.categorie(r.categorie);
+    const date = dateInpi(r.date_ouverture) || D;
+    const activite = {
+      ...(modele.codeApe ? { codeApe: modele.codeApe } : {}),
+      descriptionDetaillee: r.activite, dateDebut: date, indicateurPrincipal: true, rolePrincipalPourEntreprise: false,
+      indicateurPremiereActivite: false, exerciceActivite: 'P', formeExercice: creation.formeExercice(cat),
+      origine: { typeOrigine: creation.ORIGINE_FONDS[t.fonds_origine] || '1' }, activiteReguliere: modele.activiteReguliere,
+      ...(cat ? Object.fromEntries(cat.code.split('-').map((v, i) => [`categorisationActivite${i + 1}`, v])) : {}),
+    };
+    pm.autresEtablissements = [...(pm.autresEtablissements || []), {
+      descriptionEtablissement: { rolePourEntreprise: '4', statutPourFormalite: '1', indicateurEtablissementPrincipal: false, identifiantTemporaire: '1' },
+      adresse: adresseInpi(r.adresse), activites: [activite],
+      effectifSalarie: { presenceSalarie: oui(r.salaries), emploiPremierSalarie: false },
+      is54PMFTriggered: true, dateEffetOuvertureEtablissement: date,
+    }];
+  },
+  '55PM'(c, r, D) {
+    const e = etablissement(c, r.etablissement);
+    e.nomsDeDomaine = [...(e.nomsDeDomaine || []), { nomDomaine: r.nom_domaine, statutDomaine: '1', is55PMTriggered: true, dateEffet: D }];
+  },
+  '60PMF'(c, r, D) {
+    Object.assign(chemin(etablissement(c, r.etablissement), 'descriptionEtablissement'), { enseigne: r.enseigne, is60PMFTriggered: true, dateEffet60PMF: D });
+  },
+  '61PMF'(c, r, D) {
+    const ep = chemin(c, 'personneMorale', 'etablissementPrincipal');
+    const modele = (ep.activites || [])[ep.activites?.length - 1] || {};
+    const cat = creation.categorie(r.categorie);
+    const act = JSON.parse(JSON.stringify(modele));
+    delete act.activiteId;
+    Object.assign(act, {
+      rolePrincipalPourEntreprise: false, indicateurPrincipal: false, descriptionDetaillee: r.activite, dateDebut: dateInpi(r.date_debut) || D,
+      formeExercice: creation.formeExercice(cat) || act.formeExercice, is61PMFTriggered: true,
+      ...(cat ? Object.fromEntries(cat.code.split('-').map((v, i) => [`categorisationActivite${i + 1}`, v])) : {}),
+    });
+    ep.activites = [...(ep.activites || []), act];
+  },
+  '62M'(c, r) {
+    const a = (chemin(c, 'personneMorale', 'etablissementPrincipal').activites || [])[Number(r.activite || 0)];
+    if (a) Object.assign(a, { is62PMTriggered: true, dateFin: dateInpi(r.date_fin) });
+  },
+  '63M'(c, r) {
+    const a = (chemin(c, 'personneMorale', 'etablissementPrincipal').activites || [])[0];
+    if (a) Object.assign(a, { is63PMFTriggered: true, dateEffet63PMF: dateInpi(r.date_rachat) });
+  },
+  '67PMF'(c, r, D) {
+    const a = (chemin(c, 'personneMorale', 'etablissementPrincipal').activites || [])[Number(r.activite || 0)];
+    if (a) Object.assign(a, { descriptionDetaillee: r.description, is67PMTriggered: true, dateEffet67PM: D });
+  },
+  '84M'(c, r, D) {
+    const ep = chemin(c, 'personneMorale', 'etablissementPrincipal');
+    const l = r.locataire || {};
+    Object.assign(ep, {
+      is84MTriggered: true, isLocationGeranceOrGeranceMandat: true,
+      locataireGerantMandataire: { denomination: l.denomination, siren: nettoyerSiren(l.siren), lieuRegistre: l.greffe ? String(l.greffe).toUpperCase() : undefined },
+      // Codes du référentiel : 1 gérance-mandat, 2 location-gérance.
+      locationGeranceMandat: { destinationLocationGeranceMandat: r.mode === 'K' ? '1' : '2', typeLocataireGerantMandataire: 'ENTREPRISE', dateEffet: dateInpi(r.date_effet) || D },
+    });
+    for (const a of ep.activites || []) a.isLocationGeranceOrGeranceMandat = true;
+  },
   '34M'(c, r, D, fiche, t) { dirigeants(c, r, D, fiche, t); },
 };
+
+const oui = (x) => x === true || x === 'true';
+
+/** Établissement secondaire désigné par son rang dans la fiche. */
+function etablissement(c, rang) {
+  const autres = chemin(c, 'personneMorale').autresEtablissements || [];
+  return autres[Number(rang || 0)] || {};
+}
+
+/* ------------------------------------------------- cessations (type « R ») */
+
+/**
+ * Mise en sommeil (40M) et dissolution par l'associé unique (28M) se déposent
+ * comme des cessations, sur la fiche complète, sans état antérieur à part.
+ * Recettes établies par dépôts de test.
+ */
+const CESSATIONS = {
+  '40M'(c, r) {
+    const d = dateInpi(r.date_cessation);
+    c.personneMorale.detailCessationEntreprise = { dateCessationTotaleActivite: d, indicateurDissolution: false, indicateurDisparitionPM: false };
+    for (const e of tousEtablissements(c)) Object.assign(chemin(e, 'descriptionEtablissement'), { statutPourFormalite: '2', destinationEtablissement: 'F', dateEffetFermeture: d });
+  },
+  '28M'(c, r) {
+    const d = dateInpi(r.date_dissolution);
+    const a = r.associe_unique || {};
+    c.personneMorale.detailCessationEntreprise = {
+      indicateurDissolution: true, typeDissolution: '2', dateDissolutionDisparition: d, dateTransfertPatrimoine: d, motifCessation: '11',
+    };
+    chemin(c, 'personneMorale', 'composition').pouvoirs = [...(c.personneMorale.composition.pouvoirs || []), {
+      typeDePersonne: 'ENTREPRISE', roleEntreprise: '130', statutPourLaFormalite: '1',
+      entreprise: { siren: nettoyerSiren(a.siren), denomination: a.denomination, formeJuridique: a.forme_juridique_code, roleEntreprise: '130', lieuRegistre: a.greffe ? String(a.greffe).toUpperCase() : undefined },
+      adresseEntreprise: adresseInpi(a.adresse),
+    }];
+    // Établissements secondaires : le guichet exige une destination (constaté).
+    for (const e of c.personneMorale.autresEtablissements || []) chemin(e, 'descriptionEtablissement').destinationEtablissement = 'B';
+  },
+};
+
+function tousEtablissements(c) {
+  return [c.personneMorale.etablissementPrincipal, ...(c.personneMorale.autresEtablissements || [])].filter(Boolean);
+}
+
+function construireCessation(dossier, op) {
+  const fiche = dossier.fiche || {};
+  const r = { ...(dossier.reponses?.commun || {}), ...(dossier.reponses?.[op] || {}) };
+  const c = socle(copie(contenuAnterieur(fiche)));
+  completerRegistre(c, dossier.reponses?._registre || {});
+  c.evenementCessation = op;
+  c.natureCessation = '1';
+  // Pouvoirs existants : inchangés (exigé par le guichet pour une cessation).
+  for (const p of c.personneMorale?.composition?.pouvoirs || []) p.statutPourLaFormalite = '4';
+  for (const e of tousEtablissements(c)) for (const a of e.activites || []) a.indicateurProlongement = false;
+  CESSATIONS[op](c, r);
+  c.piecesJointes = (dossier.pieces || []).map((p) => ({
+    nomDocument: p.nom, typeDocument: p.code, langueDocument: 'fr', documentExtension: 'pdf', ...(p.base64 ? { documentBase64: p.base64 } : {}),
+  }));
+  const denomination = fiche.denomination || c.personneMorale?.identite?.entreprise?.denomination;
+  return {
+    endpoint: 'formalites', methode: 'POST',
+    corps: {
+      companyName: denomination, referenceMandataire: dossier.reference || undefined, nomDossier: dossier.libelle || undefined,
+      typeFormalite: 'R', typePersonne: TYPES_PERSONNE.MORALE, diffusionINSEE: 'O', diffusionCommerciale: 'O',
+      indicateurEntreeSortieRegistre: true, siren: nettoyerSiren(dossier.siren) || undefined, content: c,
+    },
+  };
+}
 
 function dirigeants(c, r, D, fiche, t) {
   const compo = chemin(c, 'personneMorale', 'composition');
@@ -229,7 +384,7 @@ function completerRegistre(content, r) {
 }
 
 /** Opérations déposables automatiquement aujourd'hui. */
-function deposable(op) { return Boolean(APPLIQUER[op]) || ['01M', '02M'].includes(op); }
+function deposable(op) { return Boolean(APPLIQUER[op] || CESSATIONS[op]) || ['01M', '02M'].includes(op); }
 
 /* --------------------------------------------------------------- création */
 
@@ -346,6 +501,8 @@ function construireCreation(dossier) {
 function construireParcours(dossier) {
   const ops = dossier.operations || [];
   if (ops.some((op) => ['01M', '02M'].includes(op))) return construireCreation(dossier);
+  const cessation = ops.find((op) => CESSATIONS[op]);
+  if (cessation) return construireCessation(dossier, cessation);
   const nonGeres = ops.filter((op) => !deposable(op));
   if (nonGeres.length) {
     throw Object.assign(new Error(`Dépôt automatique pas encore disponible pour : ${nonGeres.join(', ')}.`), { status: 422, non_geres: nonGeres });

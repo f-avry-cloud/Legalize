@@ -72,8 +72,6 @@ const EXCLUSIONS = {
   PJ_226: 'dirigeant mineur : cas exceptionnel, à joindre à la main', PJ_237: 'dirigeant mineur : cas exceptionnel, à joindre à la main',
   PJ_144: 'comptes combinés : dépôt des comptes, hors parcours',
   PJ_198: 'refus d’approbation des comptes : dépôt des comptes, hors parcours',
-  PJ_189: 'cession de parts : dépôt d’acte sans événement au registre, hors parcours',
-  PJ_190: 'cession de parts : dépôt d’acte sans événement au registre, hors parcours',
   PJ_196: 'projet de fusion ou de scission : dépôt de projet, hors parcours',
   PJ_197: 'projet de fusion ou de scission : dépôt de projet, hors parcours',
   PJ_204: 'rapport du liquidateur : dépôt d’acte isolé, hors parcours',

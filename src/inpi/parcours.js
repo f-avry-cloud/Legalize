@@ -52,7 +52,17 @@ const OPERATIONS = {
   '80PMF': { nom: 'Fermer un établissement', type: null },
   '84M': { nom: 'Mettre le fonds en location-gérance', type: null },
   '22M': { nom: 'Dissoudre la société (liquidation amiable)', type: 'cessation', cessation: true },
-  '28M': { nom: 'Dissolution-confusion (TUP)', type: null, cessation: true },
+  '28M': { nom: 'Dissolution sans liquidation par l’associé unique (TUP)', type: null, cessation: true },
+  '40M': { nom: 'Mettre la société en sommeil (cessation totale d’activité)', type: null, cessation: true },
+  '18M': { nom: 'Qualité d’entreprise de l’économie sociale et solidaire (ESS)', type: null },
+  '19M': { nom: 'Changer la nature de la gérance (SARL)', type: null },
+  '29M': { nom: 'Acquérir ou perdre la qualité de société à mission', type: null },
+  '51M': { nom: 'Débuter l’activité au siège (société sans activité)', type: null },
+  '55PM': { nom: 'Déclarer le site internet d’un établissement', type: null },
+  '60PMF': { nom: 'Modifier l’enseigne ou le nom commercial d’un établissement', type: null },
+  '62M': { nom: 'Supprimer une partie de l’activité', type: null },
+  '63M': { nom: 'Racheter le fonds pris en location-gérance', type: null },
+  '67PMF': { nom: 'Modifier la description d’une activité', type: null },
   '41M': { nom: 'Fusion : radier la société absorbée', type: null, cessation: true },
   '42M': { nom: 'Radier après la clôture de la liquidation', type: 'cessation', cessation: true },
 };
@@ -545,6 +555,39 @@ function champs(ops, t, fiche, rep = {}) {
     '22M': [{ name: 'lieu_liquidation', label: 'Siège de la liquidation', type: 'choix', options: [['S', 'Au siège social'], ['L', 'À l’adresse du liquidateur'], ['A', 'À une autre adresse']], defaut: 'S' },
       { name: 'adresse_liquidation', label: 'Adresse de liquidation (si autre)', type: 'adresse' }],
     '42M': [{ name: 'date_cloture_liquidation', label: 'Date de clôture de la liquidation', type: 'date', requis: true }],
+    '18M': [{ name: 'ess', label: 'La société a la qualité d’entreprise de l’ESS', type: 'ouinon', requis: true }],
+    '19M': [{ name: 'nature_gerance', label: 'Nouvelle nature de la gérance', type: 'choix', requis: true, options: NATURES_GERANCE }],
+    '29M': [{ name: 'societe_mission', label: 'La société a la qualité de société à mission', type: 'ouinon', requis: true }],
+    '51M': [{ name: 'date_debut', label: 'Date de début de l’activité au siège', type: 'date', requis: true }],
+    '38F': [{ name: 'beneficiaires', label: 'Liste complète des bénéficiaires effectifs après la modification', type: 'beneficiaires', requis: true,
+      sous_requis: ['nom', 'prenoms', 'genre', 'date_naissance', 'lieu_naissance', 'adresse.codePostal', 'adresse.commune', 'modalites'],
+      aide: 'La déclaration remplace la précédente : indiquez tous les bénéficiaires, y compris ceux qui ne changent pas.',
+      actuel: (fiche.beneficiaires_effectifs || []).map((b) => b.nom_complet).filter(Boolean).join(', ') }],
+    '54PMF': [{ name: 'adresse', label: 'Adresse du nouvel établissement', type: 'adresse', requis: true },
+      { name: 'activite', label: 'Activité exercée dans cet établissement', type: 'textarea', requis: true },
+      { name: 'categorie', label: 'Catégorie d’activité (nomenclature du guichet)', type: 'categorie', requis: true },
+      { name: 'date_ouverture', label: 'Date d’ouverture', type: 'date', requis: true },
+      { name: 'salaries', label: 'L’établissement emploie des salariés', type: 'ouinon', defaut: false }],
+    '55PM': [{ name: 'etablissement', label: 'Établissement concerné', type: 'choix', requis: true, options: optionsEtablissements(fiche) },
+      { name: 'nom_domaine', label: 'Adresse du site internet', type: 'text', requis: true }],
+    '60PMF': [{ name: 'etablissement', label: 'Établissement concerné', type: 'choix', requis: true, options: optionsEtablissements(fiche) },
+      { name: 'enseigne', label: 'Nouvelle enseigne', type: 'text', requis: true }],
+    '61PMF': [{ name: 'activite', label: 'Activité ajoutée (au siège / établissement principal)', type: 'textarea', requis: true },
+      { name: 'categorie', label: 'Catégorie d’activité (nomenclature du guichet)', type: 'categorie', requis: true },
+      { name: 'date_debut', label: 'Date de début de cette activité', type: 'date', requis: true }],
+    '62M': [{ name: 'activite', label: 'Activité qui cesse', type: 'choix', requis: true, options: optionsActivites(fiche) },
+      { name: 'date_fin', label: 'Date de fin de cette activité', type: 'date', requis: true }],
+    '63M': [{ name: 'date_rachat', label: 'Date du rachat du fonds', type: 'date', requis: true }],
+    '67PMF': [{ name: 'activite', label: 'Activité modifiée', type: 'choix', requis: true, options: optionsActivites(fiche) },
+      { name: 'description', label: 'Nouvelle description de l’activité', type: 'textarea', requis: true }],
+    '84M': [{ name: 'mode', label: 'Mode d’exploitation', type: 'choix', requis: true, defaut: 'D', options: [['D', 'Location-gérance de la totalité du fonds'], ['K', 'Gérance-mandat']] },
+      { name: 'locataire', label: 'Locataire-gérant ou gérant-mandataire', type: 'personne_morale', requis: true,
+        sous_requis: ['denomination', 'siren', 'greffe'] },
+      { name: 'date_effet', label: 'Date de début du contrat', type: 'date', requis: true }],
+    '28M': [{ name: 'date_dissolution', label: 'Date de la décision de dissolution', type: 'date', requis: true },
+      { name: 'associe_unique', label: 'Associé unique qui recueille le patrimoine', type: 'personne_morale', requis: true,
+        sous_requis: ['denomination', 'siren', 'forme_juridique_code', 'greffe', 'adresse.codePostal', 'adresse.commune'] }],
+    '40M': [{ name: 'date_cessation', label: 'Date de cessation totale d’activité', type: 'date', requis: true }],
   };
   const complements = complementsRegistre(fiche, t._rejets || []);
   if (modifs.length && complements.length) {
@@ -610,6 +653,23 @@ function complementsRegistre(fiche, rejets = []) {
     }
   });
   return out;
+}
+
+const NATURES_GERANCE = [['1', 'Gérance majoritaire'], ['3', 'Minoritaire ou égalitaire, avec société associée'], ['4', 'Minoritaire ou égalitaire, sans société associée'],
+  ['5', 'Gérance non associée, avec société associée'], ['6', 'Gérance non associée, sans société associée']];
+
+/** Établissements secondaires ouverts, d'après la fiche du registre (rang dans la fiche). */
+function optionsEtablissements(fiche) {
+  const autres = fiche?.brut?.formality?.content?.personneMorale?.autresEtablissements || [];
+  return autres.map((e, i) => [String(i), e]).filter(([, e]) => !/^1[1-6]$/.test(String(e.descriptionEtablissement?.rolePourEntreprise || '')))
+    .map(([i, e]) => [i, [e.descriptionEtablissement?.enseigne, e.adresse?.numVoie, e.adresse?.typeVoie, e.adresse?.voie, e.adresse?.codePostal, e.adresse?.commune,
+      e.descriptionEtablissement?.siret ? `(SIRET ${e.descriptionEtablissement.siret})` : ''].filter(Boolean).join(' ')]);
+}
+
+/** Activités de l'établissement principal. */
+function optionsActivites(fiche) {
+  const acts = fiche?.brut?.formality?.content?.personneMorale?.etablissementPrincipal?.activites || [];
+  return acts.map((a, i) => [String(i), `${String(a.descriptionDetaillee || a.codeApe || `activité n° ${i + 1}`).slice(0, 120)}${a.dateDebut ? ` (depuis ${a.dateDebut})` : ''}`]);
 }
 
 const AFFILIATION = [['0', 'Non applicable'], ['1', 'Sans affiliation sociale'], ['3', 'Avec affiliation sociale']];

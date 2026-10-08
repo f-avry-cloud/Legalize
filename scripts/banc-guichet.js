@@ -78,9 +78,11 @@ function creation(forme, sc = {}) {
   };
 }
 
+const CESSATIONS = ['28M', '40M'];
+
 function modification(ops, fiche, extra = {}) {
   return {
-    endpoint: '/api/formality_updates',
+    endpoint: ops.some((o) => CESSATIONS.includes(o)) ? '/api/formalities' : '/api/formality_updates',
     dossier: {
       operations: ops, fiche, siren: SIREN_DEMO, reference: 'BANC', libelle: `Banc ${ops.join('+')}`,
       typologie: { entrants: [{ nom: 'Claire DURAND', nature: 'PP', fonction: 'dirigeant' }], sortants: [], ...extra.t },
@@ -97,6 +99,23 @@ function modification(ops, fiche, extra = {}) {
         '16M': { nouvelle_cloture: '30/06' },
         '17M': { associe_unique: true },
         '35M': { entrant_0: PP('DURAND', 'Claire', { genre: '2', qualite: 'Directeur général' }) },
+        '18M': { ess: true },
+        '19M': { nature_gerance: '1' },
+        '20M': { date_debut_activite: '2013-09-01' },
+        '29M': { societe_mission: true },
+        '38F': { beneficiaires: [{ ...PP('MARTIN', 'Paul'), modalites: ['3', '1'], pourcentage_capital: 30, pourcentage_votes: 30, detention: 'directe' }] },
+        '51M': { date_debut: '2026-09-30' },
+        '54PMF': { adresse: { numVoie: '5', typeVoie: 'RUE', voie: 'Nationale', codePostal: '59000', commune: 'Lille', codeInseeCommune: '59350' },
+          activite: 'Conseil en organisation', categorie: '07-04-08-02', date_ouverture: '2026-09-30', salaries: false },
+        '55PM': { etablissement: '6', nom_domaine: 'etablissement-banc.fr' },
+        '60PMF': { etablissement: '6', enseigne: 'BANC ENSEIGNE' },
+        '61PMF': { activite: 'Formation professionnelle continue', categorie: '07-04-08-02', date_debut: '2026-09-30' },
+        '62M': { activite: '1', date_fin: '2026-09-30' },
+        '63M': { date_rachat: '2026-09-30' },
+        '67PMF': { activite: '0', description: 'Édition de logiciels applicatifs de prise de rendez-vous' },
+        '84M': { mode: 'D', locataire: PM('LOCATAIRE FICTIF'), date_effet: '2026-09-30' },
+        '28M': { date_dissolution: '2026-09-30', associe_unique: PM('ASSOCIE UNIQUE FICTIF', { forme_juridique_code: '5599' }) },
+        '40M': { date_cessation: '2026-09-30' },
       },
       pieces: [],
     },
@@ -120,6 +139,9 @@ function scenarios(fiche) {
   l.push(['creation-SAS-sans-activite', creation('SAS', { op: '02M' })]);
   for (const ops of [['15M', '35M'], ['10M', '15M', '35M'], ['12M', '16M'], ['13M', '14M', '25M'], ['12M', '17M']]) {
     l.push([`modification-${ops.join('-')}`, modification(ops, fiche)]);
+  }
+  for (const op of ['18M', '19M', '20M', '29M', '38F', '51M', '54PMF', '55PM', '60PMF', '61PMF', '62M', '63M', '67PMF', '84M', '28M', '40M']) {
+    l.push([`seule-${op}`, modification([op], fiche)]);
   }
   return l;
 }
