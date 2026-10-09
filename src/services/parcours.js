@@ -71,7 +71,7 @@ async function creer({ societe_id = null, siren = '', operations = [] }) {
     try {
       fiche = await rne.entreprise(sirenUtilise);
     } catch (e) {
-      avertissement = `Fiche du registre indisponible (${e.message}).`;
+      avertissement = messageRegistre(e);
       fiche = societe ? { denomination: societe.denomination, siren: sirenUtilise } : {};
     }
   }
@@ -85,6 +85,27 @@ async function creer({ societe_id = null, siren = '', operations = [] }) {
   await db(supabase.from('formalites').update({ reference }).eq('id', f.id).select());
   await journal(f.id, 'creation', `Parcours ouvert : ${ops.map((c) => parcours.nomOperation(c)).join(', ')}.`, { siren: sirenUtilise });
   return { id: f.id, avertissement };
+}
+
+/** Explication en clair d'un échec de lecture du registre. */
+function messageRegistre(e) {
+  if (e.status === 401 || /401/.test(e.message || '')) {
+    return 'Le registre de l’INPI refuse la connexion du compte data.inpi.fr enregistré dans l’application. '
+      + 'Connectez-vous une fois sur data.inpi.fr avec ce compte (mot de passe à renouveler ou conditions d’utilisation à accepter), '
+      + 'puis cliquez sur « Relire la fiche du registre ».';
+  }
+  return `Fiche du registre indisponible pour le moment (${e.message}). Réessayez avec « Relire la fiche du registre ».`;
+}
+
+/** Relit la fiche du registre d'un dossier ouvert sans elle. */
+async function relireFiche(id) {
+  const f = await charger(id); verifierOuvert(f);
+  if (!f.siren) throw erreur('Ce dossier ne porte pas de SIREN.');
+  let fiche;
+  try { fiche = await rne.entreprise(f.siren); } catch (e) { throw erreur(messageRegistre(e), 502); }
+  await db(supabase.from('formalites').update({ fiche, updated_at: new Date().toISOString() }).eq('id', id).select());
+  await journal(id, 'saisie', 'Fiche du registre relue.');
+  return lire(id);
 }
 
 /* ---------------------------------------------------------------- lecture */
@@ -139,6 +160,7 @@ async function lire(id) {
     numero_liasse: f.numero_liasse,
     montant: f.montant,
     simule: f.simule,
+    fiche_absente: !creation && !fiche.brut,
     societe: creation
       ? { denomination: nouvelle.denomination || '', siren: '', forme: creationPc.forme(f.typologie)?.libelle || '', adresse: '', creation: true }
       : { denomination: fiche.denomination || '', siren: fiche.siren_formate || formaterSiren(f.siren || ''), forme: fiche.forme_juridique || '', adresse: fiche.adresse?.texte || '' },
@@ -384,6 +406,6 @@ function referentiels() {
 }
 
 module.exports = {
-  TYPE, creer, referentiels, redigerPouvoir, lire, majOperations, majTypologie, majReponses,
+  TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses,
   ajouterPiece, majPiece, retirerPiece, analyser, apercu, deposer,
 };

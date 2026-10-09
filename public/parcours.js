@@ -195,12 +195,17 @@ function pcAfficher() {
       </div>
       <div>${boutonSupprimerFormalite({ id: d.id, statut: d.statut })}</div>
     </div>
+    ${d.fiche_absente ? `<div class="alerte alerte-bloquant pc-fiche-absente"><strong>La fiche du registre n’a pas pu être lue.</strong>
+      Sans elle, l’application ne connaît pas les dirigeants ni les données actuelles de la société.
+      <button class="btn" id="pc-relire-fiche">Relire la fiche du registre</button></div>` : ''}
     ${d.incompatibilites.length ? `<div class="alerte alerte-bloquant">${d.incompatibilites.map(esc).join('<br>')}</div>` : ''}
     <nav class="pc-etapes" role="tablist">
       ${PC_ETAPES.map(([nom, titre], i) => `<button role="tab" data-etape="${nom}" class="${pcEtape.nom === nom ? 'actif' : ''}">
         <span class="pc-etape-num">${i + 1}</span> ${titre} ${pcCompteur(nom, d)}</button>`).join('')}
     </nav>
     <div id="pc-contenu"></div>`;
+  const $relire = document.getElementById('pc-relire-fiche');
+  if ($relire) $relire.onclick = async () => { $relire.disabled = true; $relire.textContent = 'Lecture…'; await pcMaj('POST', `/parcours/${d.id}/fiche`); };
   $main.querySelectorAll('.pc-etapes button').forEach((b) => {
     b.onclick = async () => { await pcSauverSiBesoin(); pcEtape.nom = b.dataset.etape; pcAfficher(); };
   });

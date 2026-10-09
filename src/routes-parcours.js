@@ -21,6 +21,7 @@ router.get('/parcours/referentiels', (req, res) => {
 router.post('/parcours', async (req, res) => res.status(201).json(await parcours.creer(req.body || {})));
 router.get('/parcours/:id', async (req, res) => res.json(await parcours.lire(req.params.id)));
 router.put('/parcours/:id/operations', async (req, res) => res.json(await parcours.majOperations(req.params.id, req.body?.operations || [])));
+router.post('/parcours/:id/fiche', async (req, res) => res.json(await parcours.relireFiche(req.params.id)));
 router.post('/parcours/:id/pouvoir', async (req, res) => res.json(await parcours.redigerPouvoir(req.params.id, req.body || {})));
 router.put('/parcours/:id/typologie', async (req, res) => res.json(await parcours.majTypologie(req.params.id, req.body || {})));
 router.put('/parcours/:id/reponses', async (req, res) => res.json(await parcours.majReponses(req.params.id, req.body || {})));
