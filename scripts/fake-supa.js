@@ -67,7 +67,12 @@ function requete(table) {
     order(col, opts) { etat.tri = { col, asc: opts?.ascending !== false }; return builder; },
     single() { etat.unique = true; return builder; },
     maybeSingle() { etat.unique = 'peut-etre'; return builder; },
-    then(resoudre, rejeter) { return executer().then(resoudre, rejeter); },
+    // faux.latence (ms) simule l'aller-retour réseau : utile pour éprouver
+    // deux requêtes simultanées.
+    then(resoudre, rejeter) {
+      const attente = faux.latence ? new Promise((r) => setTimeout(r, faux.latence)) : Promise.resolve();
+      return attente.then(executer).then(resoudre, rejeter);
+    },
   };
 
   async function executer() {

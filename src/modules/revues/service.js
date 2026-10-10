@@ -246,11 +246,22 @@ const APPLIQUER = {
 async function accepter(id, modifs = {}) {
   const p = await lireProposition(id);
   if (p.statut !== 'proposee') throw erreur('Cette proposition a déjà été traitée.', 409);
-  // Ce que l'avocat a corrigé avant de valider prime sur la proposition.
-  const resultat = await APPLIQUER[p.nature]({ ...p, donnees: { ...p.donnees, ...modifs } }, modifs);
+  // La proposition est réservée avant d'être appliquée : un double clic ou
+  // deux membres en même temps n'ouvrent pas deux fois le même dossier.
+  const [reservee] = await q(supabase.from('propositions').update({
+    statut: 'acceptee', decide_par: utilisateurCourant()?.id || null, decide_le: new Date().toISOString(),
+  }).eq('id', id).eq('statut', 'proposee').select('id'));
+  if (!reservee) throw erreur('Cette proposition a déjà été traitée.', 409);
+  let resultat;
+  try {
+    // Ce que l'avocat a corrigé avant de valider prime sur la proposition.
+    resultat = await APPLIQUER[p.nature]({ ...p, donnees: { ...p.donnees, ...modifs } }, modifs);
+  } catch (e) {
+    await q(supabase.from('propositions').update({ statut: 'proposee', decide_par: null, decide_le: null }).eq('id', id).select('id'));
+    throw e;
+  }
   await q(supabase.from('propositions').update({
-    statut: 'acceptee', resultat, decide_par: utilisateurCourant()?.id || null, decide_le: new Date().toISOString(),
-    ...(Object.keys(modifs).length ? { donnees: { ...p.donnees, ...modifs } } : {}),
+    resultat, ...(Object.keys(modifs).length ? { donnees: { ...p.donnees, ...modifs } } : {}),
   }).eq('id', id).select('id'));
   return { ...resultat, proposition_id: Number(id) };
 }

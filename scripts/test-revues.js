@@ -86,8 +86,13 @@ function verifier(nom, condition, detail) {
   verifier('tâche d’un dossier pas encore ouvert : refus clair (409)', avant.statut === 409 && /Ouvrez d’abord/.test(avant.corps.error));
   const sansType = await appel('POST', '/propositions/1/accepter', { type: '' });
   verifier('ouverture sans type : refus clair', sansType.statut === 400 && /type/.test(sansType.corps.error));
-  const ouvert = await appel('POST', '/propositions/1/accepter');
+  // Double clic : deux validations simultanées n'ouvrent qu'un dossier.
+  fake.faux.latence = 5;
+  const [v1, v2] = await Promise.all([appel('POST', '/propositions/1/accepter'), appel('POST', '/propositions/1/accepter')]);
+  fake.faux.latence = 0;
+  const ouvert = v1.statut === 200 ? v1 : v2;
   verifier('dossier ouvert depuis la proposition', ouvert.statut === 200 && ouvert.corps.dossier_id && tables.dossiers.length === 1, ouvert.corps);
+  verifier('double clic : la seconde validation est refusée (409)', [v1.statut, v2.statut].sort().join() === '200,409', [v1.statut, v2.statut]);
   const did = ouvert.corps.dossier_id;
   verifier('client créé', tables.clients[0]?.nom === 'Fonds Exemple');
   verifier('mails de la clé rattachés au dossier', tables.emails.filter((e) => e.dossier_id === did && e.statut === 'rattache').length === 2);
