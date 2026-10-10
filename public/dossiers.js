@@ -641,10 +641,10 @@ async function dosBlocTableauDeBord() {
   return `
     <div class="grid cols-4">
       ${DOS_FAMILLES.map((f) => `<a class="card dos-stat" href="#/dossiers?vue=${f}"><div class="stat">${s.par_famille[f] || 0}</div><div class="stat-label">${esc(cat.familles[f].libelle)}</div></a>`).join('')}
-      <a class="card dos-stat" href="#/clients"><div class="stat" style="color:${s.echeances.some((x) => dosClasseDate(x.date) === 'retard') ? 'var(--danger)' : 'inherit'}">${s.echeances.length}</div><div class="stat-label">Échéances à 30 jours</div></a>
+      <div class="card"><div class="stat" style="color:${s.echeances.some((x) => dosClasseDate(x.date) === 'retard') ? 'var(--danger)' : 'inherit'}">${s.echeances.length}</div><div class="stat-label">Échéances en retard ou à 30 jours</div></div>
     </div>
     <div class="grid cols-2 mt">
-      <div class="card"><h2>Échéances à venir</h2>
+      <div class="card"><h2>Échéances en retard ou à 30 jours</h2>
         ${s.echeances.length ? `<table><tbody>${s.echeances.slice(0, 8).map((x) => `
           <tr class="clickable" onclick="location.hash='#/dossiers/${x.dossier_id}'"><td>${dosDate(x.date)}</td>
             <td>${esc(x.libelle)}<div class="sub">${esc(x.dossier_reference)} · ${esc(x.dossier_titre)}</div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Rien dans les 30 prochains jours</div>'}

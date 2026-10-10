@@ -1443,3 +1443,7 @@ a.dos-stat { color: inherit; text-decoration: none; }
   .dos-etapes li { flex-wrap: wrap; }
   .dos-etapes li .dos-etape-corps { flex-basis: calc(100% - 80px); }
 }
+/* Échéances : la date et les boutons sur une ligne, le libellé dessous (colonne étroite). */
+.dos-echeances li { flex-wrap: wrap; }
+.dos-echeances li .dos-etape-corps { order: 3; flex-basis: 100%; }
+.dos-echeances li .dos-boutons { margin-left: auto; }
