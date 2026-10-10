@@ -183,7 +183,7 @@ async function creer(payload = {}) {
 
   let client;
   if (payload.client_id) client = await lireClient(payload.client_id);
-  else if (texte(payload.nouveau_client?.nom)) client = await creerClient(payload.nouveau_client);
+  else if (texte(payload.nouveau_client?.nom)) client = await clientDuMemeNom(payload.nouveau_client) || await creerClient(payload.nouveau_client);
   else throw erreur('Indiquez le client.');
 
   const parties = await preparerParties(payload.parties, t.roles);
@@ -495,6 +495,15 @@ async function executerAction(dossierId, actionId, params) {
 /* ---------------------------------------------------------------- clients */
 
 const NATURES = { groupe: 'Groupe', societe: 'Société', personne: 'Personne physique' };
+
+/** Client déjà enregistré sous ce nom (casse ignorée) : deux dossiers d'un
+ *  même nouveau client ne doivent pas en créer deux fiches. */
+async function clientDuMemeNom(champs = {}) {
+  const nom = texte(champs.nom);
+  if (!nom || texte(champs.siren)) return null;
+  const motif = nom.replace(/[\\%_]/g, (c) => `\\${c}`);
+  return (await q(supabase.from('clients').select('*').ilike('nom', motif).order('id').limit(1)))[0] || null;
+}
 
 async function creerClient(champs = {}) {
   // Un SIREN suffit : la société est importée du registre et le client s'y rattache.

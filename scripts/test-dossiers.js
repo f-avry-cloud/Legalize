@@ -135,6 +135,13 @@ function verifier(nom, condition, detail) {
   verifier('étapes du modèle modifié par le cabinet', consult.etapes.map((e) => e.libelle).join('|') === 'Question reçue|Recherches|Note écrite|Rendez-vous de restitution');
   verifier('titre saisi conservé', consult.titre === 'Apport-cession : report d’imposition');
   verifier('pas d’actions de formalité sur une consultation', consult.actions.length === 0);
+  const nbClients = tables.clients.length;
+  const second = (await appel('POST', '/dossiers', {
+    type: 'question_ponctuelle', nouveau_client: { nom: 'jean MOREL', nature: 'personne' }, titre: 'Donation de titres',
+  })).corps;
+  verifier('même nouveau client : fiche existante reprise, pas de doublon', second.client_id === consult.client_id && tables.clients.length === nbClients,
+    { client: second.client_id, attendu: consult.client_id });
+  await appel('DELETE', `/dossiers/${second.id}`, { confirmation: second.reference });
 
   console.log('\nVues et fiche client');
   let liste = (await appel('GET', '/dossiers?famille=haut_de_bilan')).corps;
