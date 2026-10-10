@@ -103,6 +103,72 @@ function decrire(p) {
   return { ...p, libelle: LIBELLES[p.nature] || p.nature, texte };
 }
 
+/* ------------------------------------------------------------ aujourd'hui */
+
+/** Date du jour à Paris (AAAA-MM-JJ). */
+function jourParis(decalage = 0) {
+  const d = new Date(Date.now() + decalage * 86400000);
+  return new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }).format(d);
+}
+
+/** Retard, aujourd'hui, cette semaine, plus tard, sans date. */
+function tranche(date) {
+  if (!date) return 'sans_date';
+  if (date < jourParis()) return 'retard';
+  if (date === jourParis()) return 'aujourdhui';
+  if (date <= jourParis(7)) return 'semaine';
+  return 'plus_tard';
+}
+
+/**
+ * L'écran « Aujourd'hui » : les tâches d'abord (les vôtres et celles que
+ * l'assistant suggère), les échéances proches, une ligne par dossier pour
+ * ce qui est nouveau, puis ce qui reste à valider.
+ */
+async function aujourdhui() {
+  const [dossiersTous, taches, echeances, propositions, revueDuJour] = await Promise.all([
+    q(supabase.from('dossiers').select('id, reference, titre, famille, statut, client_id')),
+    q(supabase.from('taches').select('id, dossier_id, titre, echeance, statut, origine, responsable_id, created_at').eq('statut', 'a_faire')),
+    q(supabase.from('echeances').select('id, dossier_id, libelle, date, base_legale').eq('statut', 'a_venir').order('date')),
+    q(supabase.from('propositions').select('*').eq('statut', 'proposee').order('id')),
+    lire('derniere'),
+  ]);
+  const actifs = new Map(dossiersTous.filter((d) => ['en_cours', 'en_attente', 'suspendu'].includes(d.statut)).map((d) => [d.id, d]));
+  // Titre des dossiers proposés (clé) : celui de leur proposition d'ouverture.
+  const titresCles = Object.fromEntries(propositions.filter((p) => p.nature === 'creer_dossier' && p.dossier_cle).map((p) => [p.dossier_cle, p.donnees?.titre || p.dossier_cle]));
+  const dossierDe = (x) => (x.dossier_id && actifs.has(x.dossier_id)
+    ? { id: x.dossier_id, reference: actifs.get(x.dossier_id).reference, titre: actifs.get(x.dossier_id).titre }
+    : x.dossier_cle ? { cle: x.dossier_cle, titre: titresCles[x.dossier_cle] || x.dossier_cle, propose: true } : null);
+
+  const mesTaches = taches.filter((t) => actifs.has(t.dossier_id)).map((t) => ({
+    ...t, dossier: dossierDe(t), tranche: tranche(t.echeance), suggestion: false,
+  }));
+  const suggestionsTaches = propositions.filter((p) => p.nature === 'creer_tache').map((p) => ({
+    id: `p${p.id}`, proposition_id: p.id, titre: p.donnees?.titre || '', echeance: p.donnees?.echeance || null,
+    justification: p.justification, dossier: dossierDe(p), tranche: tranche(p.donnees?.echeance), suggestion: true,
+  }));
+  const ordre = (a, b) => String(a.echeance || '9999').localeCompare(String(b.echeance || '9999'));
+  const limite = jourParis(14);
+  const revue = revueDuJour.revue;
+  return {
+    jour: jourParis(),
+    taches: [...mesTaches, ...suggestionsTaches].sort(ordre),
+    echeances: echeances.filter((x) => actifs.has(x.dossier_id) && x.date <= limite).map((x) => ({ ...x, dossier: dossierDe(x) })),
+    echeances_revue: (revue?.echeances || []).filter((x) => x.date && x.date >= jourParis() && x.date <= limite && !x.dossier_id)
+      .map((x) => ({ ...x, dossier: dossierDe(x) })),
+    suggestions: propositions.filter((p) => p.nature !== 'creer_tache').map((p) => ({ ...decrire(p), dossier: dossierDe(p) })),
+    nouveautes: revue ? revueDuJour.sections.map((s) => ({
+      id: s.id, titre: s.titre, resume: s.resume || s.faits?.[0] || '', priorite: s.priorite,
+      dossier: s.dossier ? { id: s.dossier.id, reference: s.dossier.reference } : null, cle: s.cle,
+      faits: s.faits, en_attente: s.en_attente,
+      emails: s.emails.map((e) => ({ id: e.id, sens: e.sens, objet: e.objet, expediteur: e.expediteur, date: e.date, lien: e.lien })),
+    })) : [],
+    a_ranger: revue ? revueDuJour.a_ranger?.length || revueDuJour.a_rattacher.length : 0,
+    revue: revue ? { id: revue.id, date_revue: revue.date_revue, moment: revue.moment, stats: revue.stats, remarques: revue.remarques, created_at: revue.created_at } : null,
+    dossiers: [...actifs.values()].map((d) => ({ id: d.id, reference: d.reference, titre: d.titre })),
+  };
+}
+
 /* ---------------------------------------------------------- application */
 
 async function lireProposition(id) {
@@ -268,6 +334,7 @@ async function supprimerRevue(id) {
 }
 
 module.exports = {
+  aujourdhui, tranche, jourParis,
   liste, enAttente, lire, accepter, refuser, accepterTout, confirmerEmails, rangerEmail,
   regles, ajouterRegle, supprimerRegle, supprimerRevue, NATURES_REGLE,
 };

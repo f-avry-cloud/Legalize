@@ -106,6 +106,20 @@ function verifier(nom, condition, detail) {
   r = (await appel('GET', '/dossiers/' + did)).corps;
   verifier('fiche dossier : mails rattachés avec leur résumé', r.emails.length === 2 && r.emails.some((e) => e.resume === 'Quatre projets pour revue.'));
 
+  console.log('\nAujourd’hui');
+  const { jourParis, tranche } = require('../src/modules/revues/service');
+  verifier('tranches : retard, aujourd’hui, semaine, plus tard, sans date',
+    tranche(jourParis(-1)) === 'retard' && tranche(jourParis()) === 'aujourdhui' && tranche(jourParis(3)) === 'semaine'
+    && tranche(jourParis(30)) === 'plus_tard' && tranche(null) === 'sans_date');
+  tables.taches.push({ id: 90, dossier_id: did, titre: 'Tâche en retard', echeance: jourParis(-2), statut: 'a_faire', origine: 'manuel' });
+  tables.propositions.push({ id: 20, revue_id: 1, dossier_id: did, nature: 'creer_tache', statut: 'proposee', donnees: { titre: 'Suggestion du jour', echeance: jourParis() }, justification: 'Mail de ce matin' });
+  const aj = (await appel('GET', '/aujourdhui')).corps;
+  verifier('tâches et suggestions réunies, triées par date', aj.taches[0].titre === 'Tâche en retard' && aj.taches.some((t) => t.suggestion && t.titre === 'Suggestion du jour' && t.tranche === 'aujourdhui'), aj.taches.map((t) => t.titre));
+  verifier('chaque tâche (hors suggestion) porte son dossier', aj.taches.filter((t) => !t.suggestion).every((t) => t.dossier?.reference));
+  verifier('suggestions hors tâches dans « À valider »', aj.suggestions.every((p) => p.nature !== 'creer_tache'));
+  verifier('nouveautés : une ligne par dossier de la revue', aj.nouveautes.length === 2 && aj.nouveautes[0].resume);
+  verifier('échéance du dossier dans les 14 jours, hors dossiers clos', Array.isArray(aj.echeances));
+
   console.log('\nRefus et règles');
   const refus = await appel('POST', '/propositions/5/refuser', { regle: { nature: 'ignorer_expediteur', valeur: 'Inconnu@Client.test' } });
   verifier('refus enregistré', refus.statut === 200 && tables.propositions.find((p) => p.id === 5).statut === 'refusee');

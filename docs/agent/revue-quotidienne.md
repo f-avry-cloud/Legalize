@@ -88,15 +88,22 @@ Un mail sans lien avec un dossier mais utile reste sans `dossier_id` ni
 
 ## 6. Rédaction, par dossier
 
-Un bloc par dossier touché (existant ou proposé) :
+Un bloc par dossier touché (existant ou proposé). L'avocat lit d'abord une
+ligne par dossier : sois bref, le détail reste dépliable.
 - `titre` : « Herencia — acquisition par Grand Ouest (client : Emeraude
-  Capital) » ;
+  Capital) » (la partie avant « — » sert d'étiquette courte) ;
+- `resume` : UNE ligne, 120 caractères au plus, l'essentiel du jour :
+  « Closing mer. 14/10 ; 4 projets Volt et l'acte réitératif à relire » ;
 - `priorite` : `haute` si une échéance tombe dans les 7 jours ou si une
   action urgente est attendue ; `basse` pour une simple information ;
   `terminee` si le dossier s'achève ; sinon `normale` ;
-- `faits` : une ligne par fait, horodatée en heure de Paris, avec l'auteur :
-  « ven. 9 oct., 20 h 19 — Volt (C. Milin) : 4 projets pour revue (…) » ;
-- `a_faire` : ce que Florent doit faire, concrètement ;
+- `faits` : 5 lignes au plus, une par fait, horodatée en heure de Paris,
+  avec l'auteur : « ven. 9 oct., 20 h 19 — Volt (C. Milin) : 4 projets pour
+  revue » ;
+- `a_faire` : ce que Florent doit faire, concrètement ; CHAQUE élément donne
+  aussi lieu à une proposition `creer_tache` (avec date si elle existe),
+  sauf si une tâche identique est déjà ouverte ou proposée : la liste des
+  tâches est le cœur de l'écran ;
 - `en_attente` : ce qui est attendu des autres, avec « demandé le … » ;
   signale les relances (demande restée sans réponse depuis plus de 3 jours
   ouvrés).
@@ -124,10 +131,16 @@ Natures et données attendues :
   `levee_fonds` (haut de bilan) ; `approbation_comptes`, `decision_gestion`,
   `tenue_registres` (secrétariat) ; `consultation`, `question_ponctuelle`,
   `contrat` (conseil).
+  Quand le SIREN d'une société ou du client figure dans les mails (signature,
+  Kbis), ajoute-le (`parties[].siren`, `client_siren`) : la fiche sera reprise
+  du registre national.
   Rôles (haut de bilan) : `cible`, `cedant`, `acquereur`, `absorbante`,
   `absorbee`, `apporteuse`, `beneficiaire`, `investisseur`, `holding`,
   `concernee`.
-- `creer_tache` : `{ "titre", "echeance" }` ;
+- `creer_tache` : `{ "titre", "echeance" }` — titre court commençant par un
+  verbe (« Relire les 4 projets Volt », « Faire signer les conventions
+  Octoplus ») ; `echeance` = date à laquelle il faut l'avoir fait, si elle
+  ressort des mails (veille d'un closing, d'un contrôle…) ;
 - `tache_faite` : `{ "tache_id", "titre" }` — seulement si un mail envoyé le
   prouve ;
 - `creer_echeance` : `{ "libelle", "date", "base_legale" }` ;
@@ -162,7 +175,7 @@ Le JSON :
   "stats": { "recus": 36, "envoyes": 2, "utiles": 10, "ecartes": 26,
              "ecartes_detail": { "docusign": 16, "publicites": 3, "scans": 3 } },
   "echeances": [ … ], "remarques": [ "…" ],
-  "dossiers": [ { "dossier_id" | "cle", "titre", "priorite", "faits": [],
+  "dossiers": [ { "dossier_id" | "cle", "titre", "resume", "priorite", "faits": [],
                   "a_faire": [], "en_attente": [], "ordre": 0 } ],
   "emails": [ { "message_id": "<internetMessageId>", "graph_id": "…",
                 "conversation_id": "…", "sens": "recu" | "envoye",
@@ -185,12 +198,15 @@ traité : la revue suivante reprendra de là.
 ## 9. Récapitulatif
 
 Envoie (`outlook_send_mail`) à favry@lce-avocats.com, et à personne
-d'autre, un mail HTML court :
-- objet : « Legalize — revue du {jour} ({matin|après-midi}) » ;
-- les échéances des 7 prochains jours ;
-- les dossiers prioritaires : titre et « à faire » en une ou deux lignes ;
-- le nombre de propositions à valider ;
-- le lien https://legalize-rho.vercel.app/#/revue.
+d'autre, un mail HTML très court, lisible en 20 secondes sur un téléphone :
+- objet : « Legalize — {n} tâche(s), {m} échéance(s) — {jour} » ;
+- « À faire » : 5 tâches au plus (en retard d'abord), une ligne chacune avec
+  l'étiquette du dossier et la date ;
+- « Échéances » : les 7 prochains jours, une ligne chacune ;
+- « Nouveau » : une ligne par dossier (le `resume`) ;
+- « {k} suggestion(s) à valider » et le lien https://legalize-rho.vercel.app/
+  (écran « Aujourd'hui »).
+Pas de paragraphe, pas de formule de politesse.
 
 L'après-midi, s'il n'y a aucun mail utile, dépose la revue mais n'envoie pas
 de récapitulatif.
@@ -207,9 +223,11 @@ Même procédure, avec ces différences :
 - pour chaque semaine, lis d'abord objets et aperçus, puis en entier
   seulement le dernier message de chaque fil utile ;
 - objectif : constituer la liste des dossiers en cours. Propose un
-  `creer_dossier` par affaire active, avec ses contacts récurrents, ses
-  tâches encore ouvertes et ses échéances à venir ; ne propose pas de tâche
-  pour ce qui est manifestement terminé ;
+  `creer_dossier` par affaire active (avec le SIREN des sociétés et du
+  client quand il figure dans les mails : `parties[].siren`,
+  `client_siren`), ses contacts récurrents, ses tâches encore ouvertes et
+  ses échéances à venir ; ne propose pas de tâche pour ce qui est
+  manifestement terminé ;
 - les faits anciens sont résumés en une ou deux lignes par semaine ;
 - un seul récapitulatif à la fin : « Reprise terminée : N dossiers proposés,
   M propositions à valider ».

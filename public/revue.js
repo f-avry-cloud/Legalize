@@ -215,7 +215,7 @@ async function vueReglesRevue() {
 }
 
 routes.unshift(
-  { re: /^\/revue$/, view: () => vueRevue(), nav: 'revue' },
-  { re: /^\/revue\/regles$/, view: vueReglesRevue, nav: 'revue' },
-  { re: /^\/revue\/(\d+)$/, view: vueRevue, nav: 'revue' },
+  { re: /^\/revue$/, view: () => vueRevue(), nav: 'aujourdhui' },
+  { re: /^\/revue\/regles$/, view: vueReglesRevue, nav: 'aujourdhui' },
+  { re: /^\/revue\/(\d+)$/, view: vueRevue, nav: 'aujourdhui' },
 );

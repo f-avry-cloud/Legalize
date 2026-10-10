@@ -10,6 +10,7 @@ const service = require('./service');
 const router = express.Router();
 const corps = (req) => req.body || {};
 
+router.get('/aujourdhui', async (req, res) => res.json(await service.aujourdhui()));
 router.get('/revues', async (req, res) => res.json(await service.liste()));
 router.get('/revues/en-attente', async (req, res) => res.json(await service.enAttente()));
 router.get('/revues/regles', async (req, res) => res.json(await service.regles()));

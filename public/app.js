@@ -70,7 +70,7 @@ async function getReferentiel() {
 /* ================================================================ routeur */
 
 const routes = [
-  { re: /^\/?$/, view: dashboard, nav: 'dashboard' },
+  { re: /^\/tableau$/, view: dashboard, nav: 'dashboard' },
   { re: /^\/societes$/, view: societesList, nav: 'societes' },
   { re: /^\/societes\/(\d+)$/, view: societeDetail, nav: 'societes' },
   { re: /^\/groupes$/, view: groupesList, nav: 'groupes' },
