@@ -99,8 +99,10 @@ const base = (jeton) => createClient(SUPABASE_URL, SUPABASE_KEY, {
       const r = await appel(chemin, { jeton: j2 });
       verifier(`${chemin} accessible`, r.statut === 200, r.statut);
     }
-    const { data: b2, error: eb2 } = await base(j2).from('societes').select('id').limit(5);
-    verifier('la base livre les données au membre', !eb2 && b2.length > 0, eb2?.message);
+    // Indépendant du contenu de la base : le membre lit au moins sa propre fiche.
+    const { data: b2, error: eb2 } = await base(j2).from('utilisateurs').select('id').ilike('email', EMAIL);
+    const { error: eb3 } = await base(j2).from('societes').select('id').limit(1);
+    verifier('la base livre les données au membre', !eb2 && !eb3 && b2.length === 1, eb2?.message || eb3?.message);
     const { data: v } = await base(j2).from('document_versions').select('id').limit(1);
     if (v?.[0]) {
       const r = await fetch(`${APP}/api/versions/${v[0].id}/download`, { headers: { Cookie: `lz_jeton=${encodeURIComponent(j2)}` } });
