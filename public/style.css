@@ -1447,3 +1447,30 @@ a.dos-stat { color: inherit; text-decoration: none; }
 .dos-echeances li { flex-wrap: wrap; }
 .dos-echeances li .dos-etape-corps { order: 3; flex-basis: 100%; }
 .dos-echeances li .dos-boutons { margin-left: auto; }
+
+/* ============================================================ revue du jour */
+
+.rv-tete { align-items: flex-end; flex-wrap: wrap; gap: 16px; }
+.rv-tete h1 { text-transform: none; }
+.rv-tete h1::first-letter { text-transform: uppercase; }
+.rv-chiffres { display: flex; gap: 18px; flex-wrap: wrap; margin: 0 0 16px; font-size: 13px; color: var(--ink-2); }
+.rv-chiffres strong { color: var(--ink); font-size: 16px; }
+.rv-bloc { border-left: 3px solid var(--line-fort); }
+.rv-bloc.haute { border-left-color: var(--danger); }
+.rv-bloc.basse, .rv-bloc.terminee { border-left-color: var(--ok); }
+.rv-bloc-tete { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rv-bloc-tete h2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0; text-transform: none; letter-spacing: 0; font-size: 17px; color: var(--ink); }
+.rv-bloc-tete h2 a { color: inherit; }
+.rv-colonnes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 14px 0; }
+.rv-colonnes h3, .rv-bloc > h3 { margin: 0 0 6px; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.rv-colonnes ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 13.5px; line-height: 1.45; }
+.rv-props li.acceptee, .rv-props li.refusee { opacity: .6; }
+.rv-mails li { align-items: flex-start; }
+.rv-sens { flex: none; width: 18px; text-align: center; color: var(--ink-3); font-weight: 700; }
+.rv-mails select { padding: 6px 8px; border-radius: var(--r-xs); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: inherit; font-size: 12px; max-width: 220px; }
+.rv-pied { margin-top: 18px; font-size: 13px; }
+.dos-case { display: flex; gap: 8px; align-items: center; margin: 10px 0; font-size: 14px; }
+@media (max-width: 860px) {
+  .rv-colonnes { grid-template-columns: 1fr; }
+  .rv-mails li { flex-wrap: wrap; }
+}

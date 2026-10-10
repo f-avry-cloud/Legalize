@@ -233,7 +233,7 @@ async function lire(id) {
   id = Number(id);
   const d = await lireDossier(id);
   const [resume] = await resumer([d]);
-  const [client, etapes, taches, echeances, evenements, intervenants, operations, formalites, utilisateurs] = await Promise.all([
+  const [client, etapes, taches, echeances, evenements, intervenants, operations, formalites, utilisateurs, emails] = await Promise.all([
     d.client_id ? q(supabase.from('clients').select('*').eq('id', d.client_id).single()).catch(() => null) : null,
     q(supabase.from('etapes').select('*').eq('dossier_id', id).order('ordre')),
     q(supabase.from('taches').select('*').eq('dossier_id', id).order('created_at')),
@@ -243,6 +243,8 @@ async function lire(id) {
     q(supabase.from('operations').select('id, libelle, type, statut, societe_id, created_at').eq('dossier_id', id)),
     q(supabase.from('formalites').select('id, type, libelle, reference, statut, statut_inpi, societe_id, created_at').eq('dossier_id', id)),
     q(supabase.from('utilisateurs').select('id, nom, prenom, email')),
+    q(supabase.from('emails').select('id, sens, expediteur, objet, date, resume, lien').eq('dossier_id', id).eq('statut', 'rattache')
+      .order('date', { ascending: false }).limit(100)),
   ]);
   const U = parId(utilisateurs);
   const t = types.type(d.type);
@@ -265,6 +267,7 @@ async function lire(id) {
     intervenants,
     operations,
     formalites,
+    emails,
     rattachables: {
       operations: opsLibres.filter((o) => !o.dossier_id),
       formalites: formLibres.filter((f) => !f.dossier_id),
@@ -276,6 +279,7 @@ async function lire(id) {
 const MODIFIABLES = ['titre', 'statut', 'responsable_id', 'echeance', 'notes', 'client_id'];
 
 async function modifier(id, champs = {}) {
+  id = Number(id);
   const avant = await lireDossier(id);
   const maj = {};
   for (const c of MODIFIABLES) if (c in champs) maj[c] = champs[c];
@@ -295,6 +299,14 @@ async function modifier(id, champs = {}) {
   await q(supabase.from('dossiers').update(maj).eq('id', id).select());
   if ('statut' in maj && maj.statut !== avant.statut) {
     await journal(id, 'statut', `Statut : ${types.STATUTS[avant.statut]} → ${types.STATUTS[maj.statut]}.`);
+    // À la clôture, les résumés des mails sont effacés : seuls restent
+    // l'expéditeur, l'objet, la date, le lien et la chronologie.
+    if (['clos', 'abandonne'].includes(maj.statut) && !['clos', 'abandonne'].includes(avant.statut)) {
+      await q(supabase.from('emails').update({ resume: null }).eq('dossier_id', id).select('id'));
+      await q(supabase.from('revue_dossiers').delete().eq('dossier_id', id).select('id'));
+      await q(supabase.from('propositions').update({ justification: null }).eq('dossier_id', id).select('id'));
+      await journal(id, 'statut', 'Résumés des mails effacés (dossier clos).', { origine: 'systeme' });
+    }
   }
   if ('responsable_id' in maj && maj.responsable_id !== avant.responsable_id) {
     const u = maj.responsable_id ? (await membres()).find((m) => m.id === maj.responsable_id) : null;
@@ -304,6 +316,7 @@ async function modifier(id, champs = {}) {
 }
 
 async function supprimer(id, { confirmation } = {}) {
+  id = Number(id);
   const d = await lireDossier(id);
   if (texte(confirmation) !== d.reference) throw erreur(`Pour supprimer, retapez la référence du dossier (${d.reference}).`, 422);
   await q(supabase.from('dossiers').delete().eq('id', id).select());
@@ -353,13 +366,14 @@ async function supprimerEtape(etapeId) {
 
 /* -------------------------------------------------------------- tâches */
 
-async function ajouterTache(dossierId, { titre, echeance, responsable_id, etape_id } = {}) {
+async function ajouterTache(dossierId, { titre, echeance, responsable_id, etape_id, origine = 'manuel' } = {}) {
   dossierId = Number(dossierId);
   if (!texte(titre)) throw erreur('Intitulé de la tâche requis.');
   await lireDossier(dossierId);
   await q(supabase.from('taches').insert({
     dossier_id: dossierId, titre: texte(titre), echeance: dateOuNull(echeance),
     responsable_id: idOuNull(responsable_id) ?? utilisateurCourant()?.id ?? null, etape_id: idOuNull(etape_id),
+    origine: ['manuel', 'modele', 'agent'].includes(origine) ? origine : 'manuel',
   }).select());
   return lire(dossierId);
 }

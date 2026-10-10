@@ -15,6 +15,7 @@ const tables = {
   formalites: [], formalite_pieces: [], formalite_evenements: [],
   utilisateurs: [], clients: [], contacts: [], modeles_processus: [], dossiers: [], dossier_parties: [],
   dossier_intervenants: [], etapes: [], taches: [], echeances: [], evenements: [],
+  revues: [], revue_dossiers: [], emails: [], propositions: [], regles_agent: [],
 };
 const sequences = {};
 
@@ -26,6 +27,8 @@ const DEFAUTS = {
   echeances: () => ({ statut: 'a_venir', origine: 'manuel', base_legale: '', nature: 'autre' }),
   evenements: () => ({ date: new Date().toISOString(), origine: 'manuel', details: {} }),
   dossier_parties: () => ({ role: 'concernee' }),
+  propositions: () => ({ statut: 'proposee', donnees: {} }),
+  revue_dossiers: () => ({ priorite: 'normale', faits: [], a_faire: [], en_attente: [], ordre: 0 }),
 };
 const fichiers = new Map();
 

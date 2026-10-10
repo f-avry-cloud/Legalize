@@ -422,6 +422,17 @@ function dosAfficherDossier(d, cat, membres, societes, famille) {
         </div>
 
         <div class="card mt">
+          <h2>Mails <span class="muted dos-h2-info">${d.emails?.length || 0}</span></h2>
+          ${d.emails?.length ? `<ul class="dos-taches rv-mails">${d.emails.slice(0, 15).map((e) => `
+            <li><span class="rv-sens" title="${e.sens === 'envoye' ? 'Envoyé' : 'Reçu'}">${e.sens === 'envoye' ? '→' : '←'}</span>
+              <div class="dos-etape-corps"><span>${esc(e.objet || '(sans objet)')}</span>
+                <span class="sub">${new Date(e.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(e.expediteur || '')}</span>
+                ${e.resume ? `<span class="sub">${esc(e.resume)}</span>` : ''}</div>
+              ${e.lien ? `<a class="btn btn-sm" href="${esc(e.lien)}" target="_blank" rel="noopener">Ouvrir</a>` : ''}</li>`).join('')}</ul>`
+    : '<p class="muted">Les mails de ce dossier apparaîtront ici après la revue quotidienne.</p>'}
+        </div>
+
+        <div class="card mt">
           <h2>Travaux rattachés</h2>
           ${d.operations.length || d.formalites.length ? `<ul class="dos-liste-simple">
             ${d.operations.map((o) => `<li><div><a href="#/operations/${o.id}">${esc(o.libelle)}</a><span class="sub">Actes · ${esc(STATUT_OP[o.statut] || o.statut || '')}</span></div></li>`).join('')}

@@ -19,7 +19,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DOSSIER = path.join(__dirname, '..', 'public');
-const FICHIERS = ['app.html', 'style.css', 'auth.js', 'app.js', 'formalites.js', 'rmt.js', 'catalogue.js', 'memo.js', 'parcours.js', 'dossiers.js'];
+const FICHIERS = ['app.html', 'style.css', 'auth.js', 'app.js', 'formalites.js', 'rmt.js', 'catalogue.js', 'memo.js', 'parcours.js', 'dossiers.js', 'revue.js'];
 
 function calculer() {
   // Sur une plateforme de déploiement, le SHA du commit est la source la plus
@@ -57,7 +57,7 @@ function configAuth() {
 function pageIndex() {
   const html = fs.readFileSync(path.join(DOSSIER, 'app.html'), 'utf8');
   return html
-    .replace(/(href|src)="(style\.css|auth\.js|app\.js|formalites\.js|rmt\.js|catalogue\.js|memo\.js|parcours\.js|dossiers\.js)(\?v=[^"]*)?"/g,
+    .replace(/(href|src)="(style\.css|auth\.js|app\.js|formalites\.js|rmt\.js|catalogue\.js|memo\.js|parcours\.js|dossiers\.js|revue\.js)(\?v=[^"]*)?"/g,
       (_, attr, fichier) => `${attr}="${fichier}?v=${VERSION}"`)
     .replace('</head>', `  <meta name="legalize-version" content="${VERSION}">\n  <script>window.LEGALIZE_AUTH = ${configAuth()};</script>\n</head>`);
 }

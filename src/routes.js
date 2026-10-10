@@ -19,6 +19,8 @@ router.use(require('./routes-rmt'));
 router.use(require('./routes-parcours'));
 // Dossiers, clients, contacts : le suivi des missions du cabinet.
 router.use(require('./modules/dossiers/routes'));
+// Revue quotidienne des mails : propositions de l'assistant, validées ici.
+router.use(require('./modules/revues/routes'));
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },

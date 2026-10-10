@@ -20,6 +20,7 @@
     "test:exhaustivite": "node scripts/test-exhaustivite.js",
     "test:acces": "node scripts/test-acces.js",
     "test:dossiers": "node scripts/test-dossiers.js",
+    "test:revues": "node scripts/test-revues.js",
     "banc:guichet": "node scripts/banc-guichet.js"
   },
   "engines": {

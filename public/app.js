@@ -225,6 +225,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await ouvrirSession();
   render();
   majPastilleFormalites();
+  majPastilleRevue();
 });
 
 /* ================================================================ tableau de bord */
