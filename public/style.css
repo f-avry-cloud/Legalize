@@ -1474,3 +1474,5 @@ a.dos-stat { color: inherit; text-decoration: none; }
   .rv-colonnes { grid-template-columns: 1fr; }
   .rv-mails li { flex-wrap: wrap; }
 }
+.rv-prop .dos-boutons { flex-wrap: nowrap; }
+@media (max-width: 520px) { .rv-prop { flex-wrap: wrap; } .rv-prop .dos-boutons { margin-left: auto; } }
