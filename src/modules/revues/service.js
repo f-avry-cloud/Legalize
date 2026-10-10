@@ -131,11 +131,11 @@ const APPLIQUER = {
     if (!t) throw erreur('Choisissez le type de dossier avant de l’ouvrir.');
     const corps = {
       type: d.type, titre: d.titre, donnees: d.donnees || {}, echeance: d.echeance || null,
-      parties: (d.parties || []).map((x) => ({ societe_id: x.societe_id || null, denomination: x.denomination, role: x.role })),
+      parties: (d.parties || []).map((x) => ({ societe_id: x.societe_id || null, siren: x.siren || '', denomination: x.denomination, role: x.role })),
     };
     const clientId = Number(d.client_id) || null;
     if (clientId) corps.client_id = clientId;
-    else corps.nouveau_client = { nom: d.client_nom || d.titre, nature: d.client_nature || 'societe' };
+    else corps.nouveau_client = { nom: d.client_nom || d.titre, nature: d.client_nature || 'societe', siren: d.client_siren || '' };
     const cree = await dossiers.creer(corps);
     await resoudreCle(p.dossier_cle, cree.id);
     await dossiers.signaler(cree.id, 'ouverture', 'Ouvert à partir de la revue des mails.', { origine: 'agent', objet_table: 'propositions', objet_id: p.id });

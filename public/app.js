@@ -269,13 +269,18 @@ async function societesList() {
   const [societes, groupes] = await Promise.all([api('GET', '/societes'), api('GET', '/groupes')]);
   $main.innerHTML = `
     <div class="page-head"><h1>Sociétés</h1>
-      <button class="btn-primary" id="btn-new">Nouvelle société</button></div>
+      <div class="dos-actions-tete">
+        <button class="btn-sm" id="btn-registre-tout" title="Relit au registre national toutes les fiches qui ont un SIREN">Relire le registre</button>
+        <button id="btn-new">Saisie manuelle</button>
+        <button class="btn-primary" id="btn-importer">Ajouter par SIREN</button>
+      </div></div>
     <div class="card">
       ${societes.length ? `<table>
         <thead><tr><th>Dénomination</th><th>Forme</th><th>Capital</th><th>Groupe</th><th>Statut</th><th>Opérations en cours</th><th></th></tr></thead>
         <tbody>${societes.map((s) => `
           <tr class="clickable" onclick="location.hash='#/societes/${s.id}'">
-            <td><strong>${esc(s.denomination)}</strong><div class="sub">${esc(s.siren || 'SIREN à renseigner')} ${s.rcs_ville ? `RCS ${esc(s.rcs_ville)}` : ''}</div></td>
+            <td><strong>${esc(s.denomination)}</strong><div class="sub">${esc(s.siren || 'SIREN à renseigner')} ${s.rcs_ville ? `RCS ${esc(s.rcs_ville)}` : ''}
+              ${s.rne_maj_le ? `· <span title="Lu au registre national le ${esc(new Date(s.rne_maj_le).toLocaleString('fr-FR'))}">registre ✓</span>` : ''}</div></td>
             <td>${esc(s.forme_sociale)}</td>
             <td>${eur.format(s.capital_social)}</td>
             <td>${esc(s.groupe_nom || '—')}</td>
@@ -285,8 +290,51 @@ async function societesList() {
           </tr>`).join('')}</tbody></table>` : '<div class="empty">Aucune société. Créez la première fiche.</div>'}
     </div>`;
   document.getElementById('btn-new').onclick = () => societeDialog(groupes);
+  document.getElementById('btn-importer').onclick = () => importerSocieteDialog(groupes);
+  document.getElementById('btn-registre-tout').onclick = async (e) => {
+    e.target.disabled = true;
+    e.target.textContent = 'Lecture du registre…';
+    try {
+      const r = await api('POST', '/societes/registre');
+      toast(`${r.traitees} fiche(s) relue(s)${r.changements.length ? `, ${r.changements.length} avec des changements` : ', aucun changement'}${r.erreurs.length ? `, ${r.erreurs.length} en erreur` : ''}${r.restantes ? ` — ${r.restantes} restante(s), relancez` : ''}.`, r.erreurs.length > 0);
+      render();
+    } catch (err) { toast(err.message, true); e.target.disabled = false; }
+  };
   document.querySelectorAll('[data-suppr-societe]').forEach((b) => {
     b.onclick = (e) => { e.stopPropagation(); supprimerSocieteDialog(Number(b.dataset.supprSociete)); };
+  });
+}
+
+/** Bandeau du registre national : fraîcheur de la fiche, changements constatés, relecture. */
+function bandeauRegistre(s) {
+  const r = s.registre || {};
+  if (!s.siren) return '<div class="alerte alerte-info rg-bandeau">Sans SIREN, la fiche n’est pas suivie au registre national. Renseignez-le pour la tenir à jour automatiquement.</div>';
+  const quand = s.rne_maj_le ? new Date(s.rne_maj_le).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }) : null;
+  const changements = (r.ecarts || []).map((x) => `${x.libelle} : ${x.avant || '—'} → ${x.apres || '—'}`);
+  const historique = (s.rne_historique || []).filter((h) => h.ecarts?.length);
+  return `<div class="alerte ${r.statut === 'erreur' ? 'alerte-alerte' : changements.length ? 'alerte-alerte' : 'alerte-ok'} rg-bandeau">
+    <div><strong>Registre national des entreprises</strong>
+      ${r.statut === 'erreur' ? ` — lecture impossible : ${esc(r.erreur || s.rne_erreur || '')}${quand ? ` (dernière lecture le ${esc(quand)})` : ''}`
+    : quand ? ` — fiche à jour, lue le ${esc(quand)}` : ' — pas encore lue'}
+      ${changements.length ? `<ul>${changements.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}
+      ${historique.length ? `<details class="sub"><summary>Changements constatés au registre (${historique.length})</summary><ul>${historique.map((h) => `
+        <li>${esc(new Date(h.date).toLocaleDateString('fr-FR'))} : ${h.ecarts.map((x) => esc(`${x.libelle} : ${x.avant || '—'} → ${x.apres || '—'}`)).join(' ; ')}</li>`).join('')}</ul></details>` : ''}
+    </div>
+    <button type="button" class="btn btn-sm" id="btn-relire-registre">Relire</button>
+  </div>`;
+}
+
+function importerSocieteDialog(groupes) {
+  openDialog(`
+    <form><h2>Ajouter une société par son SIREN</h2>
+      <p class="muted">La fiche est créée depuis le registre national (dénomination, forme, capital, siège, objet, dirigeants) puis tenue à jour.</p>
+      <label class="field">SIREN<input name="siren" inputmode="numeric" placeholder="9 chiffres" required></label>
+      <label class="field">Groupe<select name="groupe_id"><option value="">—</option>${groupes.map((g) => `<option value="${g.id}">${esc(g.nom)}</option>`).join('')}</select></label>
+      <div class="dialog-actions"><button type="button" class="btn" onclick="this.closest('dialog').close()">Annuler</button><button class="btn btn-primary">Ajouter</button></div>
+    </form>`, async (form) => {
+    const r = await api('POST', '/societes/importer', { siren: form.siren.value, groupe_id: form.groupe_id.value || null });
+    toast(r.cree ? `${r.societe.denomination} ajoutée depuis le registre.` : `${r.societe.denomination} existait déjà : fiche relue au registre.`);
+    location.hash = `#/societes/${r.societe.id}`;
   });
 }
 
@@ -387,6 +435,7 @@ async function societeDetail(id) {
         <a class="btn btn-primary" href="#/operations/new?societe=${s.id}">Nouvelle opération</a>
       </div>
     </div>
+    ${bandeauRegistre(s)}
     <div class="grid cols-2">
       <div class="card">
         <h2>Identité</h2>
@@ -428,6 +477,17 @@ async function societeDetail(id) {
     </div>`;
 
   document.getElementById('btn-edit').onclick = () => societeDialog(groupes, s);
+  const $relire = document.getElementById('btn-relire-registre');
+  if ($relire) {
+    $relire.onclick = async () => {
+      $relire.disabled = true;
+      try {
+        const r = await api('POST', `/societes/${s.id}/registre`);
+        toast(r.statut === 'erreur' ? `Registre : ${r.erreur}` : r.ecarts?.length ? `${r.ecarts.length} changement(s) constaté(s) au registre.` : 'Fiche relue : identique au registre.', r.statut === 'erreur');
+        render();
+      } catch (e) { toast(e.message, true); $relire.disabled = false; }
+    };
+  }
   document.getElementById('btn-supprimer-societe').onclick = () => supprimerSocieteDialog(s.id);
   const btnRegistre = document.getElementById('btn-registre');
   if (btnRegistre) btnRegistre.onclick = () => { location.hash = `#/societes/${s.id}/registre`; };

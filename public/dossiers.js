@@ -536,7 +536,8 @@ async function vueClients() {
 function dosDialogClient(client) {
   openDialog(`
     <form><h2>${client ? 'Modifier le client' : 'Nouveau client'}</h2>
-      <label class="field">Nom *<input name="nom" value="${esc(client?.nom || '')}" required></label>
+      ${client ? '' : '<label class="field">SIREN (société)<input name="siren" inputmode="numeric" placeholder="Facultatif : la société est reprise du registre national"></label>'}
+      <label class="field">Nom${client ? ' *' : ''}<input name="nom" value="${esc(client?.nom || '')}" ${client ? 'required' : 'placeholder="Repris du registre si un SIREN est saisi"'}></label>
       <label class="field">Nature<select name="nature">${[['societe', 'Société'], ['groupe', 'Groupe'], ['personne', 'Personne physique']].map(([k, l]) => `<option value="${k}" ${client?.nature === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="field">Courriel<input type="email" name="email" value="${esc(client?.email || '')}"></label>
       <label class="field">Téléphone<input name="telephone" value="${esc(client?.telephone || '')}"></label>
@@ -544,7 +545,8 @@ function dosDialogClient(client) {
       <label class="field">Notes<textarea name="notes">${esc(client?.notes || '')}</textarea></label>
       <div class="dialog-actions"><button type="button" class="btn" onclick="this.closest('dialog').close()">Annuler</button><button class="btn btn-primary">Enregistrer</button></div>
     </form>`, async (form) => {
-    const corps = Object.fromEntries(['nom', 'nature', 'email', 'telephone', 'adresse', 'notes'].map((k) => [k, form[k].value]));
+    const corps = Object.fromEntries(['nom', 'nature', 'email', 'telephone', 'adresse', 'notes', 'siren'].filter((k) => form[k]).map((k) => [k, form[k].value]));
+    if (!client && !corps.nom && !corps.siren) throw new Error('Saisissez un nom ou un SIREN.');
     const r = client ? await api('PUT', `/clients/${client.id}`, corps) : await api('POST', '/clients', corps);
     location.hash = `#/clients/${r.id}`;
     if (client) render();
@@ -596,7 +598,11 @@ async function vueClient(id) {
         </div>
         <div class="card mt">
           <h2>Sociétés</h2>
-          ${c.societes.length ? `<ul class="dos-liste-simple">${c.societes.map((s) => `<li><div><a href="#/societes/${s.id}">${esc(s.denomination)}</a><span class="sub">${esc(s.forme_sociale || '')} ${esc(s.siren || '')}</span></div></li>`).join('')}</ul>` : '<p class="muted">Aucune société liée.</p>'}
+          ${c.societes.length ? `<ul class="dos-liste-simple">${c.societes.map((s) => `<li><div><a href="#/societes/${s.id}">${esc(s.denomination)}</a>
+            <span class="sub">${esc(s.forme_sociale || '')}${s.capital_social ? ` · capital ${esc(eur.format(s.capital_social))}` : ''} · ${esc(s.siren || 'sans SIREN')}</span>
+            ${s.siege_social ? `<span class="sub">${esc(s.siege_social)}</span>` : ''}
+            ${(s.rne_dirigeants || []).length ? `<span class="sub">${s.rne_dirigeants.map((d) => esc(`${d.fonction ? `${d.fonction} : ` : ''}${d.nom_complet}`)).join(' · ')}</span>` : ''}
+            <span class="sub">${s.rne_maj_le ? `Registre national : lu le ${esc(new Date(s.rne_maj_le).toLocaleDateString('fr-FR'))}` : 'Pas encore lue au registre national'}${s.statut === 'radiee' ? ' · <strong>radiée</strong>' : ''}</span></div></li>`).join('')}</ul>` : '<p class="muted">Aucune société liée.</p>'}
         </div>
       </div>
     </div>`;

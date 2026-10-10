@@ -157,7 +157,11 @@ async function lireClient(id) {
 async function preparerParties(liste, roles) {
   const sortie = [];
   for (const p of liste || []) {
-    const societeId = idOuNull(p.societe_id);
+    let societeId = idOuNull(p.societe_id);
+    if (!societeId && texte(p.siren)) {
+      // Société désignée par son SIREN : fiche créée (ou retrouvée) depuis le registre.
+      societeId = (await require('../societes/registre').importer(p.siren)).societe.id;
+    }
     let denomination = texte(p.denomination);
     if (societeId) {
       const s = await q(supabase.from('societes').select('id, denomination, forme_sociale').eq('id', societeId).single())
@@ -493,6 +497,13 @@ async function executerAction(dossierId, actionId, params) {
 const NATURES = { groupe: 'Groupe', societe: 'Société', personne: 'Personne physique' };
 
 async function creerClient(champs = {}) {
+  // Un SIREN suffit : la société est importée du registre et le client s'y rattache.
+  if (texte(champs.siren)) {
+    const { societe } = await require('../societes/registre').importer(champs.siren, { groupe_id: idOuNull(champs.groupe_id) });
+    const existant = (await q(supabase.from('clients').select('*').eq('societe_id', societe.id)))[0];
+    if (existant) return existant;
+    champs = { ...champs, nom: texte(champs.nom) || societe.denomination, societe_id: societe.id, nature: champs.nature || 'societe' };
+  }
   const nom = texte(champs.nom);
   if (!nom) throw erreur('Nom du client requis.');
   const nature = NATURES[champs.nature] ? champs.nature : 'societe';
@@ -548,7 +559,7 @@ async function ficheClient(id) {
   if (client.groupe_id) (await q(supabase.from('societes').select('id').eq('groupe_id', client.groupe_id))).forEach((s) => societesIds.add(s.id));
   resumes.forEach((d) => d.parties.forEach((p) => p.societe_id && societesIds.add(p.societe_id)));
   const societes = societesIds.size
-    ? await q(supabase.from('societes').select('id, denomination, forme_sociale, siren, date_cloture').in('id', [...societesIds]))
+    ? await q(supabase.from('societes').select('id, denomination, forme_sociale, siren, date_cloture, capital_social, siege_social, statut, rne_maj_le, rne_dirigeants').in('id', [...societesIds]))
     : [];
   const titreDossier = parId(dossiers);
   return {

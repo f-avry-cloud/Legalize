@@ -48,6 +48,7 @@ create table if not exists revue_dossiers (
   dossier_id  bigint references dossiers(id) on delete cascade,
   cle         text,
   titre       text not null,
+  resume      text,                          -- une ligne : l'essentiel du jour
   priorite    text not null default 'normale' check (priorite in ('haute', 'normale', 'basse', 'terminee')),
   faits       jsonb not null default '[]',
   a_faire     jsonb not null default '[]',
@@ -98,6 +99,12 @@ create table if not exists propositions (
 );
 create index if not exists propositions_revue_idx on propositions (revue_id);
 create index if not exists propositions_cle_idx on propositions (dossier_cle) where statut = 'proposee';
+
+-- Suivi du registre (RNE) sur les fiches société.
+alter table societes add column if not exists rne_maj_le timestamptz;
+alter table societes add column if not exists rne_dirigeants jsonb not null default '[]';
+alter table societes add column if not exists rne_historique jsonb not null default '[]';
+alter table societes add column if not exists rne_erreur text;
 
 -- Ce que l'avocat a demandé d'ignorer (refus mémorisés).
 create table if not exists regles_agent (
@@ -185,9 +192,9 @@ begin
   -- Blocs par dossier.
   for v in select * from jsonb_array_elements(coalesce(p->'dossiers', '[]')) loop
     v_dossier := (select d.id from dossiers d where d.id::text = v->>'dossier_id');
-    insert into revue_dossiers (revue_id, dossier_id, cle, titre, priorite, faits, a_faire, en_attente, ordre)
+    insert into revue_dossiers (revue_id, dossier_id, cle, titre, resume, priorite, faits, a_faire, en_attente, ordre)
     values (v_revue, v_dossier, case when v_dossier is null then nullif(v->>'cle', '') end,
-            coalesce(nullif(v->>'titre', ''), 'Sans titre'),
+            coalesce(nullif(v->>'titre', ''), 'Sans titre'), left(v->>'resume', 300),
             case when v->>'priorite' in ('haute', 'normale', 'basse', 'terminee') then v->>'priorite' else 'normale' end,
             coalesce(v->'faits', '[]'), coalesce(v->'a_faire', '[]'), coalesce(v->'en_attente', '[]'),
             coalesce(nullif(v->>'ordre', '')::integer, 0));

@@ -130,8 +130,20 @@ router.post('/societes', async (req, res) => {
   res.status(201).json(societe);
 });
 
+// Registre national des entreprises : la fiche suit le registre (src/modules/societes/registre.js).
+const registre = require('./modules/societes/registre');
+router.post('/societes/registre', async (req, res) => res.json(await registre.actualiserToutes()));
+router.post('/societes/importer', async (req, res) => {
+  const r = await registre.importer(req.body?.siren, { groupe_id: req.body?.groupe_id || null });
+  res.status(r.cree ? 201 : 200).json(r);
+});
+router.post('/societes/:id/registre', async (req, res) => res.json(await registre.actualiser(Number(req.params.id), { force: true })));
+
 router.get('/societes/:id', async (req, res) => {
+  // Une fiche lue au registre il y a plus de 24 heures est relue avant affichage.
+  const suivi = await registre.actualiser(Number(req.params.id)).catch((e) => ({ statut: 'erreur', erreur: e.message }));
   const societe = await q(supabase.from('societes').select('*').eq('id', req.params.id).single());
+  societe.registre = { statut: suivi.statut, ecarts: suivi.ecarts || [], erreur: suivi.erreur || null };
   const [groupe, dirigeants, associes, operations, societesLiees] = await Promise.all([
     societe.groupe_id ? q(supabase.from('groupes').select('nom').eq('id', societe.groupe_id).single()) : null,
     q(supabase.from('dirigeants').select('*').eq('societe_id', societe.id).order('id')),
