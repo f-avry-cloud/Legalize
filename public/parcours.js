@@ -38,13 +38,16 @@ const pcSansAccent = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u
 
 async function vueParcoursNouveau(query = '') {
   const [societes, operations] = await Promise.all([api('GET', '/societes'), apiParcours('GET', '/parcours/operations')]);
-  const preselection = new Set((new URLSearchParams(query || '').get('ops') || '').split(',').filter(Boolean));
+  const params = new URLSearchParams(query || '');
+  const preselection = new Set((params.get('ops') || '').split(',').filter(Boolean));
+  // Ouvert depuis un dossier : la formalité y sera rattachée.
+  const dossierId = params.get('dossier') || null;
   const parCode = new Map(operations.map((o) => [o.code, o]));
 
   $main.innerHTML = `
     <div class="entete-vue"><div>
       <div class="crumb"><a href="#/formalites">Formalités</a> /</div>
-      <h1 class="titre-page">Nouveau dossier</h1>
+      <h1 class="titre-page">Nouvelle formalité</h1>
       <p class="muted">Choisissez la société, puis toutes les opérations décidées : elles seront déposées ensemble quand c’est possible.</p>
     </div></div>
 
@@ -134,6 +137,11 @@ async function vueParcoursNouveau(query = '') {
   };
   document.addEventListener('click', (e) => { if (!e.target.closest('#pc-choix-ops') && document.getElementById('pc-ops-liste')) ouvrir(false); });
   puces();
+  const $societe = document.getElementById('pc-societe');
+  if (params.get('societe') && [...$societe.options].some((o) => o.value === params.get('societe'))) {
+    $societe.value = params.get('societe');
+    $societe.dispatchEvent(new Event('change'));
+  }
   document.getElementById('pc-ouvrir').onclick = async () => {
     const operations = [...choisies];
     const societe_id = document.getElementById('pc-societe').value || null;
@@ -142,7 +150,7 @@ async function vueParcoursNouveau(query = '') {
     if (!operations.length) { $msg.textContent = 'Choisissez au moins une opération.'; return; }
     $msg.textContent = 'Lecture de la fiche du registre…';
     try {
-      const r = await apiParcours('POST', '/parcours', { societe_id, siren, operations });
+      const r = await apiParcours('POST', '/parcours', { societe_id, siren, operations, dossier_id: dossierId });
       if (r.avertissement) toast(r.avertissement, true);
       location.hash = `#/parcours/${r.id}`;
     } catch (e) { $msg.textContent = e.message; }

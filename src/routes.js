@@ -17,6 +17,8 @@ const router = express.Router();
 router.use(require('./routes-formalites'));
 router.use(require('./routes-rmt'));
 router.use(require('./routes-parcours'));
+// Dossiers, clients, contacts : le suivi des missions du cabinet.
+router.use(require('./modules/dossiers/routes'));
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
@@ -219,14 +221,17 @@ router.get('/operations', async (req, res) => {
 });
 
 router.post('/operations', async (req, res) => {
-  const { societe_id, type, libelle, variables = {} } = req.body;
+  const { societe_id, type, libelle, variables = {}, dossier_id: dossierId = null } = req.body;
   const def = OPERATION_TYPES[type];
   if (!societe_id || !def) return res.status(400).json({ error: "Société et type d'opération valides requis" });
   const societe = await q(supabase.from('societes').select('denomination').eq('id', societe_id).single());
 
   const operation = await q(supabase.from('operations')
-    .insert({ societe_id, type, libelle: libelle || `${def.libelle} — ${societe.denomination}`, variables })
+    .insert({ societe_id, type, libelle: libelle || `${def.libelle} — ${societe.denomination}`, variables, dossier_id: dossierId || null })
     .select().single());
+  if (dossierId) {
+    await require('./modules/dossiers/service').signaler(dossierId, 'lien', `Opération ouverte : ${operation.libelle}.`, { objet_table: 'operations', objet_id: operation.id });
+  }
   // La checklist du type d'opération instancie automatiquement les documents requis.
   await q(supabase.from('documents').insert(def.documents.map((d) => ({
     operation_id: operation.id, code: d.code, nom: d.nom, obligatoire: Boolean(d.obligatoire),

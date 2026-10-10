@@ -75,7 +75,7 @@ const routes = [
   { re: /^\/societes\/(\d+)$/, view: societeDetail, nav: 'societes' },
   { re: /^\/groupes$/, view: groupesList, nav: 'groupes' },
   { re: /^\/operations$/, view: operationsList, nav: 'operations' },
-  { re: /^\/operations\/new$/, view: operationNew, nav: 'operations' },
+  { re: /^\/operations\/new(?:\?.*)?$/, view: operationNew, nav: 'operations' },
   { re: /^\/operations\/(\d+)$/, view: operationDetail, nav: 'operations' },
   { re: /^\/factures$/, view: facturesList, nav: 'factures' },
 ];
@@ -231,9 +231,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function dashboard() {
   const d = await api('GET', '/dashboard');
+  const blocDossiers = await dosBlocTableauDeBord().catch(() => '');
   $main.innerHTML = `
     <div class="page-head"><h1>Tableau de bord</h1>
-      <a class="btn btn-primary" href="#/operations/new">Nouvelle opération</a></div>
+      <a class="btn btn-primary" href="#/dossiers/nouveau">Nouveau dossier</a></div>
+    ${blocDossiers}
+    <h2 class="dos-titre-famille">Production d’actes</h2>
     <div class="grid cols-4">
       <div class="card"><div class="stat">${d.compteurs.societes}</div><div class="stat-label">Sociétés</div></div>
       <div class="card"><div class="stat">${d.compteurs.groupes}</div><div class="stat-label">Groupes</div></div>
@@ -727,6 +730,7 @@ async function operationNew() {
     const form = e.target;
     try {
       const op = await api('POST', '/operations', {
+        dossier_id: query.get('dossier') ? Number(query.get('dossier')) : undefined,
         societe_id: Number(form.societe_id.value),
         type: selType.value,
         libelle: form.libelle.value || undefined,

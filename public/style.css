@@ -1330,3 +1330,116 @@ body.auth-en-cours .skip-link { display: none !important; }
 
 .membre-connecte { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 13px; }
 .membre-connecte span { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ================================================================ dossiers */
+
+.dos-actions-tete { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.dos-barre { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.dos-filtres { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.dos-filtres input[type=search] {
+  min-width: 240px; padding: 9px 14px; border-radius: var(--r-full); border: 1px solid var(--line);
+  background: var(--glass); color: var(--ink); font: inherit; font-size: 13px;
+}
+.dos-compte { display: inline-block; min-width: 20px; margin-left: 4px; padding: 0 6px; border-radius: var(--r-full); background: rgba(255,255,255,.14); font-size: 11px; }
+.dos-intro { margin: 0 0 16px; font-size: 13px; }
+.dos-titre-famille { margin: 26px 0 12px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+
+.dos-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.dos-carte { display: flex; flex-direction: column; gap: 8px; color: inherit; text-decoration: none; transition: border-color var(--fast), transform var(--fast); }
+.dos-carte:hover { border-color: var(--line-fort); transform: translateY(-2px); }
+.dos-carte h3 { margin: 2px 0 0; font-size: 16px; line-height: 1.3; }
+.dos-carte-tete { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dos-ref { font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 700; color: var(--ink-3); }
+.dos-parties { display: flex; gap: 6px; flex-wrap: wrap; }
+.dos-partie { font-size: 12px; padding: 3px 9px; border-radius: var(--r-full); background: var(--glass); border: 1px solid var(--line); }
+.dos-partie em { font-style: normal; color: var(--ink-3); }
+.dos-etape { font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+.dos-carte-pied { display: flex; justify-content: space-between; gap: 10px; align-items: flex-end; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; }
+
+.dos-frise { display: flex; gap: 4px; margin-top: 4px; }
+.dos-frise span { flex: 1; height: 6px; border-radius: var(--r-full); background: var(--glass-fort); }
+.dos-frise span.fait { background: var(--ok); }
+.dos-frise span.en_cours, .dos-frise span.courante { background: var(--a1); box-shadow: 0 0 10px -2px var(--a1); }
+.dos-frise span.sans_objet { opacity: .3; }
+
+.dos-date { font-weight: 700; font-variant-numeric: tabular-nums; }
+.dos-date.proche { color: var(--warn); }
+.dos-date.retard { color: var(--danger); }
+
+.dos-form .row, .dos-donnees { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.dos-large { grid-column: 1 / -1; }
+.dos-familles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.dos-famille {
+  display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px 18px; border-radius: var(--r);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; font: inherit;
+}
+.dos-famille span { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+.dos-famille.actif { border-color: var(--a2); box-shadow: var(--halo); }
+.dos-ligne-partie { align-items: end; }
+.dos-pied { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+.dos-tete { align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+.dos-meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 13px; }
+.dos-tete-droite { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 10px; }
+.dos-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; }
+.dos-h2-info { font-size: 12px; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+.dos-progression { height: 6px; border-radius: var(--r-full); background: var(--glass-fort); overflow: hidden; margin: -4px 0 14px; }
+.dos-progression span { display: block; height: 100%; background: var(--grad); }
+
+.dos-etapes, .dos-taches, .dos-echeances, .dos-liste-simple, .dos-chrono { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.dos-etapes li, .dos-taches li, .dos-echeances li, .dos-liste-simple li {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--r-xs); background: var(--glass);
+}
+.dos-etapes li.courante { outline: 1px solid var(--a1); }
+.dos-etapes li.fait .dos-etape-libelle, .dos-taches li.fait span:first-child { color: var(--ink-3); text-decoration: line-through; }
+.dos-etapes li.sans_objet { opacity: .5; }
+.dos-etapes select, .dos-etapes input[type=date] {
+  padding: 5px 8px; border-radius: var(--r-xs); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: inherit; font-size: 12px;
+}
+.dos-etape-corps { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dos-etape-corps .sub { font-size: 12px; }
+.dos-coche {
+  flex: none; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 2px solid var(--line-fort);
+  background: transparent; cursor: pointer;
+}
+.dos-coche:hover { border-color: var(--ok); }
+li.fait > .dos-coche { background: var(--ok); border-color: var(--ok); box-shadow: inset 0 0 0 3px var(--surface); }
+li.en_cours > .dos-coche { border-color: var(--a1); }
+.dos-suppr { flex: none; padding: 2px 8px; border: 0; background: transparent; color: var(--ink-3); font-size: 16px; cursor: pointer; }
+.dos-suppr:hover { color: var(--danger); }
+.dos-boutons { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.dos-liste-simple li { justify-content: space-between; }
+.dos-liste-simple li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.dos-ajout { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.dos-ajout input, .dos-ajout select, .dos-note textarea, .dos-modele textarea {
+  flex: 1 1 140px; min-width: 0; padding: 8px 10px; border-radius: var(--r-xs); border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--ink); font: inherit; font-size: 13px;
+}
+.dos-ajout input[type=date] { flex: 0 1 150px; }
+.dos-note { display: grid; gap: 8px; margin-bottom: 16px; }
+.dos-note textarea { min-height: 64px; resize: vertical; }
+.dos-note button { justify-self: end; }
+.dos-faites { margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+.dos-faites summary { cursor: pointer; margin-bottom: 8px; }
+
+.dos-chrono li { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.dos-chrono li:last-child { border-bottom: 0; }
+.dos-chrono-icone { flex: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--glass-fort); font-size: 12px; color: var(--ink-2); }
+.dos-chrono li.note .dos-chrono-icone { background: var(--accent-soft); color: var(--a2); }
+.dos-note-texte { white-space: pre-wrap; }
+.dos-danger { display: flex; justify-content: flex-end; }
+
+.dos-modeles { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.dos-modele { display: grid; gap: 10px; }
+.dos-modele h3 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.dos-modele textarea { resize: vertical; line-height: 1.6; }
+a.dos-stat { color: inherit; text-decoration: none; }
+
+@media (max-width: 860px) {
+  .dos-familles { grid-template-columns: 1fr; }
+  .dos-tete-droite { grid-template-columns: 1fr 1fr; width: 100%; }
+  .dos-filtres input[type=search] { min-width: 0; flex: 1; }
+  .dos-etapes li { flex-wrap: wrap; }
+  .dos-etapes li .dos-etape-corps { flex-basis: calc(100% - 80px); }
+}

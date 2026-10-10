@@ -52,7 +52,7 @@ function verifierOuvert(f) {
 
 /* --------------------------------------------------------------- création */
 
-async function creer({ societe_id = null, siren = '', operations = [] }) {
+async function creer({ societe_id = null, siren = '', operations = [], dossier_id: dossierId = null }) {
   const ops = [...new Set(operations)].filter((c) => parcours.infoOperation(c));
   if (!ops.length) throw erreur('Choisissez au moins une opération.');
 
@@ -80,10 +80,14 @@ async function creer({ societe_id = null, siren = '', operations = [] }) {
   const f = await db(supabase.from('formalites').insert({
     societe_id, type: TYPE, libelle: nom.slice(0, 240), siren: sirenUtilise || null,
     service: 'formalites', fiche, reponses: {}, operations: ops, typologie: {}, statut: 'BROUILLON',
+    ...(dossierId ? { dossier_id: Number(dossierId) } : {}),
   }).select().single());
   const reference = `LGZ-${new Date().getFullYear()}-${String(f.id).padStart(5, '0')}`;
   await db(supabase.from('formalites').update({ reference }).eq('id', f.id).select());
   await journal(f.id, 'creation', `Parcours ouvert : ${ops.map((c) => parcours.nomOperation(c)).join(', ')}.`, { siren: sirenUtilise });
+  if (dossierId) {
+    await require('../modules/dossiers/service').signaler(dossierId, 'lien', `Formalité préparée : ${nom.slice(0, 240)}.`, { objet_table: 'formalites', objet_id: f.id });
+  }
   return { id: f.id, avertissement };
 }
 
