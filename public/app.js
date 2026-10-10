@@ -9,16 +9,19 @@ const $main = document.getElementById('main');
 const API_ROOT = location.pathname.replace(/\/$/, '') + '/api';
 
 async function api(method, url, body, isForm) {
-  const opts = { method };
+  const opts = { method, headers: await enTetesAuth() };
   if (body !== undefined && !isForm) {
-    opts.headers = { 'Content-Type': 'application/json' };
+    opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   } else if (body !== undefined) {
     opts.body = body;
   }
   const res = await fetch(`${API_ROOT}${url}`, opts);
   const json = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(json?.error || `Erreur ${res.status}`);
+  if (!res.ok) {
+    refusAcces(res.status, json);
+    throw new Error(json?.error || `Erreur ${res.status}`);
+  }
   return json;
 }
 
@@ -215,9 +218,11 @@ async function majPastilleFormalites() {
   } catch (e) { pastille.hidden = true; }
 }
 
-window.addEventListener('hashchange', render);
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('hashchange', () => { if (!document.body.classList.contains('auth-en-cours')) render(); });
+window.addEventListener('DOMContentLoaded', async () => {
   initCoque();
+  // Rien ne s'affiche avant la connexion d'un membre du cabinet (public/auth.js).
+  await ouvrirSession();
   render();
   majPastilleFormalites();
 });

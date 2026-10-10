@@ -19,7 +19,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DOSSIER = path.join(__dirname, '..', 'public');
-const FICHIERS = ['app.html', 'style.css', 'app.js', 'formalites.js', 'rmt.js', 'catalogue.js', 'memo.js', 'parcours.js'];
+const FICHIERS = ['app.html', 'style.css', 'auth.js', 'app.js', 'formalites.js', 'rmt.js', 'catalogue.js', 'memo.js', 'parcours.js'];
 
 function calculer() {
   // Sur une plateforme de déploiement, le SHA du commit est la source la plus
@@ -48,12 +48,18 @@ const VERSION = calculer();
  * dans le dossier publié court-circuiterait la réécriture vers l'application
  * et repartirait sans version.
  */
+/** Ce dont l'écran de connexion a besoin : adresse du service et clé publique, rien de secret. */
+function configAuth() {
+  const { SUPABASE_URL, SUPABASE_KEY } = require('./supa');
+  return JSON.stringify({ url: SUPABASE_URL, cle: SUPABASE_KEY, microsoft: process.env.AUTH_MICROSOFT === '1' }).replace(/</g, '\\u003c');
+}
+
 function pageIndex() {
   const html = fs.readFileSync(path.join(DOSSIER, 'app.html'), 'utf8');
   return html
-    .replace(/(href|src)="(style\.css|app\.js|formalites\.js|rmt\.js|catalogue\.js|memo\.js|parcours\.js)(\?v=[^"]*)?"/g,
+    .replace(/(href|src)="(style\.css|auth\.js|app\.js|formalites\.js|rmt\.js|catalogue\.js|memo\.js|parcours\.js)(\?v=[^"]*)?"/g,
       (_, attr, fichier) => `${attr}="${fichier}?v=${VERSION}"`)
-    .replace('</head>', `  <meta name="legalize-version" content="${VERSION}">\n</head>`);
+    .replace('</head>', `  <meta name="legalize-version" content="${VERSION}">\n  <script>window.LEGALIZE_AUTH = ${configAuth()};</script>\n</head>`);
 }
 
 module.exports = { VERSION, pageIndex };

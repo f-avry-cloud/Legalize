@@ -7,17 +7,6 @@ const routes = require('./src/routes');
 
 const app = express();
 
-// Jeu de démonstration chargé au premier démarrage sur base vide (idempotent).
-let initPromise = null;
-app.use((req, res, next) => {
-  if (!initPromise) {
-    initPromise = require('./src/demo-seed').seedIfEmpty()
-      .then((seeded) => { if (seeded) console.log('Jeu de démonstration chargé.'); })
-      .catch((e) => { console.error('Seed de démonstration impossible :', e.message); });
-  }
-  initPromise.then(() => next(), () => next());
-});
-
 /**
  * Chaque déploiement garde une URL propre et immuable, figée sur son code pour
  * toujours. Un onglet ouvert sur une de ces URL continue d'afficher une
@@ -45,6 +34,11 @@ app.get(['/', '/index.html'], (req, res) => {
   res.type('html').send(pageIndex());
 });
 app.get('/api/version', (req, res) => res.json({ version: VERSION }));
+
+// Tout le reste de l'API exige la session d'un membre du cabinet.
+const { exigerConnexion } = require('./src/auth');
+app.use('/api', exigerConnexion);
+app.get('/api/moi', (req, res) => res.json(require('./src/supa').utilisateurCourant()));
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', routes);

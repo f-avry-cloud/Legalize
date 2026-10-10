@@ -13,10 +13,11 @@
 
 /** Appel d'API qui garde le détail des refus (contrôles, violations du guichet). */
 async function apiParcours(method, url, body, isForm) {
-  const opts = { method };
-  if (body !== undefined && !isForm) { opts.headers = { 'Content-Type': 'application/json' }; opts.body = JSON.stringify(body); } else if (body !== undefined) opts.body = body;
+  const opts = { method, headers: await enTetesAuth() };
+  if (body !== undefined && !isForm) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); } else if (body !== undefined) opts.body = body;
   const res = await fetch(`/api${url}`, opts);
   const json = await res.json().catch(() => null);
+  if (!res.ok) refusAcces(res.status, json);
   if (!res.ok) throw Object.assign(new Error(json?.error || `Erreur ${res.status}`), { details: json?.details, violations: json?.violations });
   return json;
 }

@@ -1,5 +1,7 @@
 'use strict';
 
+require('./session-essai').installer();
+
 /**
  * Banc d'essai réel : chaque scénario du parcours est construit par le
  * générateur de l'application, déposé sur le serveur de DÉMONSTRATION du

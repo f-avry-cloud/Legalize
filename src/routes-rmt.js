@@ -3,27 +3,20 @@
 /**
  * Routes du module « Registre des mouvements de titres ».
  *
- * L'identité de l'utilisateur est résolue par l'en-tête `X-Utilisateur`, à
- * défaut par le premier compte actif. Ce n'est pas encore une barrière de
- * sécurité — celle-ci viendra d'une brique d'authentification globale — mais
- * le circuit d'approbation et le journal en ont besoin dès maintenant. Le
- * jour où l'authentification arrive, seul `utilisateurCourant` change.
+ * L'identité de l'utilisateur est celle de la session (src/auth.js) : le
+ * circuit d'approbation et le journal s'appuient sur une personne réelle.
  */
 
 const express = require('express');
-const { supabase, q: db } = require('./supa');
+const { supabase, q: db, utilisateurCourant: connecte } = require('./supa');
 const rmt = require('./services/rmt');
 const controles = require('./services/rmt-controles');
 const certification = require('./services/rmt-certification');
 
 const router = express.Router();
 
-async function utilisateurCourant(req) {
-  const id = req.get('X-Utilisateur');
-  const lignes = id
-    ? await db(supabase.from('utilisateurs').select('*').eq('id', id))
-    : await db(supabase.from('utilisateurs').select('*').eq('actif', true).order('id').limit(1));
-  return lignes[0] || null;
+async function utilisateurCourant() {
+  return connecte();
 }
 
 /* ------------------------------------------------------------ utilisateurs */
@@ -36,7 +29,7 @@ router.post('/rmt/utilisateurs', async (req, res) => {
   const { email, nom, prenom, role } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Courriel requis.' });
   const cree = await db(supabase.from('utilisateurs').insert({
-    email, nom: nom || '', prenom: prenom || '', role: role || 'collaborateur', mot_de_passe: 'a_definir',
+    email, nom: nom || '', prenom: prenom || '', role: role || 'collaborateur',
   }).select().single());
   res.status(201).json(cree);
 });

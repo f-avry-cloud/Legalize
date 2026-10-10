@@ -1,5 +1,7 @@
 'use strict';
 
+require('./session-essai').installer();
+
 /**
  * Essai de bout en bout sur l'application en production, par les mêmes
  * appels que les écrans : ouvrir un dossier, répondre aux questions, charger

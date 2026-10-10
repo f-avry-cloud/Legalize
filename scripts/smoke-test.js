@@ -1,5 +1,7 @@
 'use strict';
 
+require('./session-essai').installer();
+
 /**
  * Test de bout en bout via l'API HTTP : référentiel → société → opération →
  * génération en un clic → checklist → versions/markup → comparaison → facture.
@@ -171,7 +173,10 @@ async function main() {
     check('tableau de bord', dash.compteurs.societes >= 2 && dash.compteurs.operations_en_cours >= 2);
   } finally {
     // Nettoyage : la suppression des sociétés cascade opérations, documents, versions, factures.
-    for (const id of aNettoyer.societes) await api('DELETE', `/api/societes/${id}`).catch(() => {});
+    for (const id of aNettoyer.societes) {
+      const impact = (await api('GET', `/api/societes/${id}/suppression`).catch(() => null))?.json;
+      if (impact?.denomination) await api('DELETE', `/api/societes/${id}`, { confirmation: impact.denomination }).catch(() => {});
+    }
     for (const id of aNettoyer.groupes) await api('DELETE', `/api/groupes/${id}`).catch(() => {});
     if (server) server.close();
   }

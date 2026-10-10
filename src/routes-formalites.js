@@ -12,6 +12,7 @@
 
 const express = require('express');
 const multer = require('multer');
+const { garderContexte } = require('./supa');
 
 const formalites = require('./services/formalites');
 const rne = require('./inpi/rne');
@@ -166,7 +167,7 @@ router.put('/formalites/:id/reponses', async (req, res) => {
   res.json(await formalites.enregistrerReponses(Number(req.params.id), reponses || {}));
 });
 
-router.post('/formalites/:id/pieces', upload.single('fichier'), async (req, res) => {
+router.post('/formalites/:id/pieces', garderContexte(upload.single('fichier')), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ « fichier »)' });
   if (!req.body.code) return res.status(400).json({ error: 'Code de pièce requis' });
   const piece = await formalites.ajouterPiece(Number(req.params.id), {
@@ -215,7 +216,7 @@ router.post('/formalites/:id/payer', async (req, res) => {
  * Voie « certificat qualifié » : dépôt du document de synthèse signé hors
  * ligne, qui vaut signature de la formalité.
  */
-router.post('/formalites/:id/document-signe', upload.single('fichier'), async (req, res) => {
+router.post('/formalites/:id/document-signe', garderContexte(upload.single('fichier')), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ « fichier »)' });
   res.json(await formalites.deposerDocumentSigne(Number(req.params.id), req.file));
 });

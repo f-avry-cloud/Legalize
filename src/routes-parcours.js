@@ -7,6 +7,7 @@
 
 const express = require('express');
 const multer = require('multer');
+const { garderContexte } = require('./supa');
 const parcours = require('./services/parcours');
 const { operationsProposees } = require('./inpi/parcours');
 
@@ -25,7 +26,7 @@ router.post('/parcours/:id/fiche', async (req, res) => res.json(await parcours.r
 router.post('/parcours/:id/pouvoir', async (req, res) => res.json(await parcours.redigerPouvoir(req.params.id, req.body || {})));
 router.put('/parcours/:id/typologie', async (req, res) => res.json(await parcours.majTypologie(req.params.id, req.body || {})));
 router.put('/parcours/:id/reponses', async (req, res) => res.json(await parcours.majReponses(req.params.id, req.body || {})));
-router.post('/parcours/:id/pieces', upload.single('fichier'), async (req, res) => {
+router.post('/parcours/:id/pieces', garderContexte(upload.single('fichier')), async (req, res) => {
   res.json(await parcours.ajouterPiece(req.params.id, { ...req.body, fichier: req.file }));
 });
 router.put('/parcours/pieces/:pieceId', async (req, res) => res.json(await parcours.majPiece(req.params.pieceId, req.body || {})));

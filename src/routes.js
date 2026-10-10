@@ -4,7 +4,7 @@ const path = require('path');
 const express = require('express');
 const multer = require('multer');
 
-const { supabase, q, qCount, uploadFile, downloadFile } = require('./supa');
+const { supabase, q, qCount, uploadFile, downloadFile, garderContexte } = require('./supa');
 const { OPERATION_TYPES } = require('./definitions');
 const { genererDocuments, operationDir } = require('./services/generation');
 const { comparerVersions } = require('./services/compare');
@@ -289,7 +289,7 @@ router.put('/documents/:id', async (req, res) => {
 });
 
 /** Dépôt d'une version reçue (markup) ou importée — .docx ou .pdf. */
-router.post('/documents/:id/versions', upload.single('fichier'), async (req, res) => {
+router.post('/documents/:id/versions', garderContexte(upload.single('fichier')), async (req, res) => {
   const document = await q(supabase.from('documents').select('*').eq('id', req.params.id).single());
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ « fichier »)' });
   const ext = path.extname(req.file.originalname).toLowerCase();

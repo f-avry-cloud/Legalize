@@ -101,6 +101,10 @@ const faux = {
   async downloadFile(chemin) { return fichiers.get(chemin) || Buffer.from(''); },
   async removeFiles(chemins) { (chemins || []).forEach((c) => fichiers.delete(c)); return (chemins || []).length; },
   BUCKET: 'documents',
+  // Pas de session dans les tests unitaires : ni contexte ni utilisateur.
+  garderContexte: (middleware) => middleware,
+  dansContexte: (valeurs, suite) => suite(),
+  utilisateurCourant: () => null,
 };
 
 require.cache[require.resolve('../src/supa.js')] = { id: 'supa', filename: 'supa', loaded: true, exports: faux };

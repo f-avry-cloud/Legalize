@@ -1,5 +1,7 @@
 'use strict';
 
+require('./session-essai').installer();
+
 /**
  * Ce que l'INPI exige vraiment, établi par l'essai : on part d'un dossier
  * complet accepté, puis on retire UNE information à la fois et on redépose

@@ -18,6 +18,7 @@
     "test:suppression": "node scripts/test-suppression.js",
     "test:creation": "node scripts/test-creation.js",
     "test:exhaustivite": "node scripts/test-exhaustivite.js",
+    "test:acces": "node scripts/test-acces.js",
     "banc:guichet": "node scripts/banc-guichet.js"
   },
   "engines": {
