@@ -24,8 +24,9 @@ function ajDateCourte(iso) {
 }
 function ajPuceDossier(d) {
   if (!d) return '';
-  const nom = d.titre.split(' — ')[0];
-  return d.id ? `<a class="aj-dossier" href="#/dossiers/${d.id}" title="${esc(d.titre)}">${esc(nom)}</a>`
+  const titre = d.titre || d.reference || '';
+  const nom = titre.split(' — ')[0];
+  return d.id ? `<a class="aj-dossier" href="#/dossiers/${d.id}" title="${esc(titre)}">${esc(nom)}</a>`
     : `<span class="aj-dossier propose" title="Dossier proposé, pas encore ouvert">${esc(nom)}</span>`;
 }
 
@@ -75,7 +76,7 @@ async function vueAujourdhui() {
         <ul class="aj-liste">${a.nouveautes.map((n) => `
           <li class="aj-ligne aj-depliable" data-deplier>
             <span class="aj-point ${n.priorite}" title="${n.priorite === 'haute' ? 'Prioritaire' : ''}"></span>
-            <span class="aj-titre"><strong>${n.dossier ? `<a href="#/dossiers/${n.dossier.id}">${esc(n.titre.split(' — ')[0])}</a>` : esc(n.titre.split(' — ')[0])}</strong>
+            <span class="aj-titre"><strong>${n.dossier ? `<a href="#/dossiers/${n.dossier.id}">${esc(String(n.titre || '').split(' — ')[0])}</a>` : esc(String(n.titre || '').split(' — ')[0])}</strong>
               <span class="aj-sous">${esc(n.resume)}</span></span>
             <span class="aj-chevron" aria-hidden="true">›</span>
             <div class="aj-detail" hidden>

@@ -123,6 +123,7 @@ function verifier(nom, condition, detail) {
   verifier('chaque tâche (hors suggestion) porte son dossier', aj.taches.filter((t) => !t.suggestion).every((t) => t.dossier?.reference));
   verifier('suggestions hors tâches dans « À valider »', aj.suggestions.every((p) => p.nature !== 'creer_tache'));
   verifier('nouveautés : une ligne par dossier de la revue', aj.nouveautes.length === 2 && aj.nouveautes[0].resume);
+  verifier('nouveautés : le dossier ouvert porte son titre (pastille « En attente »)', aj.nouveautes.filter((n) => n.dossier).every((n) => n.dossier.titre), aj.nouveautes.map((n) => n.dossier));
   verifier('échéance du dossier dans les 14 jours, hors dossiers clos', Array.isArray(aj.echeances));
 
   console.log('\nRefus et règles');

@@ -159,7 +159,7 @@ async function aujourdhui() {
     suggestions: propositions.filter((p) => p.nature !== 'creer_tache').map((p) => ({ ...decrire(p), dossier: dossierDe(p) })),
     nouveautes: revue ? revueDuJour.sections.map((s) => ({
       id: s.id, titre: s.titre, resume: s.resume || s.faits?.[0] || '', priorite: s.priorite,
-      dossier: s.dossier ? { id: s.dossier.id, reference: s.dossier.reference } : null, cle: s.cle,
+      dossier: s.dossier ? { id: s.dossier.id, reference: s.dossier.reference, titre: s.dossier.titre || s.titre } : null, cle: s.cle,
       faits: s.faits, en_attente: s.en_attente,
       emails: s.emails.map((e) => ({ id: e.id, sens: e.sens, objet: e.objet, expediteur: e.expediteur, date: e.date, lien: e.lien })),
     })) : [],
