@@ -161,6 +161,15 @@ $$;
 
 /* ---------------------------------------------------------------- dépôt */
 
+/* Clé d'un dossier proposé puis ouvert : le dossier créé. Une revue déposée
+   après l'ouverture (clé encore en usage) y rattache ainsi ses éléments. */
+create or replace function public.agent_dossier_de_cle(p_cle text) returns bigint
+language sql stable security definer set search_path = public as $$
+  select d.id from propositions pr join dossiers d on d.id = (pr.resultat->>'dossier_id')::bigint
+   where pr.nature = 'creer_dossier' and pr.statut = 'acceptee' and pr.dossier_cle = p_cle
+   order by pr.id desc limit 1
+$$;
+
 create or replace function public.agent_deposer_revue(p jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
@@ -191,7 +200,7 @@ begin
 
   -- Blocs par dossier.
   for v in select * from jsonb_array_elements(coalesce(p->'dossiers', '[]')) loop
-    v_dossier := (select d.id from dossiers d where d.id::text = v->>'dossier_id');
+    v_dossier := coalesce((select d.id from dossiers d where d.id::text = v->>'dossier_id'), agent_dossier_de_cle(v->>'cle'));
     insert into revue_dossiers (revue_id, dossier_id, cle, titre, resume, priorite, faits, a_faire, en_attente, ordre)
     values (v_revue, v_dossier, case when v_dossier is null then nullif(v->>'cle', '') end,
             coalesce(nullif(v->>'titre', ''), 'Sans titre'), left(v->>'resume', 300),
@@ -204,7 +213,7 @@ begin
   for v in select * from jsonb_array_elements(coalesce(p->'emails', '[]')) loop
     continue when coalesce(v->>'message_id', '') = '';
     v_ignore := coalesce((v->>'ignore')::boolean, false);
-    v_dossier := (select d.id from dossiers d where d.id::text = v->>'dossier_id');
+    v_dossier := coalesce((select d.id from dossiers d where d.id::text = v->>'dossier_id'), agent_dossier_de_cle(v->>'dossier_cle'));
     v_fil := null;
     if not v_ignore and coalesce(v->>'conversation_id', '') <> '' then
       select m.dossier_id into v_fil from emails m
@@ -237,7 +246,12 @@ begin
       n_rejet := n_rejet + 1;
       continue;
     end if;
-    v_dossier := (select d.id from dossiers d where d.id::text = v->>'dossier_id');
+    v_dossier := coalesce((select d.id from dossiers d where d.id::text = v->>'dossier_id'), agent_dossier_de_cle(v->>'dossier_cle'));
+    -- Ouvrir un dossier déjà ouvert sous cette clé : sans objet.
+    if v->>'nature' = 'creer_dossier' and v_dossier is not null then
+      n_rejet := n_rejet + 1;
+      continue;
+    end if;
     insert into propositions (revue_id, dossier_id, dossier_cle, nature, donnees, justification)
     values (v_revue, v_dossier, case when v_dossier is null then nullif(v->>'dossier_cle', '') end,
             v->>'nature', coalesce(v->'donnees', '{}'), left(v->>'justification', 1000));
@@ -256,4 +270,4 @@ $$;
 
 -- Portes réservées au compte technique de l'assistant : aucun utilisateur
 -- de l'application ne peut les appeler.
-revoke execute on function public.agent_contexte(), public.agent_deposer_revue(jsonb) from public, anon, authenticated;
+revoke execute on function public.agent_contexte(), public.agent_deposer_revue(jsonb), public.agent_dossier_de_cle(text) from public, anon, authenticated;
