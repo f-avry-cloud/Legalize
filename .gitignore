@@ -7,3 +7,11 @@ templates/generated/
 .env
 .env.*
 !.env.example
+
+# Formalités pilotées par Claude Code : données de clients, jamais versionnées.
+/dossiers/
+/suivi/
+registre*.json
+*.xlsx
+*.pdf
+!scripts/fixtures/*.pdf
