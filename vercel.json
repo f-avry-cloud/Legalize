@@ -28,7 +28,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
-      "includeFiles": "{node_modules/tesseract.js/**,node_modules/tesseract.js-core/**,node_modules/@tesseract.js-data/fra/4.0.0_best_int/**,node_modules/@napi-rs/**,node_modules/wasm-feature-detect/**,node_modules/pdfjs-dist/**}"
+      "includeFiles": "{node_modules/pdf-parse/**,node_modules/tesseract.js/**,node_modules/tesseract.js-core/**,node_modules/@tesseract.js-data/fra/4.0.0_best_int/**,node_modules/@napi-rs/**,node_modules/wasm-feature-detect/**,node_modules/pdfjs-dist/**}"
     }
   }
 }

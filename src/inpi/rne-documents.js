@@ -105,7 +105,8 @@ async function piecesDeposees(sirenBrut) {
       id: a.id,
       date_depot: a.dateDepot || null,
       types,
-      libelle: types.length ? types.map((t) => t.type + (t.decision ? ` (${t.decision})` : '')).join(' ; ') : (a.libelle || a.nomDocument || 'Acte'),
+      // Un acte ancien peut ne porter aucun type au registre : son nom de fichier n'en dit rien.
+      libelle: types.length ? types.map((t) => t.type + (t.decision ? ` (${t.decision})` : '')).join(' ; ') : (a.libelle || 'Acte déposé (type non précisé par le registre)'),
       confidentiel: !publique(a.confidentiality),
       ...(publique(a.confidentiality) ? {} : { confidentialite: a.confidentiality }),
     };
