@@ -101,6 +101,11 @@ client.telecharger = async (cible, { chemin }) => {
   verifier('acte confidentiel signalé', l.json.actes.find((a) => a.id === 'acte-confidentiel').confidentiel === true);
   verifier('bilans du plus récent au plus ancien, type et confidentialité',
     l.json.bilans.map((b) => b.id).join() === 'bilan-2023,bilan-2022' && l.json.bilans[0].confidentiel === true && l.json.bilans[1].type_comptes === 'Comptes annuels complets', l.json.bilans);
+  verifier('exercices sans comptes visibles signalés (aucun trou ici)', !l.json.exercices_sans_comptes_visibles);
+  ATTACHMENTS.bilans.push({ siren: SIREN, dateDepot: '2020-05-01', confidentiality: 'Public', deleted: false, id: 'bilan-2019', dateCloture: '2019-12-31', typeBilan: 'C' });
+  const trou = await outil('lister_pieces_deposees', { siren: SIREN });
+  ATTACHMENTS.bilans.pop();
+  verifier('trou entre 2019 et 2022 : exercices 2020 et 2021 signalés', JSON.stringify(trou.json.exercices_sans_comptes_visibles) === '[2020,2021]' && /confidentiels/.test(trou.json.remarque_comptes), trou.json);
   verifier('données saisies signalées pour l’exercice qui en a', l.json.bilans[1].donnees_saisies.disponibles === true && l.json.bilans[0].donnees_saisies.disponibles === false);
   verifier('SIREN invalide refusé sans appel', (await outil('lister_pieces_deposees', { siren: '123456789' })).erreur && !appels.some((c) => c.includes('123456789')));
   const inconnu = await outil('lister_pieces_deposees', { siren: '732829320' });

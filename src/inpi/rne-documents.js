@@ -130,6 +130,12 @@ async function piecesDeposees(sirenBrut) {
       } : { disponibles: false },
     };
   }).sort(parDate('date_cloture'));
+  // Exercices sans dépôt visible entre deux comptes : non déposés, ou confidentiels
+  // et non diffusés à un compte sans habilitation (l'API ne les liste pas).
+  const annees = [...new Set(bilans.map((b) => Number(String(b.date_cloture || '').slice(0, 4))).filter(Boolean))].sort((a, b) => a - b);
+  const manquants = [];
+  for (let i = 1; i < annees.length; i += 1) for (let a = annees[i - 1] + 1; a < annees[i]; a += 1) manquants.push(a);
+
   // Statut au registre (radiée ou non) : utile pour lire les pièces d'une société disparue.
   let statut = null;
   try {
@@ -142,6 +148,10 @@ async function piecesDeposees(sirenBrut) {
     ...(statut ? { statut } : {}),
     actes,
     bilans,
+    ...(manquants.length ? {
+      exercices_sans_comptes_visibles: manquants,
+      remarque_comptes: 'Aucuns comptes visibles pour ces exercices : non déposés, ou confidentiels (l’INPI ne les diffuse pas sans habilitation).',
+    } : {}),
   };
 }
 
