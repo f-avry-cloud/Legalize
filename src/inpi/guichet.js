@@ -125,7 +125,30 @@ async function deposer(requete) {
   // non la formalité elle-même : sans ce déballage, l'identifiant INPI du
   // dossier déposé était perdu (constaté sur le serveur de démonstration).
   const formalite = Array.isArray(rep?.formalities) ? rep.formalities[0] : rep;
-  return { ...normaliserFormalite(formalite), evenements: formalite?.events || [] };
+  const resultat = { ...normaliserFormalite(formalite), evenements: formalite?.events || [] };
+  // Constaté en production (COUVOIR JOSSET) : l'identifiant rendu par un dépôt
+  // de modification n'était pas celui de la formalité (lecture en 404). On le
+  // vérifie aussitôt, et on retrouve la formalité par sa liasse au besoin.
+  if (resultat.inpi_id && resultat.numero_liasse) {
+    try {
+      await appel('guichet', { chemin: chemin(config.guichet.paths.formalite, { id: resultat.inpi_id }) });
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      const siren = (/"siren"\s*:\s*"(\d{9})"/.exec(JSON.stringify(requete.corps || {})) || [])[1];
+      const vraie = await retrouver({ liasse: resultat.numero_liasse, siren });
+      if (vraie?.inpi_id) Object.assign(resultat, { inpi_id: vraie.inpi_id, identifiant_corrige: true });
+    }
+  }
+  return resultat;
+}
+
+/** Une formalité du compte mandataire, retrouvée par son numéro de liasse. */
+async function retrouver({ liasse, siren } = {}) {
+  if (!liasse || config.modeGuichet === 'simulation') return null;
+  const lots = [];
+  if (siren) lots.push(await lister({ siren }));
+  if (!lots.flat().some((f) => f.numero_liasse === liasse)) lots.push(await lister({}));
+  return lots.flat().find((f) => f.numero_liasse === liasse) || null;
 }
 
 /** Mise à jour d'un dépôt avant signature, ou réponse à une régularisation. */
@@ -323,6 +346,6 @@ async function listerPieces(id) {
 
 module.exports = {
   deposer, mettreAJour, lire, lister, listerTout, regularisations, historique,
-  signer, synthese, payer, ajouterPiece, listerPieces, supprimer, brut,
+  signer, synthese, payer, ajouterPiece, listerPieces, supprimer, brut, retrouver,
   normaliserFormalite, simulationActive, motifSimulation,
 };

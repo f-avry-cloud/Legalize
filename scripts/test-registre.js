@@ -155,6 +155,23 @@ client.telecharger = async (cible, { chemin }) => {
   verifier('radiation lue dans detailCessationEntreprise', normaliserEntreprise(ficheBrute({ pm: { detailCessationEntreprise: { dateRadiation: '2023-01-10', dateCessationTotaleActivite: '2022-12-31' } } })).radiee === true);
   verifier('société sans radiation : active', normaliserEntreprise(ficheBrute({})).radiee === false);
 
+  console.log('\nIdentifiant INPI erroné après un dépôt de modification');
+  const guichetMod = require('../src/inpi/guichet');
+  const formalitesSvc = require('../src/services/formalites');
+  const lireOrig = guichetMod.lire; const retrouverOrig = guichetMod.retrouver;
+  guichetMod.lire = async (id) => { if (String(id) === '22049302') throw Object.assign(new Error('Not Found'), { status: 404 }); return { statut: 'SIGNATURE_PENDING', statut_brut: 'SIGNATURE_PENDING', regularisations: [], montant: 72.81 }; };
+  guichetMod.retrouver = async ({ liasse }) => (liasse === 'J00291446433' ? { inpi_id: '7654321', numero_liasse: liasse } : null);
+  tables.formalites.push({ id: 900, type: 'parcours', reference: 'LGZ-2026-00900', inpi_id: '22049302', numero_liasse: 'J00291446433', siren: '310427562', statut: 'RECEIVED', service: 'formalites', regularisations: [] });
+  const sync = await formalitesSvc.synchroniser(900);
+  guichetMod.lire = lireOrig; guichetMod.retrouver = retrouverOrig;
+  const f900 = tables.formalites.find((x) => x.id === 900);
+  verifier('formalité retrouvée par sa liasse, identifiant corrigé et statut relu', f900.inpi_id === '7654321' && sync.synchronise && f900.statut === 'SIGNATURE_PENDING', f900);
+  verifier('correction journalisée', tables.formalite_evenements.some((e) => e.formalite_id === 900 && /Identifiant INPI corrigé/.test(e.message)));
+  tables.formalites.splice(tables.formalites.indexOf(f900), 1);
+  tables.formalite_evenements.splice(0, tables.formalite_evenements.length);
+  const { normaliserFormalite } = guichetMod;
+  verifier('montant du panier converti des centimes en euros', normaliserFormalite({ id: 1, carts: { total: 7281 } }).montant === 72.81);
+
   console.log('\nLecture seule');
   verifier('aucun dossier de formalité créé ni modifié', tables.formalites.length === 0 && tables.formalite_pieces.length === 0 && tables.formalite_evenements.length === 0);
   verifier('seuls des appels de lecture (GET) au registre', appels.every((ch) => !/sso|formalit/.test(ch)));

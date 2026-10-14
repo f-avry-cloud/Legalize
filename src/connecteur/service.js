@@ -598,6 +598,10 @@ async function consulterFormaliteGuichet({ reference }) {
   const f = await chargerParReference(reference);
   if (!f.inpi_id) throw erreur('Ce dossier n’a pas encore été enregistré au guichet.', 409);
   if (String(f.inpi_id).startsWith('SIM-')) throw erreur('Dossier simulé : il n’existe pas au guichet.', 409);
+  // La synchronisation retrouve et corrige au besoin l'identifiant de la formalité.
+  try { await formalites.synchroniser(f.id); } catch (e) { /* lecture directe ci-dessous */ }
+  const [a] = await q(supabase.from('formalites').select('inpi_id').eq('id', f.id));
+  f.inpi_id = a?.inpi_id || f.inpi_id;
   const brut = await guichet.brut(f.inpi_id);
   const norm = guichet.normaliserFormalite(brut, f.inpi_id);
   const panier = Array.isArray(brut?.carts) ? brut.carts[0] : brut?.carts;

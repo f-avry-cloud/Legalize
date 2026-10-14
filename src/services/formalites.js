@@ -423,7 +423,20 @@ async function synchroniser(id) {
   const formalite = await db(supabase.from('formalites').select('*').eq('id', id).single());
   if (!formalite.inpi_id) return { ...formalite, synchronise: false };
 
-  const etat = await guichet.lire(formalite.inpi_id, formalite.service);
+  let etat;
+  try {
+    etat = await guichet.lire(formalite.inpi_id, formalite.service);
+  } catch (e) {
+    // Identifiant erroné (lecture en 404) : la formalité est retrouvée par sa
+    // liasse sur le compte mandataire, et l'identifiant corrigé.
+    if (e.status !== 404 || !formalite.numero_liasse || formalite.service === 'comptes_annuels') throw e;
+    const vraie = await guichet.retrouver({ liasse: formalite.numero_liasse, siren: formalite.siren });
+    if (!vraie?.inpi_id || vraie.inpi_id === String(formalite.inpi_id)) throw e;
+    await db(supabase.from('formalites').update({ inpi_id: vraie.inpi_id }).eq('id', id).select());
+    await journal(id, 'statut', `Identifiant INPI corrigé : ${formalite.inpi_id} → ${vraie.inpi_id} (retrouvé par la liasse ${formalite.numero_liasse}).`);
+    formalite.inpi_id = vraie.inpi_id;
+    etat = await guichet.lire(vraie.inpi_id, formalite.service);
+  }
   if (!etat) return { ...formalite, synchronise: false };
 
   // Capturé avant la mise à jour : c'est cette valeur qui est journalisée.
