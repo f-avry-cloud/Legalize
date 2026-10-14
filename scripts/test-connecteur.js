@@ -62,6 +62,10 @@ function verifier(nom, condition, detail) {
 
   console.log('\nProtocole MCP');
   verifier('adresse sans le bon jeton : introuvable', (await http('POST', '/mcp/mauvais-jeton', { jsonrpc: '2.0', id: 1, method: 'ping' })).statut === 404);
+  process.env.MCP_GU_JETON = '';
+  const nonConfigure = await http('POST', `/mcp/${JETON}`, { jsonrpc: '2.0', id: 1, method: 'ping' });
+  verifier('jeton absent de Vercel : « connecteur non configuré » (503)', nonConfigure.statut === 503 && /non configuré/.test(nonConfigure.corps.error.message), nonConfigure.corps);
+  process.env.MCP_GU_JETON = JETON;
   verifier('GET refusé (pas de flux serveur)', (await http('GET', `/mcp/${JETON}`)).statut === 405);
   const init = await rpc('initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
   verifier('initialize : version du client reprise, outils annoncés, consignes jointes',

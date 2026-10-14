@@ -90,6 +90,11 @@ async function traiter(message) {
 const routeur = express.Router();
 
 routeur.all('/:jeton', async (req, res) => {
+  // Réglages absents dans Vercel : on le dit, plutôt qu'un « introuvable »
+  // qui ferait chercher l'erreur dans l'adresse.
+  if ((process.env.MCP_GU_JETON || '').length < 24) {
+    return res.status(503).json(echec(null, -32000, 'Connecteur non configuré : variable MCP_GU_JETON absente (ou de moins de 24 caractères) dans Vercel.'));
+  }
   if (!jetonValide(req.params.jeton)) return res.status(404).json({ error: 'Introuvable' });
   if (req.method !== 'POST') return res.set('Allow', 'POST').status(405).json({ error: 'Méthode non autorisée' });
   const service = clientService();
