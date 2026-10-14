@@ -514,6 +514,68 @@ async function listerFormalites({ perimetre = 'assistant' } = {}) {
   };
 }
 
+/* ------------------------------------------- pièces déposées au registre */
+
+const registre = require('../inpi/rne-documents');
+const PDF_JOINT_MAX = 1.5 * 1024 * 1024;
+
+/**
+ * Le PDF est conservé dans le stockage du cabinet et remis par un lien
+ * temporaire (1 heure) ; joint en plus à la réponse s'il est léger.
+ */
+async function remettrePdf(pdf, chemin, nom) {
+  const { BUCKET } = require('../supa');
+  let lien = null;
+  try {
+    const envoi = await supabase.storage.from(BUCKET).upload(chemin, pdf, { contentType: 'application/pdf', upsert: true });
+    if (!envoi.error) {
+      const { data } = await supabase.storage.from(BUCKET).createSignedUrl(chemin, 3600, { download: nom });
+      lien = data?.signedUrl || null;
+    }
+  } catch (e) { lien = null; }
+  return {
+    pdf: { nom, taille_octets: pdf.length, lien_telechargement: lien, lien_valable: lien ? '1 heure' : null, joint: pdf.length <= PDF_JOINT_MAX },
+    _contenus: pdf.length <= PDF_JOINT_MAX
+      ? [{ type: 'resource', resource: { uri: `inpi-rne://${chemin}`, mimeType: 'application/pdf', blob: pdf.toString('base64') } }] : [],
+  };
+}
+
+function vueTexte(t) {
+  if (!t) return null;
+  return {
+    pages_total: t.pages_total,
+    scanne: t.scanne,
+    pages_lues_par_ocr: t.pages_lues_par_ocr,
+    ...(t.pages_lues_par_ocr ? { avertissement_ocr: 'Texte obtenu par reconnaissance de caractères : à vérifier sur le PDF pour les chiffres, les noms et les dates.' } : {}),
+    ...(t.pages_restantes.length ? { pages_restantes: t.pages_restantes.join(','), suite: `Rappelez l’outil avec pages: "${t.pages_restantes.join(',')}" pour lire la suite.` } : {}),
+    contenu: t.texte,
+  };
+}
+
+async function listerPiecesDeposees({ siren }) {
+  return registre.piecesDeposees(siren);
+}
+
+async function telechargerActe({ id, pages }) {
+  const r = await registre.acte(String(id).trim(), { pages });
+  const nom = `acte-${r.meta.siren ? r.meta.siren.replace(/\s/g, '') : 'rne'}-${r.meta.date_depot || ''}-${String(id).slice(0, 12)}.pdf`.replace(/-+\./, '.');
+  const remise = await remettrePdf(r.pdf, `registre/actes/${String(id).replace(/[^\w-]/g, '_')}.pdf`, nom);
+  return { acte: r.meta, ...remise, texte: vueTexte(r.texte) };
+}
+
+async function telechargerComptes({ id, pages }) {
+  const r = await registre.comptes(String(id).trim(), { pages });
+  if (r.meta.confidentiel) {
+    return {
+      comptes: r.meta,
+      message: `Comptes annuels confidentiels (${r.meta.confidentialite}) : ni le PDF ni les données ne sont récupérés.`,
+    };
+  }
+  const nom = `comptes-${r.meta.siren ? r.meta.siren.replace(/\s/g, '') : 'rne'}-${r.meta.date_cloture || ''}.pdf`;
+  const remise = await remettrePdf(r.pdf, `registre/comptes/${String(id).replace(/[^\w-]/g, '_')}.pdf`, nom);
+  return { comptes: r.meta, ...remise, donnees_saisies: r.saisis || { disponibles: false }, texte: vueTexte(r.texte) };
+}
+
 /* ------------------------------------------------------------ définitions */
 
 const REFERENCE = { type: 'string', description: 'Référence du dossier renvoyée par ouvrir_depot_pieces (ex. LGZ-2026-00012).' };
@@ -638,6 +700,35 @@ const OUTILS = [
     description: 'Statut à jour d’un dossier (relu auprès du guichet s’il est enregistré), action attendue et par qui, régularisations demandées, journal.',
     inputSchema: { type: 'object', properties: { reference: REFERENCE }, required: ['reference'] },
     run: statutFormalite,
+  },
+  {
+    name: 'lister_pieces_deposees',
+    description: 'Pièces déposées au registre national des entreprises pour une société : actes (statuts, PV d’assemblée, décisions…) et comptes annuels, '
+      + 'du plus récent au plus ancien, avec leur identifiant, leur date et leur confidentialité. Lecture seule.',
+    inputSchema: { type: 'object', properties: { siren: { type: 'string', description: 'SIREN de la société.' } }, required: ['siren'] },
+    run: listerPiecesDeposees,
+  },
+  {
+    name: 'telecharger_acte',
+    description: 'Télécharge un acte déposé au registre (identifiant donné par lister_pieces_deposees) : le PDF et son texte, '
+      + 'obtenu par reconnaissance de caractères si l’acte est numérisé. Un acte long se lit par tranches de pages (« pages »). Lecture seule.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'Identifiant de l’acte.' }, pages: { type: 'string', description: 'Facultatif : pages à lire, par exemple "1-5" ou "6,7,8".' } },
+      required: ['id'],
+    },
+    run: telechargerActe,
+  },
+  {
+    name: 'telecharger_comptes',
+    description: 'Télécharge des comptes annuels déposés au registre (identifiant donné par lister_pieces_deposees) : le PDF, son texte et, si l’INPI les a saisies, '
+      + 'les données du bilan et du compte de résultat (postes libellés et chiffres clés). Des comptes confidentiels ne sont pas récupérés. Lecture seule.',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'Identifiant des comptes annuels.' }, pages: { type: 'string', description: 'Facultatif : pages du PDF à lire, par exemple "1-4".' } },
+      required: ['id'],
+    },
+    run: telechargerComptes,
   },
   {
     name: 'lister_formalites',

@@ -40,6 +40,10 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `controler_formalite` | Bloquants, alertes, échéance, mode simulation |
 | `enregistrer_formalite` | Transmission au guichet, **uniquement avec `confirmation_avocat: true`** |
 | `statut_formalite`, `lister_formalites` | Suivi (statut relu auprès de l'INPI, régularisations, journal) |
+| `reclasser_piece`, `retirer_piece`, `catalogue_pieces` | Ranger une pièce reçue sous la bonne ligne ou un autre type officiel |
+| `lister_pieces_deposees` | Actes et comptes annuels déposés au registre pour un SIREN (lecture seule) |
+| `telecharger_acte` | PDF d'un acte et son texte, par reconnaissance de caractères s'il est numérisé (lecture seule) |
+| `telecharger_comptes` | PDF des comptes annuels, texte et données saisies par l'INPI (postes libellés, chiffres clés) ; comptes confidentiels non récupérés (lecture seule) |
 
 Aucun outil ne signe ni ne paie : la signature et le paiement restent sur le portail.
 
@@ -55,6 +59,21 @@ remplacé par tout nouveau lien du même dossier et se ferme une fois le dossier
 Le connecteur Microsoft 365 de Claude ne donne accès qu'au texte des pièces jointes Outlook, pas aux
 fichiers : Claude peut y lire les données d'un acte, mais le PDF doit passer par le lien de dépôt.
 
+## Pièces déposées au registre
+
+Sources : documentations INPI « Accéder aux Actes d'une entreprise » (v4.0, juin 2025) et « Accéder aux
+comptes annuels PDF et saisis » (v5, juin 2025). Le compte INPI du connecteur (`INPI_RNE_USERNAME`) doit être
+habilité aux actes et comptes annuels ; à défaut l'API répond 403 et l'outil le dit. Le quota journalier de
+l'INPI est de 10 000 appels ou 10 000 Mo.
+
+- Les PDF sont conservés dans le stockage du cabinet (`registre/actes/…`, `registre/comptes/…`) et remis par
+  un lien valable une heure ; un PDF de moins de 1,5 Mo est aussi joint à la réponse.
+- Le texte d'une page sans couche texte est obtenu par reconnaissance de caractères (Tesseract, français) :
+  environ une seconde par page ; au-delà de 35 secondes ou de 60 000 caractères, l'outil rend les pages
+  restantes, à lire en le rappelant avec `pages`.
+- Les libellés des postes comptables (`src/inpi/data/postes-comptes.json`) sont tirés de la section E de la
+  documentation des comptes annuels : `node scripts/build-postes-comptes.js <texte de la documentation>`.
+
 ## Garde-fous
 
 - Adresse MCP protégée par `MCP_GU_JETON` (comparaison à temps constant ; jeton trop court = fermé).
@@ -69,4 +88,5 @@ fichiers : Claude peut y lire les données d'un acte, mais le PDF doit passer pa
 - `src/connecteur/mcp.js` : protocole MCP (HTTP, sans état), `POST /mcp/:jeton`.
 - `src/connecteur/depot.js` : page et API de dépôt, `/depot/:jeton`.
 - `src/routes-formalites-ai.js`, `public/formalites-ai.js` : onglet Suivi Formalités AI.
-- Tests : `node scripts/test-connecteur.js`.
+- `src/inpi/rne-documents.js`, `src/inpi/texte-pdf.js` : pièces déposées au registre, texte et OCR.
+- Tests : `node scripts/test-connecteur.js`, `node scripts/test-registre.js` (API INPI simulée).

@@ -74,7 +74,7 @@ function verifier(nom, condition, detail) {
   verifier('notification : 202 sans corps', notif.statut === 202);
   const liste = await rpc('tools/list', {});
   const noms = liste.corps.result.tools.map((t) => t.name);
-  verifier('quatorze outils, aucun ne signe ni ne paie', noms.length === 14 && !noms.some((x) => /sign|pay/i.test(x)), noms);
+  verifier('dix-sept outils, aucun ne signe ni ne paie', noms.length === 17 && !noms.some((x) => /sign|pay/i.test(x)), noms);
   verifier('outil inconnu : erreur JSON-RPC', (await rpc('tools/call', { name: 'payer', arguments: {} })).corps.error?.code === -32602);
   verifier('méthode inconnue : erreur JSON-RPC', (await rpc('resources/read', {})).corps.error?.code === -32601);
 
@@ -181,7 +181,7 @@ function verifier(nom, condition, detail) {
   const sansCle = await rpc('tools/list', {});
   const outilSansCle = await rpc('tools/call', { name: 'lister_formalites', arguments: {} });
   verifier('sans clé de service : connexion possible, l’outil explique ce qui manque',
-    sansCle.statut === 200 && sansCle.corps.result.tools.length === 14
+    sansCle.statut === 200 && sansCle.corps.result.tools.length === 17
     && outilSansCle.corps.result.isError && /SUPABASE_SERVICE_ROLE_KEY/.test(outilSansCle.corps.result.content[0].text), outilSansCle.corps);
   faux.service = service;
 

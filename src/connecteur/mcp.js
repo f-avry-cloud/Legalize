@@ -25,6 +25,7 @@ const CONSIGNES = [
   'Chaque question de qualification indique son « format » : respectez-le, une réponse mal formée est refusée. Les « Données du registre à compléter » (objet social absent du registre, donnée refusée par le guichet…) sont à demander à l’avocat.',
   'N’appelez enregistrer_formalite qu’après l’accord explicite de l’avocat (« je confirme ») sur un récapitulatif complet, avec confirmation_avocat: true. Aucun outil ne signe ni ne paie : la signature et le paiement se font sur le portail.',
   'Si un résultat indique guichet_simulation: true, dites-le à l’avocat : rien n’est transmis à l’INPI.',
+  'Pièces déjà déposées au registre (statuts, PV, comptes annuels) : lister_pieces_deposees, puis telecharger_acte ou telecharger_comptes. Un texte issu de la reconnaissance de caractères se vérifie sur le PDF.',
   'N’inventez aucune donnée ; ne recopiez pas inutilement les données personnelles (numéro de sécurité sociale, adresse personnelle).',
 ].join('\n');
 
@@ -51,7 +52,9 @@ async function appeler(nom, args) {
   }
   try {
     const resultat = await outil.run(args || {});
-    return { content: [{ type: 'text', text: JSON.stringify(resultat, null, 1) }] };
+    // Contenus joints (PDF) : à part, pour ne pas alourdir le texte.
+    const { _contenus: joints = [], ...visible } = resultat || {};
+    return { content: [{ type: 'text', text: JSON.stringify(visible, null, 1) }, ...joints] };
   } catch (e) {
     const detail = e.details ? `\nDétail : ${JSON.stringify(e.details)}` : '';
     const violations = Array.isArray(e.detail?.violations)

@@ -1,0 +1,6465 @@
+{
+ "_source": "INPI, « Accéder aux comptes annuels PDF et saisis », version 5, juin 2025, section E",
+ "types": {
+  "C": "Comptes annuels complets",
+  "S": "Comptes annuels simplifiés",
+  "K": "Comptes consolidés",
+  "B": "Comptes annuels de banques",
+  "A": "Comptes annuels d’assurances",
+  "AC": "Comptes annuels agricoles complets",
+  "AS": "Comptes annuels agricoles simplifiés"
+ },
+ "postes": {
+  "C": {
+   "11": {
+    "rubrique": "Affectation du résultat & renseignements divers",
+    "codes": {
+     "ZE": {
+      "libelle": "Dividendes",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YQ": {
+      "libelle": "Engagement de crédit-bail mobilier",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YR": {
+      "libelle": "Engagement de crédit-bail immobilier",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YS": {
+      "libelle": "Effets portés à l’escompte et non échus",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YT": {
+      "libelle": "Sous-traitance",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "XQ": {
+      "libelle": "Location, charges locatives et de copropriété",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YU": {
+      "libelle": "Personnel extérieur à l’entreprise",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "SS": {
+      "libelle": "Rémunération d’intermédiaires et honoraires (hors rétrocessions)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YV": {
+      "libelle": "Rétrocessions d’honoraires, commissions et courtages",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ST": {
+      "libelle": "Autres comptes",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZJ": {
+      "libelle": "Total du poste correspondant à la ligne FW du tableau n° 2052",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YW": {
+      "libelle": "Taxe professionnelle",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "9Z": {
+      "libelle": "Autres impôts, taxes et versements assimilés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YX": {
+      "libelle": "Total du compte correspondant à la ligne FX du tableau n° 2052",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YY": {
+      "libelle": "Montant de la TVA. collectée",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YZ": {
+      "libelle": "Total TVA. déductible sur biens et services",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "YP": {
+      "libelle": "Effectif moyen du personnel",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZR": {
+      "libelle": "Filiales et participations",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   },
+   "16": {
+    "rubrique": "Contribution économique territoriale : Valeur ajoutée – Effectifs",
+    "codes": {
+     "YP": {
+      "libelle": "Effectif moyen du personnel",
+      "colonnes": [
+       1,
+       2
+      ]
+     }
+    }
+   },
+   "*": {
+    "rubrique": null,
+    "codes": {}
+   },
+   "01": {
+    "rubrique": "ACTIF (bilan)",
+    "codes": {
+     "AA": {
+      "libelle": "Capital souscrit non appelé",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "AB": {
+      "libelle": "Frais d’établissement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CX": {
+      "libelle": "Frais de développement ou de recherche et développement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AF": {
+      "libelle": "Concessions, brevets et droits similaires",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AH": {
+      "libelle": "Fonds commercial",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AJ": {
+      "libelle": "Autres immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AL": {
+      "libelle": "Avances et acomptes sur immobilisations incorporelles.",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AN": {
+      "libelle": "Terrains",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AP": {
+      "libelle": "Constructions",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AR": {
+      "libelle": "Installations techniques, matériel et outillage industriels",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AT": {
+      "libelle": "Autres immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AV": {
+      "libelle": "Immobilisations en cours",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AX": {
+      "libelle": "Avances et acomptes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CS": {
+      "libelle": "Participations évaluées - mise en équivalence",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CU": {
+      "libelle": "Autres participations",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BB": {
+      "libelle": "Créances rattachées à des participations",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BD": {
+      "libelle": "Autres titres immobilisés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BF": {
+      "libelle": "Prêts",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BH": {
+      "libelle": "Autres immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BJ": {
+      "libelle": "TOTAL (I)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BL": {
+      "libelle": "Matières premières, approvisionnements",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BN": {
+      "libelle": "En cours de production de biens",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BP": {
+      "libelle": "En cours de production de services",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BR": {
+      "libelle": "Produits intermédiaires et finis",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BT": {
+      "libelle": "Marchandises",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BV": {
+      "libelle": "Avances et acomptes versés sur commandes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BX": {
+      "libelle": "Clients et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BZ": {
+      "libelle": "Autres créances",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CB": {
+      "libelle": "Capital souscrit et appelé, non versé",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CD": {
+      "libelle": "Valeurs mobilières de placement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CF": {
+      "libelle": "Disponibilités",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CH": {
+      "libelle": "Charges constatées d’avance",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CJ": {
+      "libelle": "TOTAL (II)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CW": {
+      "libelle": "Charges à répartir ou frais d’émission d’emprunt",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "CM": {
+      "libelle": "Primes de remboursement des obligations (IV)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CN": {
+      "libelle": "Ecarts de conversion actif (V)",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "CO": {
+      "libelle": "TOTAL GENERAL (0 à V)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CP": {
+      "libelle": "Parts à moins d’un an",
+      "colonnes": [
+       1
+      ]
+     },
+     "CR": {
+      "libelle": "Parts à plus d’un an",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   },
+   "02": {
+    "rubrique": "PASSIF (bilan)",
+    "codes": {
+     "DA": {
+      "libelle": "Capital social ou individuel",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DB": {
+      "libelle": "Primes d’émission, de fusion, d’apport, ...",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EK": {
+      "libelle": "(dont écart d’équivalence)",
+      "colonnes": [
+       1
+      ]
+     },
+     "DC": {
+      "libelle": "Ecarts de réévaluation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DD": {
+      "libelle": "Réserve légale (1)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DE": {
+      "libelle": "Réserves statutaires ou contractuelles",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "B1": {
+      "libelle": "(dont réserve spéciale des provisions pour fluctuation des cours)",
+      "colonnes": [
+       1
+      ]
+     },
+     "DF": {
+      "libelle": "Réserves réglementées (1)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EJ": {
+      "libelle": "(dont réserve relative à l’achat d’œuvres originales d’artistes vivants)",
+      "colonnes": [
+       1
+      ]
+     },
+     "DG": {
+      "libelle": "Autres réserves",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DH": {
+      "libelle": "Report à nouveau",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DI": {
+      "libelle": "RESULTAT DE L’EXERCICE (bénéfice ou perte)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DJ": {
+      "libelle": "Subventions d’investissement",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DK": {
+      "libelle": "Provisions réglementées",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DL": {
+      "libelle": "TOTAL (I)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DM": {
+      "libelle": "Produit des émissions de titres participatifs",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DN": {
+      "libelle": "Avances conditionnées",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DO": {
+      "libelle": "TOTAL (II)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DP": {
+      "libelle": "Provisions pour risques",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DQ": {
+      "libelle": "Provisions pour charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DR": {
+      "libelle": "TOTAL (III)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DS": {
+      "libelle": "Emprunts obligataires convertibles",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DT": {
+      "libelle": "Autres emprunts obligataires",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DU": {
+      "libelle": "Emprunts et dettes auprès des établissements de crédit (3)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DV": {
+      "libelle": "Emprunts et dettes financières divers (4)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DW": {
+      "libelle": "Avances et acomptes reçus sur commandes en cours",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DX": {
+      "libelle": "Dettes fournisseurs et comptes rattachés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DY": {
+      "libelle": "Dettes fiscales et sociales",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DZ": {
+      "libelle": "Dettes sur immobilisations et comptes rattachés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EA": {
+      "libelle": "Autres dettes",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EB": {
+      "libelle": "Produits constatés d’avance (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EC": {
+      "libelle": "TOTAL (IV)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ED": {
+      "libelle": "(V)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EE": {
+      "libelle": "TOTAL GENERAL (I à V)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EF": {
+      "libelle": "Dont réserve réglementée des plus-values à long terme",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EG": {
+      "libelle": "Dettes et produits constatés d’avance à moins d’un an",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EH": {
+      "libelle": "Dont concours bancaires courants, et soldes créditeurs de banques et C.C.P.",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EI": {
+      "libelle": "Dont emprunts participatifs",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   },
+   "03": {
+    "rubrique": "COMPTE DE RESULTAT",
+    "codes": {
+     "FA": {
+      "libelle": "Ventes de marchandises",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FD": {
+      "libelle": "Production vendue biens",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FG": {
+      "libelle": "Production vendue services",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FJ": {
+      "libelle": "Chiffres d’affaires nets",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FM": {
+      "libelle": "Production stockée",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FN": {
+      "libelle": "Production immobilisée",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FO": {
+      "libelle": "Subventions d’exploitation",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FP": {
+      "libelle": "Reprises sur amortissements et provisions, transfert de charges",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FQ": {
+      "libelle": "Autres produits",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FR": {
+      "libelle": "Total des produits d’exploitation (I)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FS": {
+      "libelle": "Achats de marchandises (y compris droits de douane)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FT": {
+      "libelle": "Variation de stock (marchandises)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FU": {
+      "libelle": "Achats de matières premières et autres approvisionnements",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FV": {
+      "libelle": "Variation de stock (matières premières et approvisionnements)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FW": {
+      "libelle": "Autres achats et charges externes",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FX": {
+      "libelle": "Impôts, taxes et versements assimilés",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FY": {
+      "libelle": "Salaires et traitements",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FZ": {
+      "libelle": "Charges sociales",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GA": {
+      "libelle": "Dot. d’exploit. - Dotations aux amortissements",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GB": {
+      "libelle": "Dot. d’exploit. - Dotations aux provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GC": {
+      "libelle": "Dot. d’exploit. Sur actif circulant : dotations aux provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GD": {
+      "libelle": "Dot. d’exploit. Pour risques et charges : dotations aux provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GE": {
+      "libelle": "Autres charges",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GF": {
+      "libelle": "Total des charges d’exploitation (II)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GG": {
+      "libelle": "- RESULTAT D’EXPLOITATION (I - II)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GH": {
+      "libelle": "Bénéfice attribué ou perte transférée (III)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GI": {
+      "libelle": "Perte supportée ou bénéfice transféré (IV)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GJ": {
+      "libelle": "Produits financiers de participations",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GK": {
+      "libelle": "Produits des autres valeurs mobilières et créances de l’actif immobilisé",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GL": {
+      "libelle": "Autres intérêts et produits assimilés",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GM": {
+      "libelle": "Reprises sur provisions et transferts de charges",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GN": {
+      "libelle": "Différences positives de change",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GO": {
+      "libelle": "Produits nets sur cessions de valeurs mobilières de placement",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GP": {
+      "libelle": "Total des produits financiers (V)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GQ": {
+      "libelle": "Dotations financières sur amortissements et provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GR": {
+      "libelle": "Intérêts et charges assimilées",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GS": {
+      "libelle": "Différences négatives de change",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GT": {
+      "libelle": "Charges nettes sur cessions de valeurs mobilières de placement",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GU": {
+      "libelle": "Total des charges financières (VI)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GV": {
+      "libelle": "- RESULTAT FINANCIER (V - VI)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GW": {
+      "libelle": "- RESULTAT COURANT AVANT IMPOTS (I - II + III - IV + V - VI)",
+      "colonnes": [
+       3,
+       4
+      ]
+     }
+    }
+   },
+   "04": {
+    "rubrique": "COMPTE DE RESULTAT (suite)",
+    "codes": {
+     "HA": {
+      "libelle": "Produits exceptionnels sur opérations de gestion",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HB": {
+      "libelle": "Produits exceptionnels sur opérations en capital",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HC": {
+      "libelle": "Reprises sur provisions et transferts de charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HD": {
+      "libelle": "Total des produits exceptionnels (VII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HE": {
+      "libelle": "Charges exceptionnelles sur opérations de gestion",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HF": {
+      "libelle": "Charges exceptionnelles sur opérations en capital",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HG": {
+      "libelle": "Dotations exceptionnelles aux amortissements et provisions",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HH": {
+      "libelle": "Total des charges exceptionnelles (VIII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HI": {
+      "libelle": "- RESULTAT EXCEPTIONNEL (VII - VIII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HJ": {
+      "libelle": "Participation des salariés aux résultats de l’entreprise (IX)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HK": {
+      "libelle": "Impôts sur les bénéfices (X)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HL": {
+      "libelle": "TOTAL DES PRODUITS (I + III + V +VII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HM": {
+      "libelle": "TOTAL DES CHARGES (II + IV + VI + VIII + IX + X)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HN": {
+      "libelle": "BENEFICE OU PERTE (Total des produits - Total des charges)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HP": {
+      "libelle": "Renvois : Crédit-bail mobilier",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HQ": {
+      "libelle": "Renvois : Crédit-bail immobilier",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "A1": {
+      "libelle": "Renvois : Transfert de charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "A2": {
+      "libelle": "Renvois : Cotisations personnelles de l’exploitant",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "A3": {
+      "libelle": "Renvois : Redevances pour concessions de brevets, de licences (produits)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "A4": {
+      "libelle": "Renvois : Redevances pour concessions de brevets, de licences (charges)",
+      "colonnes": [
+       1,
+       2
+      ]
+     }
+    }
+   },
+   "05": {
+    "rubrique": "Immobilisations",
+    "codes": {
+     "CZ": {
+      "libelle": "ACQUISITIONS Frais d’établissement, et de développement ou de recherche",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "KD": {
+      "libelle": "ACQUISITIONS Total dont autres postes d’immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "LN": {
+      "libelle": "ACQUISITIONS Total Immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "LQ": {
+      "libelle": "ACQUISITIONS Total Immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "0G": {
+      "libelle": "ACQUISITIONS Total Général",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "IN": {
+      "libelle": "DIMINUTIONS Frais d’établissement, et de développement ou de recherche",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "IO": {
+      "libelle": "DIMINUTIONS Total dont autres postes d’immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "MY": {
+      "libelle": "DIMINUTIONS Virement postes immobilisations corporelles en cours",
+      "colonnes": [
+       1
+      ]
+     },
+     "NC": {
+      "libelle": "DIMINUTIONS Virement postes - Avances et acomptes",
+      "colonnes": [
+       1
+      ]
+     },
+     "IY": {
+      "libelle": "DIMINUTIONS Total Immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "I2": {
+      "libelle": "DIMINUTIONS Prêts et immobilisations financières",
+      "colonnes": [
+       2
+      ]
+     },
+     "I3": {
+      "libelle": "DIMINUTIONS Total Immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "I4": {
+      "libelle": "DIMINUTIONS Total Général",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     }
+    }
+   },
+   "06": {
+    "rubrique": "Amortissements",
+    "codes": {
+     "CY": {
+      "libelle": "AMORTISSEMENTS Frais d’établissement, et de développement ou de recherche",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "PE": {
+      "libelle": "AMORTISSEMENTS Total dont autres immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "QU": {
+      "libelle": "AMORTISSEMENTS Total Immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "0N": {
+      "libelle": "AMORTISSEMENTS Total Général",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "Z9": {
+      "libelle": "Charges à répartir ou frais d’émission d’emprunt",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "SP": {
+      "libelle": "mvt. sur charges rép. - Primes de remboursement des obligations",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     }
+    }
+   },
+   "07": {
+    "rubrique": "Provisions",
+    "codes": {
+     "3X": {
+      "libelle": "Amortissements dérogatoires",
+      "colonnes": [
+       4
+      ]
+     },
+     "3Z": {
+      "libelle": "Total Provisions réglementées",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "4A": {
+      "libelle": "Provisions pour litiges",
+      "colonnes": [
+       4
+      ]
+     },
+     "4E": {
+      "libelle": "Provisions pour garanties données aux clients",
+      "colonnes": [
+       4
+      ]
+     },
+     "4J": {
+      "libelle": "Provisions pour perte sur marchés à terme",
+      "colonnes": [
+       4
+      ]
+     },
+     "4N": {
+      "libelle": "Provisions pour amendes et pénalités",
+      "colonnes": [
+       4
+      ]
+     },
+     "4T": {
+      "libelle": "Provisions pour perte de change",
+      "colonnes": [
+       4
+      ]
+     },
+     "4X": {
+      "libelle": "Provisions pour pensions et obligations similaires",
+      "colonnes": [
+       4
+      ]
+     },
+     "5B": {
+      "libelle": "Provisions pour impôts",
+      "colonnes": [
+       4
+      ]
+     },
+     "5F": {
+      "libelle": "Provisions pour renouvellement des immobilisations",
+      "colonnes": [
+       4
+      ]
+     },
+     "EO": {
+      "libelle": "Provisions pour gros entretien et grandes révisions ou grosses réparations",
+      "colonnes": [
+       4
+      ]
+     },
+     "5R": {
+      "libelle": "Provisions pour charges sociales et fiscales sur congés à payer",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "5V": {
+      "libelle": "Autres provisions pour risques et charges",
+      "colonnes": [
+       4
+      ]
+     },
+     "5Z": {
+      "libelle": "Total Provisions pour risques et charges",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "6A": {
+      "libelle": "sur immobilisations – incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "6E": {
+      "libelle": "sur immobilisations – corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "02": {
+      "libelle": "sur immobilisations – titres mis en équivalence",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "9U": {
+      "libelle": "sur immobilisations – titres de participation",
+      "colonnes": [
+       4
+      ]
+     },
+     "06": {
+      "libelle": "sur immobilisations –autres immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "6N": {
+      "libelle": "Sur stocks et en cours",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "6T": {
+      "libelle": "Sur comptes clients",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "6X": {
+      "libelle": "Autres provisions pour dépréciation",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "7B": {
+      "libelle": "Total Provisions pour dépréciation",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "7C": {
+      "libelle": "TOTAL GENERAL",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "UE": {
+      "libelle": "dont dotations et reprises : - d’Exploitation",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "UG": {
+      "libelle": "- Financières",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "UJ": {
+      "libelle": "- Exceptionnelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     }
+    }
+   },
+   "08": {
+    "rubrique": "Créances et dettes",
+    "codes": {
+     "UL": {
+      "libelle": "Créances rattachées à des participations",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "UP": {
+      "libelle": "Prêts",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "UT": {
+      "libelle": "Autres immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VA": {
+      "libelle": "Clients douteux ou litigieux",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "UX": {
+      "libelle": "Autres créances clients",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "UO": {
+      "libelle": "(provision pour dépréciation antérieurement constituée)",
+      "colonnes": [
+       1
+      ]
+     },
+     "Z1": {
+      "libelle": "Créances représentatives de titres prêtés",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "UY": {
+      "libelle": "Personnel et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "UZ": {
+      "libelle": "Sécurité Sociale, autres organismes sociaux",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VM": {
+      "libelle": "Impôts sur les bénéfices",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VB": {
+      "libelle": "T. V. A.",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VN": {
+      "libelle": "Autres impôts, taxes versements assimilés",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VP": {
+      "libelle": "Divers",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VC": {
+      "libelle": "Groupe et associés",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VR": {
+      "libelle": "Débiteurs divers (dont créances relatives à des opérations de pension de titres)",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VS": {
+      "libelle": "Charges constatées d’avance",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VT": {
+      "libelle": "TOTAL – ETAT DES CREANCES",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "7Y": {
+      "libelle": "Emprunts obligataires convertibles brut à un an au plus",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "7Z": {
+      "libelle": "Autres emprunts obligataires brut à un an au plus",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VG": {
+      "libelle": "Emprunts à 1 an maximum à l’origine",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VH": {
+      "libelle": "Emprunts à plus d’1 an à l’origine",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "8A": {
+      "libelle": "Emprunts et dettes financières divers",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "8B": {
+      "libelle": "Fournisseurs et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "8C": {
+      "libelle": "Personnel et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "8D": {
+      "libelle": "Sécurité sociale et autres organismes sociaux",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "8E": {
+      "libelle": "Impôts sur les bénéfices",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VW": {
+      "libelle": "T.V.A.",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VX": {
+      "libelle": "Obligations cautionnées",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VQ": {
+      "libelle": "Autres impôts, taxes et assimilés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "8J": {
+      "libelle": "Dettes sur immobilisations et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VI": {
+      "libelle": "Groupe et associés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "8K": {
+      "libelle": "Autres dettes (dont dettes relatives à des opérations de pension de titre)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "Z2": {
+      "libelle": "Dette représentative de titres empruntés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "8L": {
+      "libelle": "Produits constatés d’avance",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VY": {
+      "libelle": "TOTAL – ETAT DES DETTES",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VJ": {
+      "libelle": "Emprunts souscrits en cours d’exercice",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VK": {
+      "libelle": "Emprunts remboursés en cours d’exercice",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   }
+  },
+  "S": {
+   "*": {
+    "rubrique": null,
+    "codes": {}
+   },
+   "01": {
+    "rubrique": "ACTIF",
+    "codes": {
+     "110": {
+      "libelle": "Total général Actif",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "120": {
+      "libelle": "Capital social ou individuel",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "124": {
+      "libelle": "Ecarts de réévaluation",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "126": {
+      "libelle": "Réserve légale",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "130": {
+      "libelle": "Réserves réglementées",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "132": {
+      "libelle": "Autres réserves",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "134": {
+      "libelle": "Report à nouveau",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "136": {
+      "libelle": "Résultat de l’exercice",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "140": {
+      "libelle": "Provisions réglementées",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "142": {
+      "libelle": "Total des capitaux propres - Total I",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "154": {
+      "libelle": "Provisions pour risques et charges - Total II",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "156": {
+      "libelle": "Emprunts et dettes assimilées",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "164": {
+      "libelle": "Avances et acomptes reçus sur commandes en cours",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "166": {
+      "libelle": "Fournisseurs et comptes rattachés",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "169": {
+      "libelle": "Autres dettes dont comptes courant d’associés de l’exercice N",
+      "colonnes": [
+       2
+      ]
+     },
+     "172": {
+      "libelle": "Autres dettes",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "174": {
+      "libelle": "Produits constatés d’avance",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "176": {
+      "libelle": "Total des dettes",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "180": {
+      "libelle": "Total général Passif",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "182": {
+      "libelle": "Coût de revient des immobilisations acquises ou créées au cours de l’exercice",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "184": {
+      "libelle": "Prix de vente hors T.V.A. des immobilisations cédées au cours de l’exercice",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "193": {
+      "libelle": "Dont immobilisations financières à moins d’un an",
+      "colonnes": [
+       3
+      ]
+     },
+     "195": {
+      "libelle": "Dont dettes à plus d’un an",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "197": {
+      "libelle": "Dont créances à plus d’un an",
+      "colonnes": [
+       3
+      ]
+     },
+     "199": {
+      "libelle": "Dont comptes courant d’associés débiteurs",
+      "colonnes": [
+       3
+      ]
+     },
+     "010": {
+      "libelle": "liasse Immobilisations incorporelles - Fonds commercial",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "014": {
+      "libelle": "Immobilisations incorporelles – Autres",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "028": {
+      "libelle": "Immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "040": {
+      "libelle": "Immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "044": {
+      "libelle": "Total Actif Immobilisé",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "050": {
+      "libelle": "Matières premières, approvisionnements, en cours de production",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "060": {
+      "libelle": "Stock marchandises",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "064": {
+      "libelle": "Avances et acomptes versés sur commandes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "068": {
+      "libelle": "Créances – Clients et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "072": {
+      "libelle": "Créances – Autres",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "080": {
+      "libelle": "Valeurs mobilières de placement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "084": {
+      "libelle": "Disponibilités",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "088": {
+      "libelle": "Caisse",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "092": {
+      "libelle": "Charges constatées d’avance",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "096": {
+      "libelle": "Total Actif circulant + Charges constatées d’avance",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     }
+    }
+   },
+   "02": {
+    "rubrique": "COMPTE DE RESULTAT",
+    "codes": {
+     "209": {
+      "libelle": "Ventes de marchandises – Export",
+      "colonnes": [
+       1
+      ]
+     },
+     "210": {
+      "libelle": "Ventes de marchandises – France",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "214": {
+      "libelle": "Production vendue de biens – France",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "215": {
+      "libelle": "Production vendue de biens - Export",
+      "colonnes": [
+       1
+      ]
+     },
+     "217": {
+      "libelle": "Production vendue de services - Export",
+      "colonnes": [
+       1
+      ]
+     },
+     "218": {
+      "libelle": "Production vendue de services - France",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "222": {
+      "libelle": "Production stockée",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "224": {
+      "libelle": "Production immobilisée",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "226": {
+      "libelle": "Subventions d’exploitation reçues",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "230": {
+      "libelle": "Autres produits",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "232": {
+      "libelle": "Total des produits d’exploitation hors T.V.A.",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "234": {
+      "libelle": "Achats de marchandises (y compris droits de douane)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "236": {
+      "libelle": "Variation de stock (marchandises)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "238": {
+      "libelle": "Achats de matières premières et autres approvisionnements (y compris droits de douane)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "240": {
+      "libelle": "Variation de stock (matières premières et approvisionnement)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "242": {
+      "libelle": "Autres charges externes*",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "243": {
+      "libelle": "(dont taxe professionnelle)",
+      "colonnes": [
+       1
+      ]
+     },
+     "244": {
+      "libelle": "Impôts, taxes et versements assimilés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "250": {
+      "libelle": "Rémunérations du personnel",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "252": {
+      "libelle": "Charges sociales",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "254": {
+      "libelle": "Dotations aux amortissements",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "256": {
+      "libelle": "Dotations aux provisions",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "259": {
+      "libelle": "(dont provisions fiscales pour implantations commerciales à l’étranger)",
+      "colonnes": [
+       1
+      ]
+     },
+     "262": {
+      "libelle": "Autres charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "264": {
+      "libelle": "Total des charges d’exploitation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "270": {
+      "libelle": "Résultat d’exploitation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "280": {
+      "libelle": "Produits financiers",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "290": {
+      "libelle": "Produits exceptionnels",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "294": {
+      "libelle": "Charges financières",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "300": {
+      "libelle": "Charges exceptionnelles",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "306": {
+      "libelle": "Impôts sur les bénéfices",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "310": {
+      "libelle": "Bénéfice ou perte",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "316": {
+      "libelle": "Rémunération et avantages personnels non déductibles",
+      "colonnes": [
+       1
+      ]
+     },
+     "374": {
+      "libelle": "Montant de la T.V.A. collectée",
+      "colonnes": [
+       1
+      ]
+     },
+     "376": {
+      "libelle": "Effectif moyen du personnel",
+      "colonnes": [
+       1
+      ]
+     },
+     "378": {
+      "libelle": "Montant de la T.V.A. déductible sur biens et services",
+      "colonnes": [
+       1
+      ]
+     },
+     "24B": {
+      "libelle": "(dont crédit bail mobilier)*",
+      "colonnes": [
+       1
+      ]
+     },
+     "24A": {
+      "libelle": "(dont crédit bail immobilier)*",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   },
+   "03": {
+    "rubrique": "IMMOBILISATIONS – AMORTISSEMENTS – PLUS-VALUES, MOINS-VALUES",
+    "codes": {
+     "402": {
+      "libelle": "AUGMENTATIONS Immobilisations incorporelles – Fonds commercial",
+      "colonnes": [
+       1
+      ]
+     },
+     "404": {
+      "libelle": "DIMINUTIONS Immobilisations incorporelles – Fonds commercial",
+      "colonnes": [
+       1
+      ]
+     },
+     "412": {
+      "libelle": "AUGMENTATIONS Immobilisations incorporelles –Autres immobilisations incorporelles",
+      "colonnes": [
+       1
+      ]
+     },
+     "414": {
+      "libelle": "DIMINUTIONS Immobilisations incorporelles –Autres immobilisations incorporelles",
+      "colonnes": [
+       1
+      ]
+     },
+     "422": {
+      "libelle": "AUGMENTATIONS Imm. corporelles – Terrains",
+      "colonnes": [
+       1
+      ]
+     },
+     "432": {
+      "libelle": "AUGMENTATIONS Imm. corporelles – Constructions",
+      "colonnes": [
+       1
+      ]
+     },
+     "442": {
+      "libelle": "AUGMENTATIONS Imm. corporelles – Installations techniques matériel et outillage industriels industriels",
+      "colonnes": [
+       1
+      ]
+     },
+     "452": {
+      "libelle": "AUGMENTATIONS Imm. corporelles – Installations générales, agencements divers",
+      "colonnes": [
+       1
+      ]
+     },
+     "462": {
+      "libelle": "AUGMENTATIONS Imm. corporelles – Matériel de transport",
+      "colonnes": [
+       1
+      ]
+     },
+     "472": {
+      "libelle": "AUGMENTATIONS Imm. corporelles – Autres immobilisations corporelles",
+      "colonnes": [
+       1
+      ]
+     },
+     "482": {
+      "libelle": "AUGMENTATIONS Immobilisations financières",
+      "colonnes": [
+       1
+      ]
+     },
+     "484": {
+      "libelle": "DIMINUTIONS Immobilisations financières",
+      "colonnes": [
+       1
+      ]
+     },
+     "490": {
+      "libelle": "Total Immobilisations (Valeur brute)",
+      "colonnes": [
+       1
+      ]
+     },
+     "492": {
+      "libelle": "Total Immobilisations (Augmentations)",
+      "colonnes": [
+       1
+      ]
+     },
+     "494": {
+      "libelle": "Total Immobilisations (Diminutions)",
+      "colonnes": [
+       1
+      ]
+     },
+     "582": {
+      "libelle": "Total Plus-values, Moins-values (Valeur résiduelle)",
+      "colonnes": [
+       1
+      ]
+     },
+     "584": {
+      "libelle": "Total Plus-values, Moins-values (Prix de cession)",
+      "colonnes": [
+       1
+      ]
+     },
+     "585": {
+      "libelle": "Total Immobilisations – Amortissement - Plus-values, Moins-values (Long terme - 19%)",
+      "colonnes": [
+       1
+      ]
+     },
+     "596": {
+      "libelle": "Total Immobilisations – Amortissement - Plus-values, Moins-values (Court terme)",
+      "colonnes": [
+       1
+      ]
+     },
+     "597": {
+      "libelle": "Total Immobilisations – Amortissement - Plus-values, Moins-values (Long terme - 15% ou 16%)",
+      "colonnes": [
+       1
+      ]
+     },
+     "599": {
+      "libelle": "Total Immobilisations – Amortissement - Plus-values, Moins-values (Long terme - 0%)",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   },
+   "04": {
+    "rubrique": "RELEVE DES PROVISIONS – AMORTISSEMENTS DEROGATOIRES – DEFICITS REPORTABLES",
+    "codes": {
+     "374": {
+      "libelle": "DIVERS Montant de la TVA collectée",
+      "colonnes": [
+       1
+      ]
+     },
+     "378": {
+      "libelle": "DIVERS Montant de la TVA déductible sur biens et services (sauf immobilisations)",
+      "colonnes": [
+       1
+      ]
+     },
+     "602": {
+      "libelle": "AUGMENTATIONS Provisions réglementées – Amortissements dérogatoires",
+      "colonnes": [
+       1
+      ]
+     },
+     "603": {
+      "libelle": "AUGMENTATIONS Provisions réglementées – Dont majorations exceptionnelles de 30%",
+      "colonnes": [
+       1
+      ]
+     },
+     "604": {
+      "libelle": "DIMINUTIONS Provisions réglementées – Amortissements dérogatoires",
+      "colonnes": [
+       1
+      ]
+     },
+     "605": {
+      "libelle": "DIMINUTIONS Provisions réglementées – Dont majorations exceptionnelles de 30%",
+      "colonnes": [
+       1
+      ]
+     },
+     "612": {
+      "libelle": "AUGMENTATIONS Provisions réglementées – Autres provisions réglementées",
+      "colonnes": [
+       1
+      ]
+     },
+     "614": {
+      "libelle": "DIMINUTIONS Provisions réglementées – Autres provisions réglementées",
+      "colonnes": [
+       1
+      ]
+     },
+     "622": {
+      "libelle": "AUGMENTATIONS Provisions pour risques et charges",
+      "colonnes": [
+       1
+      ]
+     },
+     "624": {
+      "libelle": "DIMINUTIONS Provisions pour risques et charges",
+      "colonnes": [
+       1
+      ]
+     },
+     "632": {
+      "libelle": "AUGMENTATIONS Provisions pour dépréciation – Sur immobilisations",
+      "colonnes": [
+       1
+      ]
+     },
+     "634": {
+      "libelle": "DIMINUTIONS Provisions pour dépréciation – Sur immobilisations",
+      "colonnes": [
+       1
+      ]
+     },
+     "642": {
+      "libelle": "AUGMENTATIONS Provisions pour dépréciation – Sur stocks et en cours",
+      "colonnes": [
+       1
+      ]
+     },
+     "644": {
+      "libelle": "DIMINUTIONS Provisions pour dépréciation – Sur stocks et en cours",
+      "colonnes": [
+       1
+      ]
+     },
+     "652": {
+      "libelle": "AUGMENTATIONS Provisions pour dépréciation – Sur clients et comptes rattachés",
+      "colonnes": [
+       1
+      ]
+     },
+     "654": {
+      "libelle": "DIMINUTIONS Provisions pour dépréciation – Sur clients et comptes rattachés",
+      "colonnes": [
+       1
+      ]
+     },
+     "662": {
+      "libelle": "AUGMENTATIONS Provisions pour dépréciation – Autres provisions pour dépréciation",
+      "colonnes": [
+       1
+      ]
+     },
+     "664": {
+      "libelle": "DIMINUTIONS Provisions pour dépréciation – Autres provisions pour dépréciation",
+      "colonnes": [
+       1
+      ]
+     },
+     "682": {
+      "libelle": "AUGMENTATIONS Total Relevé des provisions",
+      "colonnes": [
+       1
+      ]
+     },
+     "684": {
+      "libelle": "DIMINUTIONS Total Relevé des provisions",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   },
+   "05": {
+    "rubrique": "CONTRIBUTION ECONOMIQUE TERRITORIALE : VALEUR AJOUTEE – EFFECTIF",
+    "codes": {
+     "376": {
+      "libelle": "Effectifs moyens du personnel",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   }
+  },
+  "K": {
+   "*": {
+    "rubrique": "COMPTE DE RESULTAT (suite)",
+    "codes": {
+     "AA": {
+      "libelle": "Capital souscrit non appelé",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "AB": {
+      "libelle": "Frais d’établissement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CX": {
+      "libelle": "Frais de développement ou de recherche et développement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AF": {
+      "libelle": "Concessions, brevets et droits similaires",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AH": {
+      "libelle": "Fonds commercial",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AJ": {
+      "libelle": "Autres immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AL": {
+      "libelle": "Avances et acomptes sur immobilisations incorporelles.",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "A1": {
+      "libelle": "Ecarts d’acquisition",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "A2": {
+      "libelle": "Sur valeurs - goodwill",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "A3": {
+      "libelle": "Différence de première consolidation",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AN": {
+      "libelle": "Terrains",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AP": {
+      "libelle": "Constructions",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AR": {
+      "libelle": "Installations techniques, matériel et outillage industriels",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AT": {
+      "libelle": "Autres immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AV": {
+      "libelle": "Immobilisations en cours",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AX": {
+      "libelle": "Avances et acomptes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CS": {
+      "libelle": "Participations évaluées - mise en équivalence",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CU": {
+      "libelle": "Autres participations",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BB": {
+      "libelle": "Créances rattachées à des participations",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BD": {
+      "libelle": "Autres titres immobilisés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BF": {
+      "libelle": "Prêts",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BH": {
+      "libelle": "Autres immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "A4": {
+      "libelle": "Titres mis en équivalence",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BJ": {
+      "libelle": "TOTAL (I)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BL": {
+      "libelle": "Matières premières, approvisionnements",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BN": {
+      "libelle": "En cours de production de biens",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BP": {
+      "libelle": "En cours de production de services",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BR": {
+      "libelle": "Produits intermédiaires et finis",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BT": {
+      "libelle": "Marchandises",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BV": {
+      "libelle": "Avances et acomptes versés sur commandes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BX": {
+      "libelle": "Clients et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BZ": {
+      "libelle": "Autres créances",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CB": {
+      "libelle": "Capital souscrit et appelé, non versé",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CD": {
+      "libelle": "Valeurs mobilières de placement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CF": {
+      "libelle": "Disponibilités",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CH": {
+      "libelle": "Charges constatées d’avance",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CJ": {
+      "libelle": "TOTAL (II)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CW": {
+      "libelle": "Charges à répartir ou frais d’émission d’emprunt",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "CM": {
+      "libelle": "Primes de remboursement des obligations (IV)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CN": {
+      "libelle": "Ecarts de conversion actif (V)",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "CO": {
+      "libelle": "TOTAL GENERAL (0 à V)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CP": {
+      "libelle": "Parts à moins d’un an",
+      "colonnes": [
+       1
+      ]
+     },
+     "CR": {
+      "libelle": "Parts à plus d’un an",
+      "colonnes": [
+       1
+      ]
+     },
+     "DA": {
+      "libelle": "Capital social ou individuel",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DB": {
+      "libelle": "Primes d’émission, de fusion, d’apport, ...",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EK": {
+      "libelle": "(dont écart d’équivalence)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DC": {
+      "libelle": "Ecarts de réévaluation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DD": {
+      "libelle": "Réserve légale (1)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DE": {
+      "libelle": "Réserves statutaires ou contractuelles",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DF": {
+      "libelle": "Réserves réglementées (1)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DG": {
+      "libelle": "Autres réserves",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DH": {
+      "libelle": "Report à nouveau",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P1": {
+      "libelle": "Ecarts de conversion",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P2": {
+      "libelle": "Résultat consolidé part du groupe",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DJ": {
+      "libelle": "Subventions d’investissement",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DK": {
+      "libelle": "Provisions réglementées",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DL": {
+      "libelle": "TOTAL (I)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DM": {
+      "libelle": "Produit des émissions de titres participatifs",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DN": {
+      "libelle": "Avances conditionnées",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P3": {
+      "libelle": "Autres",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DO": {
+      "libelle": "TOTAL (II)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P4": {
+      "libelle": "Ecarts de conversion",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P5": {
+      "libelle": "Dans les réserves",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P6": {
+      "libelle": "Dans les résultats",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P7": {
+      "libelle": "TOTAL (III)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P8": {
+      "libelle": "Impôts différés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P9": {
+      "libelle": "Ecarts d’acquisition",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DP": {
+      "libelle": "Provisions pour risques",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DQ": {
+      "libelle": "Provisions pour charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DR": {
+      "libelle": "TOTAL (IV)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DS": {
+      "libelle": "Emprunts obligataires convertibles",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DT": {
+      "libelle": "Autres emprunts obligataires",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DU": {
+      "libelle": "Emprunts et dettes auprès des établissements de crédit (3)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DV": {
+      "libelle": "Emprunts et dettes financières divers (4)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DW": {
+      "libelle": "Avances et acomptes reçus sur commandes en cours",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DX": {
+      "libelle": "Dettes fournisseurs et comptes rattachés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DY": {
+      "libelle": "Dettes fiscales et sociales",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DZ": {
+      "libelle": "Dettes sur immobilisations et comptes rattachés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EA": {
+      "libelle": "Autres dettes",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EB": {
+      "libelle": "Produits constatés d’avance (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EC": {
+      "libelle": "TOTAL (IV)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ED": {
+      "libelle": "(V)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EE": {
+      "libelle": "TOTAL GENERAL (I à V)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EF": {
+      "libelle": "Dont réserve réglementée des plus-values à long terme",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EG": {
+      "libelle": "Dettes et produits constatés d’avance à moins d’un an",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EH": {
+      "libelle": "Dont concours bancaires courants, et soldes créditeurs de banques et C.C.P.",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EI": {
+      "libelle": "Dont emprunts participatifs",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FA": {
+      "libelle": "Ventes de marchandises",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FD": {
+      "libelle": "Production vendue biens",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FG": {
+      "libelle": "Production vendue services",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FJ": {
+      "libelle": "Chiffres d’affaires nets",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FM": {
+      "libelle": "Production stockée",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FN": {
+      "libelle": "Production immobilisée",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FO": {
+      "libelle": "Subventions d’exploitation",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FP": {
+      "libelle": "Reprises sur amortissements et provisions, transfert de charges",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FQ": {
+      "libelle": "Autres produits",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FR": {
+      "libelle": "Total des produits d’exploitation (I)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FS": {
+      "libelle": "Achats de marchandises (y compris droits de douane)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FT": {
+      "libelle": "Variation de stock (marchandises)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FU": {
+      "libelle": "Achats de matières premières et autres approvisionnements",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FV": {
+      "libelle": "Variation de stock (matières premières et approvisionnements)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FW": {
+      "libelle": "Autres achats et charges externes",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FX": {
+      "libelle": "Impôts, taxes et versements assimilés",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FY": {
+      "libelle": "Salaires et traitements",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FZ": {
+      "libelle": "Charges sociales",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GA": {
+      "libelle": "Dot. d’exploit. - Dotations aux amortissements",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GB": {
+      "libelle": "Dot. d’exploit. - Dotations aux provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GC": {
+      "libelle": "Dot. d’exploit. Sur actif circulant : dotations aux provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GD": {
+      "libelle": "Dot. d’exploit. Pour risques et charges : dotations aux provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GE": {
+      "libelle": "Autres charges",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GF": {
+      "libelle": "Total des charges d’exploitation (II)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GG": {
+      "libelle": "- RESULTAT D’EXPLOITATION (I - II)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GH": {
+      "libelle": "Bénéfice attribué ou perte transférée (III)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GI": {
+      "libelle": "Perte supportée ou bénéfice transféré (IV)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GJ": {
+      "libelle": "Produits financiers de participations",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GK": {
+      "libelle": "Produits des autres valeurs mobilières et créances de l’actif immobilisé",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GL": {
+      "libelle": "Autres intérêts et produits assimilés",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GM": {
+      "libelle": "Reprises sur provisions et transferts de charges",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GN": {
+      "libelle": "Différences positives de change",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GO": {
+      "libelle": "Produits nets sur cessions de valeurs mobilières de placement",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GP": {
+      "libelle": "Total des produits financiers (V)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GQ": {
+      "libelle": "Dotations financières sur amortissements et provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GR": {
+      "libelle": "Intérêts et charges assimilées",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GS": {
+      "libelle": "Différences négatives de change",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GT": {
+      "libelle": "Charges nettes sur cessions de valeurs mobilières de placement",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GU": {
+      "libelle": "Total des charges financières (VI)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GV": {
+      "libelle": "- RESULTAT FINANCIER (V - VI)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GW": {
+      "libelle": "- RESULTAT COURANT AVANT IMPOTS (I - II + III - IV + V - VI)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "HA": {
+      "libelle": "Produits exceptionnels sur opérations de gestion",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HB": {
+      "libelle": "Produits exceptionnels sur opérations en capital",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HC": {
+      "libelle": "Reprises sur provisions et transferts de charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HD": {
+      "libelle": "Total des produits exceptionnels (VII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HE": {
+      "libelle": "Charges exceptionnelles sur opérations de gestion",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HF": {
+      "libelle": "Charges exceptionnelles sur opérations en capital",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HG": {
+      "libelle": "Dotations exceptionnelles aux amortissements et provisions",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HH": {
+      "libelle": "Total des charges exceptionnelles (VIII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HI": {
+      "libelle": "- RESULTAT EXCEPTIONNEL (VII - VIII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HJ": {
+      "libelle": "Participation des salariés aux résultats de l’entreprise",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HK": {
+      "libelle": "Impôts sur les bénéfices",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R1": {
+      "libelle": "Impôts différés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R2": {
+      "libelle": "- RESULTAT NET AVANT AMORTISSEMENT DES ECARTS D’ACQUISITION",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R3": {
+      "libelle": "Dotation aux amortissements des écarts d’acquisition",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R4": {
+      "libelle": "Résultat net des sociétés mises en équivalence",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R5": {
+      "libelle": "Résultat net des entreprises intégrées",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R6": {
+      "libelle": "Résultat Groupe (Résultat net consolidé)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R7": {
+      "libelle": "Part des intérêts minoritaires (Résultat hors groupe)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R8": {
+      "libelle": "Résultat net part du groupe (part de la société mère)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HP": {
+      "libelle": "Renvois : Crédit-bail mobilier",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HQ": {
+      "libelle": "Renvois : Crédit-bail immobilier",
+      "colonnes": [
+       1,
+       2
+      ]
+     }
+    }
+   }
+  },
+  "B": {
+   "*": {
+    "rubrique": null,
+    "codes": {
+     "A1": {
+      "libelle": "ACTIF - Créances sur les Ets de crédit",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "A2": {
+      "libelle": "ACTIF - Créances sur la clientèle",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "A3": {
+      "libelle": "TOTAL ACTIF",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P1": {
+      "libelle": "PASSIF - Dettes envers les Ets de crédit",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P2": {
+      "libelle": "PASSIF - Comptes créditeurs à la clientèle",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P3": {
+      "libelle": "PASSIF - Capital souscrit",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P4": {
+      "libelle": "PASSIF - Primes d’émission",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P5": {
+      "libelle": "PASSIF - Réserves",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P6": {
+      "libelle": "PASSIF - Ecarts de réévaluation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P7": {
+      "libelle": "PASSIF - Report à nouveau",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P8": {
+      "libelle": "PASSIF - Résultat de l’exercice",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P9": {
+      "libelle": "TOTAL PASSIF",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R1": {
+      "libelle": "Compte de résultat - Intérêts et produits assimilés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R2": {
+      "libelle": "Compte de résultat - Intérêts et charges assimilées",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R3": {
+      "libelle": "Compte de résultat - Résultat de l’exercice",
+      "colonnes": [
+       1,
+       2
+      ]
+     }
+    }
+   }
+  },
+  "A": {
+   "*": {
+    "rubrique": null,
+    "codes": {
+     "A1": {
+      "libelle": "ACTIF - Placements",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "A2": {
+      "libelle": "TOTAL ACTIF",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P1": {
+      "libelle": "PASSIF - Capitaux propres",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P2": {
+      "libelle": "PASSIF - Provisions techniques brutes",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "P3": {
+      "libelle": "TOTAL PASSIF",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R1": {
+      "libelle": "Compte de résultat - Primes - Cotisations acquises",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R2": {
+      "libelle": "Compte de résultat - Charges des sinistres",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R3": {
+      "libelle": "Compte de résultat - Résultat technique",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "R4": {
+      "libelle": "Compte de résultat - Résultat de l’exercice",
+      "colonnes": [
+       1,
+       2
+      ]
+     }
+    }
+   }
+  },
+  "AC": {
+   "11": {
+    "rubrique": "Affectation du résultat & renseignements divers",
+    "codes": {
+     "ZA": {
+      "libelle": "m1,m2,m3,m 4 Engagement de crédit bail mobilier",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZB": {
+      "libelle": "Engagement de crédit bail immobilier",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZC": {
+      "libelle": "Effets portés à l’escompte et non échus",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZL": {
+      "libelle": "Sous-traitance",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZP": {
+      "libelle": "Autres locations, autres charges locatives et de copropriété",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZQ": {
+      "libelle": "Personnel extérieur à l’entreprise",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZR": {
+      "libelle": "Rémunération d’intermédiaires et honoraires (hors rétrocessions)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZT": {
+      "libelle": "Autres comptes",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZU": {
+      "libelle": "Total du poste correspondant à la ligne GC du tableau n° 2146-SD",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZV": {
+      "libelle": "Taxes foncières",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZW": {
+      "libelle": "Autres impôts, taxes et versements assimilés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZX": {
+      "libelle": "Total du compte correspondant à la ligne GD du tableau n° 2146-SD",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZY": {
+      "libelle": "Montant de la TVA. collectée",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ZZ": {
+      "libelle": "Montant de laTVA. déductible sur biens et services",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "UP": {
+      "libelle": "Montant de la TVA. Déductible afférente aux stocks",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "UR": {
+      "libelle": "Effectif moyen du personnel",
+      "colonnes": [
+       1,
+       2
+      ]
+     }
+    }
+   },
+   "*": {
+    "rubrique": null,
+    "codes": {}
+   },
+   "01": {
+    "rubrique": "ACTIF",
+    "codes": {
+     "AA": {
+      "libelle": "Capital souscrit non appelé",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "AB": {
+      "libelle": "Frais d’établissement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AD": {
+      "libelle": "Autres immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AF": {
+      "libelle": "Avances et acomptes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AH": {
+      "libelle": "Terrains",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AJ": {
+      "libelle": "Aménagements fonciers",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AL": {
+      "libelle": "Améliorations du fonds",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AN": {
+      "libelle": "Constructions",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AP": {
+      "libelle": "Installations techniques, matériel et outillage*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AR": {
+      "libelle": "Autres immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AT": {
+      "libelle": "Animaux reproducteurs*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AV": {
+      "libelle": "Animaux de service*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AX": {
+      "libelle": "Plantations pérennes et autres végétaux immobilisés*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AZ": {
+      "libelle": "Immobilisations corporelles en cours",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BB": {
+      "libelle": "Avances et acomptes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BD": {
+      "libelle": "Participations et créances rattachées*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BF": {
+      "libelle": "Prêts",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BH": {
+      "libelle": "Autres immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BJ": {
+      "libelle": "TOTAL (I)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BK": {
+      "libelle": "Approvisionnements et marchandises*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BN": {
+      "libelle": "Animaux et végétaux en terre (cycle long)*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BP": {
+      "libelle": "En-cours de production de biens et services (cycle long)*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BR": {
+      "libelle": "Animaux et végétaux en terre (cycle court)*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BT": {
+      "libelle": "En-cours de production de biens et services (cycle court)*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BV": {
+      "libelle": "Produits intermédiaires, finis et résiduels",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BX": {
+      "libelle": "Avances et acomptes versés sur commande",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BZ": {
+      "libelle": "Clients et comptes rattachés (2)*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CB": {
+      "libelle": "Autres clients et comptes rattachés (conventions de compte courant) (2)*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CD": {
+      "libelle": "Autres créances (2)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CF": {
+      "libelle": "Valeurs mobilières de placement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CJ": {
+      "libelle": "Disponibilités CH Charges constatées d’avance (2)*",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CL": {
+      "libelle": "TOTAL (II)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "IE": {
+      "libelle": "Frais d’émission d’emprunt à étaler* (III)",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "CO": {
+      "libelle": "Ecarts de conversion Actif* (IV)",
+      "colonnes": [
+       1,
+       3,
+       4
+      ]
+     },
+     "CP": {
+      "libelle": "TOTAL GENERAL (V)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CQ": {
+      "libelle": "Parts à moins d’un an",
+      "colonnes": [
+       1
+      ]
+     },
+     "CR": {
+      "libelle": "Parts à plus d’un an",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   },
+   "02": {
+    "rubrique": "PASSIF",
+    "codes": {
+     "DA": {
+      "libelle": "Capital social (dont versé . . . . . . . . . . . . . . . . . ) ou individuel *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DB": {
+      "libelle": "Primes d’émission, de fusion, d’apport, ...",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DC": {
+      "libelle": "Ecarts de réévaluation (1) *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DE": {
+      "libelle": "Réserves statutaires ou contractuelles",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DF": {
+      "libelle": "Réserves réglementées (1)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DG": {
+      "libelle": "Autres réserves",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DH": {
+      "libelle": "Report à nouveau *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DI": {
+      "libelle": "RESULTAT DE L’EXERCICE (bénéfice ou perte) *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DJ": {
+      "libelle": "Subventions d’investissement",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DK": {
+      "libelle": "Provisions réglementées *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DL": {
+      "libelle": "TOTAL (I)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DM": {
+      "libelle": "Provisions pour risques",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DN": {
+      "libelle": "Provisions pour charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DO": {
+      "libelle": "TOTAL (II)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DP": {
+      "libelle": "Emprunts et dettes auprès des établissements de crédit (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EE": {
+      "libelle": "Emprunts fonciers (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DQ": {
+      "libelle": "Concours bancaires courants et découverts bancaires (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DR": {
+      "libelle": "Autres dettes financières (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DS": {
+      "libelle": "Avances et acomptes reçus sur commandes en cours",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DT": {
+      "libelle": "Dettes fournisseurs et comptes rattachés (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DU": {
+      "libelle": "Dettes autres fournisseurs et comptes rattachés (conventions de compte-courant) (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DV": {
+      "libelle": "Dettes fiscales et sociales (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DW": {
+      "libelle": "Dettes sur immobilisations et comptes rattachés (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DX": {
+      "libelle": "Autres dettes (2)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DY": {
+      "libelle": "Produits constatés d’avance (2)*",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DZ": {
+      "libelle": "TOTAL (III)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EA": {
+      "libelle": "Ecarts de conversion Passif * (IV)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EB": {
+      "libelle": "TOTAL GENERAL (I à IV)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "1B": {
+      "libelle": "(1) Dont Réserve spéciale de réévaluation (1959)",
+      "colonnes": [
+       1
+      ]
+     },
+     "1C": {
+      "libelle": "(1) Dont Ecart de réévaluation libre",
+      "colonnes": [
+       1
+      ]
+     },
+     "1D": {
+      "libelle": "(1) Dont Réserve de réévaluation (1976)",
+      "colonnes": [
+       1
+      ]
+     },
+     "EC": {
+      "libelle": "(2) dettes et produits constatés d’avance à moins d’un an",
+      "colonnes": [
+       1
+      ]
+     },
+     "ED": {
+      "libelle": "(2) dettes et produits constatés d’avance à plus d’un an",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   },
+   "03": {
+    "rubrique": "COMPTE DE RESULTAT",
+    "codes": {
+     "FA": {
+      "libelle": "Ventes d’origine végétale",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FD": {
+      "libelle": "Ventes d’origine animale",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FG": {
+      "libelle": "Ventes de produits transformés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FJ": {
+      "libelle": "Ventes d’animaux * (1)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FM": {
+      "libelle": "Autre production vendue * (2)",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FP": {
+      "libelle": "Montant net du chiffre d’affaires *",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "FS": {
+      "libelle": "Variation d’inventaire : animaux reproducteurs immobilisés*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FT": {
+      "libelle": "Variation d’inventaire de la production stockée*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FU": {
+      "libelle": "Production immobilisée*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FV": {
+      "libelle": "Production autoconsommée*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FW": {
+      "libelle": "Indemnités et subventions d’exploitation (3)*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FX": {
+      "libelle": "Reprises sur provisions et amortissements, transfert de charges*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GZ": {
+      "libelle": "Autres produits (4)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FY": {
+      "libelle": "Total des produits d’exploitation (5) (I)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "FZ": {
+      "libelle": "Achats de marchandises et d’approvisionnements (y compris droits de douane)*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GA": {
+      "libelle": "Variation de stock (marchandises et approvisionnements)*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GB": {
+      "libelle": "Achats d’animaux (y compris droits de douane)*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GC": {
+      "libelle": "Autres achats et charges externes (6)*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GD": {
+      "libelle": "Impôts, taxes et versements assimilés*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GE": {
+      "libelle": "Rémunérations (7)*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GF": {
+      "libelle": "Cotisations sociales personnelles de l’exploitant*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GG": {
+      "libelle": "Autres charges sociales",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GH": {
+      "libelle": "Dotations d’exploitation sur immobilisations – dotations aux amortissements *",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GI": {
+      "libelle": "Dotations d’exploitation sur immobilisations – dotations aux provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GJ": {
+      "libelle": "Dotations d’exploitation sur actif circulant : dotations aux provisions *",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GK": {
+      "libelle": "Dotations d’exploitation pour risques et charges : dotations aux provisions",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GL": {
+      "libelle": "Autres charges (8)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GM": {
+      "libelle": "Total des charges d’exploitation (9) (II)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GN": {
+      "libelle": "- RESULTAT D’EXPLOITATION (I - II) (III)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GO": {
+      "libelle": "Produits financiers de participations",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GP": {
+      "libelle": "Produits d’autres valeurs mobilières et créances de l’actif immobilisé",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GQ": {
+      "libelle": "Autres intérêts, produits assimilés et différences positives de change (10)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GR": {
+      "libelle": "Reprises sur provisions et transferts de charges*",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GS": {
+      "libelle": "Produits nets sur cessions de valeurs mobilières de placement",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GT": {
+      "libelle": "Total des produits financiers (IV)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GU": {
+      "libelle": "Dotations financières aux amortissements et provisions *",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GV": {
+      "libelle": "Intérêts, charges assimilées et différences négatives de change (11)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GW": {
+      "libelle": "Charges nettes sur cessions de valeurs mobilières de placement",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GX": {
+      "libelle": "Total des charges financières (V)",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "GY": {
+      "libelle": "- RESULTAT FINANCIER (IV - V) (VI)",
+      "colonnes": [
+       3,
+       4
+      ]
+     }
+    }
+   },
+   "04": {
+    "rubrique": "COMPTE DE RESULTAT (suite)",
+    "codes": {
+     "HA": {
+      "libelle": "liasse m1,m2,m 3,m4 Produits exceptionnels sur opérations de gestion *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HB": {
+      "libelle": "Produits des cessions d’éléments d’actif",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HC": {
+      "libelle": "Autres produits exceptionnels sur opérations en capital *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HD": {
+      "libelle": "Reprises sur provisions et transferts de charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HE": {
+      "libelle": "Total des produits exceptionnels (12) (VII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HF": {
+      "libelle": "Charges exceptionnelles sur opérations de gestion *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HG": {
+      "libelle": "Valeurs comptables des éléments d’actif cédés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HH": {
+      "libelle": "Autres charges exceptionnelles sur opérations en capital",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HI": {
+      "libelle": "Dotations aux amortissements et aux provisions",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HJ": {
+      "libelle": "Total des charges exceptionnelles (12) (VIII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HK": {
+      "libelle": "RESULTAT EXCEPTIONNEL (VII - VIII) (IX)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HL": {
+      "libelle": "Participation des salariés aux résultats de l’entreprise (X)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HM": {
+      "libelle": "TOTAL DES PRODUITS (I + IV + VII)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HN": {
+      "libelle": "TOTAL DES CHARGES (II + V + VIII + X)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HO": {
+      "libelle": "BENEFICE OU PERTE (Total des produits - Total des charges)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HP": {
+      "libelle": "(1) Dont produit de cessions d’animaux reproducteurs *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HT": {
+      "libelle": "(2) Dont opérations de nature commerciale ou non commerciale",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HR": {
+      "libelle": "(3) Dont remboursement forfaitaire TVA",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HS": {
+      "libelle": "(4)Dont quotes-parts de bénéfice sur opérations faites en commun *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HU": {
+      "libelle": "(5) Dont produits d’exploitation afférents à des exercices antérieurs (à détailler au (13) ci- dessous)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HQ": {
+      "libelle": "(6) Dont valeur comptable des animaux reproducteurs cédés *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HV": {
+      "libelle": "(7) Dont rémunération du travail de (ou des) l’exploitant(s)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HW": {
+      "libelle": "(8) Dont quotes-parts de perte sur opérations faites en commun *",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HX": {
+      "libelle": "(9) Dont charges d’exploitation afférentes à des exercices antérieurs (à détailler au (13) ci- dessous)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HY": {
+      "libelle": "(10) Dont différences positives de change",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "HZ": {
+      "libelle": "(11) Dont différences négatives de change",
+      "colonnes": [
+       1,
+       2
+      ]
+     }
+    }
+   },
+   "05": {
+    "rubrique": "Immobilisations",
+    "codes": {
+     "KA": {
+      "libelle": "liasse m1,m2,m 3,m4 ACQUISITIONS Frais d’établissement",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "KD": {
+      "libelle": "ACQUISITIONS autres postes d’immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "KG": {
+      "libelle": "ACQUISITIONS Avances et acomptes",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "LQ": {
+      "libelle": "ACQUISITIONS Total Immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "LT": {
+      "libelle": "ACQUISITIONS Participations et créances rattachées",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "LW": {
+      "libelle": "ACQUISITIONS Prêts",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "LZ": {
+      "libelle": "ACQUISITIONS Autres immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "OG": {
+      "libelle": "ACQUISITIONS Total Général",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "MC": {
+      "libelle": "DIMINUTIONS Frais d’établissement",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "MF": {
+      "libelle": "DIMINUTIONS Autres postes d’immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "MI": {
+      "libelle": "DIMINUTIONS Avances et acomptes",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "NO": {
+      "libelle": "DIMINUTIONS immobilisations corporelles en cours",
+      "colonnes": [
+       1
+      ]
+     },
+     "NR": {
+      "libelle": "DIMINUTIONS Avances et acomptes",
+      "colonnes": [
+       1
+      ]
+     },
+     "NU": {
+      "libelle": "DIMINUTIONS Total Immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "NX": {
+      "libelle": "DIMINUTIONS Participations et créances rattachées",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "OA": {
+      "libelle": "DIMINUTIONS Prêts",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "OD": {
+      "libelle": "DIMINUTIONS Autres immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "OK": {
+      "libelle": "DIMINUTIONS Total Général",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     }
+    }
+   },
+   "06": {
+    "rubrique": "Amortissements",
+    "codes": {
+     "8A": {
+      "libelle": "liasse m1,m2,m 3,m4 AMORTISSEMENTS Total immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "PE": {
+      "libelle": "AMORTISSEMENTS Autres immobilisations incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "QP": {
+      "libelle": "AMORTISSEMENTS Total Immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "UA": {
+      "libelle": "AMORTISSEMENTS Total Général",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "A3": {
+      "libelle": "Charges à répartir ou frais d’émission d’emprunt",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     }
+    }
+   },
+   "07": {
+    "rubrique": "Provisions",
+    "codes": {
+     "2C": {
+      "libelle": "liasse m1,m2,m 3,m4 Amortissements dérogatoires",
+      "colonnes": [
+       4
+      ]
+     },
+     "2E": {
+      "libelle": "Total Provisions réglementées",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "2F": {
+      "libelle": "Provisions pour litiges",
+      "colonnes": [
+       4
+      ]
+     },
+     "2J": {
+      "libelle": "Provisions pour garanties données aux clients",
+      "colonnes": [
+       4
+      ]
+     },
+     "2N": {
+      "libelle": "Provisions pour perte sur marchés à terme",
+      "colonnes": [
+       4
+      ]
+     },
+     "2S": {
+      "libelle": "Provisions pour amendes et pénalités",
+      "colonnes": [
+       4
+      ]
+     },
+     "2W": {
+      "libelle": "Provisions pour perte de change",
+      "colonnes": [
+       4
+      ]
+     },
+     "3A": {
+      "libelle": "Provisions pour pensions et obligations similaires",
+      "colonnes": [
+       4
+      ]
+     },
+     "3E": {
+      "libelle": "Provisions pour impôts",
+      "colonnes": [
+       4
+      ]
+     },
+     "3I": {
+      "libelle": "Provisions pour renouvellement des immobilisations",
+      "colonnes": [
+       4
+      ]
+     },
+     "A5": {
+      "libelle": "Provisions pour gros entretien et grandes révisions",
+      "colonnes": [
+       4
+      ]
+     },
+     "3R": {
+      "libelle": "Provisions pour charges sociales et fiscales sur congés à payer",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "3V": {
+      "libelle": "Autres provisions pour risques et charges",
+      "colonnes": [
+       4
+      ]
+     },
+     "3Z": {
+      "libelle": "Total Provisions pour risques et charges",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "4A": {
+      "libelle": "sur immobilisations – incorporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "4E": {
+      "libelle": "sur immobilisations – corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "4I": {
+      "libelle": "sur immobilisations –financières",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "4M": {
+      "libelle": "Sur stocks et en cours",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "4R": {
+      "libelle": "Sur comptes clients",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "4V": {
+      "libelle": "Autres provisions pour dépréciation",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "4Z": {
+      "libelle": "Total Provisions pour dépréciation",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "5A": {
+      "libelle": "TOTAL GENERAL",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "5B": {
+      "libelle": "dont dotations et reprises : - d’Exploitation",
+      "colonnes": [
+       2,
+       3
+      ]
+     },
+     "5D": {
+      "libelle": "- Financières",
+      "colonnes": [
+       2,
+       3
+      ]
+     },
+     "5F": {
+      "libelle": "- Exceptionnelles",
+      "colonnes": [
+       2,
+       3
+      ]
+     }
+    }
+   },
+   "08": {
+    "rubrique": "Créances et dettes",
+    "codes": {
+     "6A": {
+      "libelle": "liasse m1,m2,m 3,m4 Créances rattachées à des participations",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6D": {
+      "libelle": "Prêts",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6G": {
+      "libelle": "Autres immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6J": {
+      "libelle": "Clients douteux ou litigieux",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6K": {
+      "libelle": "Autres créances clients",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6L": {
+      "libelle": "Personnel et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6M": {
+      "libelle": "Mutualité sociale agricole et autres organismes sociaux",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6N": {
+      "libelle": "T. V. A.",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6O": {
+      "libelle": "Autres impôts, taxes versements assimilés",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6P": {
+      "libelle": "Divers",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6Q": {
+      "libelle": "Groupe, communauté d’exploitation et associés",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6R": {
+      "libelle": "Débiteurs divers",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6S": {
+      "libelle": "Charges constatées d’avance",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "6T": {
+      "libelle": "TOTAL – ETAT DES CREANCES",
+      "colonnes": [
+       1,
+       2,
+       3
+      ]
+     },
+     "VA": {
+      "libelle": "Emprunts obligataires convertibles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VB": {
+      "libelle": "Autres emprunts obligataires",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VC": {
+      "libelle": "Emprunts à 1 an maximum à l’origine",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VD": {
+      "libelle": "Emprunts à plus d’1 an à l’origine",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VE": {
+      "libelle": "Emprunts et dettes financières divers",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VF": {
+      "libelle": "Fournisseurs et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VG": {
+      "libelle": "Personnel et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VH": {
+      "libelle": "Mutualité sociale agricole et autres organismes sociaux",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VJ": {
+      "libelle": "T.V.A.",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VK": {
+      "libelle": "Autres impôts, taxes et assimilés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VL": {
+      "libelle": "Dettes sur immobilisations et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VM": {
+      "libelle": "Groupe, communauté d’exploitation et associés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VN": {
+      "libelle": "Autres dettes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VP": {
+      "libelle": "Produits constatés d’avance",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VQ": {
+      "libelle": "TOTAL – ETAT DES DETTES",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "VS": {
+      "libelle": "Emprunts souscrits en cours d’exercice",
+      "colonnes": [
+       1
+      ]
+     },
+     "VT": {
+      "libelle": "Emprunts remboursés en cours d’exercice",
+      "colonnes": [
+       1
+      ]
+     },
+     "VU": {
+      "libelle": "Montant des divers emprunts et dettes contractés auprès des associés personnes physiques",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   }
+  },
+  "AS": {
+   "*": {
+    "rubrique": null,
+    "codes": {}
+   },
+   "01": {
+    "rubrique": "ACTIF",
+    "codes": {
+     "AA": {
+      "libelle": "Immobilisations incorporelles - Frais d’établissement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AC": {
+      "libelle": "Immobilisations incorporelles – Autres",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AE": {
+      "libelle": "Terrains",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AG": {
+      "libelle": "Améliorations du fonds",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AJ": {
+      "libelle": "Constructions",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AL": {
+      "libelle": "Installations techniques, matériel et outillage",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AN": {
+      "libelle": "Plantations pérennes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AQ": {
+      "libelle": "Autres immobilisations corporelles",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AS": {
+      "libelle": "Immobilisations corporelles en cours",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AU": {
+      "libelle": "Immobilisations financières",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AW": {
+      "libelle": "Total Actif Immobilisé",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "AY": {
+      "libelle": "Stocks",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BA": {
+      "libelle": "Avances et acomptes versés sur commandes",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BC": {
+      "libelle": "Créances – Clients et comptes rattachés",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BE": {
+      "libelle": "Créances – Autres",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BG": {
+      "libelle": "Valeurs mobilières de placement",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BJ": {
+      "libelle": "Caisse, Banques, CCP. Et autres disponibilités",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BN": {
+      "libelle": "Charges constatées d’avance",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BP": {
+      "libelle": "Total Actif circulant + Charges constatées d’avance",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "BR": {
+      "libelle": "Total général Actif",
+      "colonnes": [
+       1,
+       2,
+       3,
+       4
+      ]
+     },
+     "CA": {
+      "libelle": "Capital social",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CB": {
+      "libelle": "Ecarts de réévaluation",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CC": {
+      "libelle": "Réserves et report à nouveau",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CE": {
+      "libelle": "Résultat de l’exercice",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CF": {
+      "libelle": "Subventions d’investissement et provisions réglementées",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CG": {
+      "libelle": "Total des capitaux propres - Total I",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CH": {
+      "libelle": "Provisions pour risques et charges - Total II",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CR": {
+      "libelle": "Concours bancaires courants et découverts bancaires",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CS": {
+      "libelle": "Autres emprunts et dettes assimilées",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CJ": {
+      "libelle": "Avances et acomptes reçus sur commandes en cours",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CK": {
+      "libelle": "Fournisseurs et comptes rattachés",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CL": {
+      "libelle": "Autres dettes",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CM": {
+      "libelle": "Produits constatés d’avance",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CN": {
+      "libelle": "Total des dettes",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "CP": {
+      "libelle": "Total général Passif",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "DA": {
+      "libelle": "Dont immobilisations financières à moins d’un an",
+      "colonnes": [
+       3
+      ]
+     },
+     "DC": {
+      "libelle": "Dont dettes à plus d’un an",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "DB": {
+      "libelle": "Dont créances à plus d’un an",
+      "colonnes": [
+       3
+      ]
+     },
+     "DE": {
+      "libelle": "Coût de revient des immobilisations acquises ou créées au cours de l’exercice",
+      "colonnes": [
+       3,
+       4
+      ]
+     },
+     "DF": {
+      "libelle": "Prix de vente hors T.V.A. des immobilisations cédées au cours de l’exercice",
+      "colonnes": [
+       3,
+       4
+      ]
+     }
+    }
+   },
+   "02": {
+    "rubrique": "COMPTE DE RESULTAT",
+    "codes": {
+     "EA": {
+      "libelle": "Production vendue - produits végétaux",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EB": {
+      "libelle": "Production vendue - produits animaux",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EC": {
+      "libelle": "Production vendue - produits transformés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ED": {
+      "libelle": "Production vendue - animaux",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EE": {
+      "libelle": "Production vendue - autre production vendue (biens et services)",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EF": {
+      "libelle": "Variation d’inventaire : animaux reproducteurs",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EG": {
+      "libelle": "Variation de production stockée",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EH": {
+      "libelle": "Production immobilisée",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EJ": {
+      "libelle": "Production autoconsommée",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EL": {
+      "libelle": "Indemnités et subventions d’exploitation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EN": {
+      "libelle": "Autres produits",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EP": {
+      "libelle": "Total des produits d’exploitation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EQ": {
+      "libelle": "Achats d’approvisionnement",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ER": {
+      "libelle": "Achats d’animaux",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ES": {
+      "libelle": "autres achats et charges externes",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "ET": {
+      "libelle": "Variation de stock",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EU": {
+      "libelle": "Loyer, fermage et charges locatives",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EV": {
+      "libelle": "Impôts, taxes et versements assimilés",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EX": {
+      "libelle": "Rémunération",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EY": {
+      "libelle": "Charges sociales",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "DG": {
+      "libelle": "Autres charges sociales",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "EZ": {
+      "libelle": "Dotations aux amortissements et provisions",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FB": {
+      "libelle": "Autres charges",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FC": {
+      "libelle": "Total des charges d’exploitation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FD": {
+      "libelle": "Résultat d’exploitation",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FE": {
+      "libelle": "Produits financiers",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FF": {
+      "libelle": "Produits exceptionnels",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FG": {
+      "libelle": "Charges financières",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FH": {
+      "libelle": "Charges exceptionnelles",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FJ": {
+      "libelle": "Bénéfice ou perte",
+      "colonnes": [
+       1,
+       2
+      ]
+     },
+     "FM": {
+      "libelle": "Rémunération et avantages personnels non déductibles",
+      "colonnes": [
+       1
+      ]
+     },
+     "GA": {
+      "libelle": "Montant de la T.V.A. collectée",
+      "colonnes": [
+       1
+      ]
+     },
+     "HA": {
+      "libelle": "Effectif moyen du personnel",
+      "colonnes": [
+       1
+      ]
+     },
+     "GB": {
+      "libelle": "Montant de la T.V.A. déductible sur biens et services",
+      "colonnes": [
+       1
+      ]
+     }
+    }
+   }
+  }
+ }
+}

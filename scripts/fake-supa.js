@@ -125,6 +125,8 @@ const faux = {
     // ensuite le fichier lui-même dans `fichiers`.
     storage: {
       from: () => ({
+        async upload(chemin, buffer) { fichiers.set(chemin, buffer); return { data: { path: chemin }, error: null }; },
+        async createSignedUrl(chemin, duree) { return { data: { signedUrl: `${faux.urlStockage}/storage/v1/object/sign/documents/${chemin}?token=t&expires=${duree}` }, error: null }; },
         async createSignedUploadUrl(chemin) {
           return { data: { signedUrl: `${faux.urlStockage}/storage/v1/object/upload/sign/documents/${chemin}?token=t`, token: 't', path: chemin }, error: null };
         },

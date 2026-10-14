@@ -22,7 +22,8 @@
     "test:dossiers": "node scripts/test-dossiers.js",
     "test:revues": "node scripts/test-revues.js",
     "banc:guichet": "node scripts/banc-guichet.js",
-    "test:connecteur": "node scripts/test-connecteur.js"
+    "test:connecteur": "node scripts/test-connecteur.js",
+    "test:registre": "node scripts/test-registre.js"
   },
   "engines": {
     "node": ">=20"
@@ -32,11 +33,13 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
     "@supabase/supabase-js": "^2.110.2",
+    "@tesseract.js-data/fra": "^1.0.0",
     "diff": "^9.0.0",
     "docxtemplater": "^3.69.0",
     "express": "^5.2.1",
     "multer": "^2.2.0",
     "pdf-parse": "^2.4.5",
-    "pizzip": "^3.2.0"
+    "pizzip": "^3.2.0",
+    "tesseract.js": "^7.0.0"
   }
 }
