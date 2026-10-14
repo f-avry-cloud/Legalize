@@ -22,6 +22,9 @@ const POSTES = require('./data/postes-comptes.json');
 
 const TYPES_COMPTES = POSTES.types;
 
+/** Code de confidentialité des données saisies, ou null s'il n'est pas renseigné (null ≠ 0). */
+const codeConnu = (c) => (c === undefined || c === null || String(c).trim() === '' ? null : Number(c));
+
 const CONFIDENTIALITE_SAISIS = {
   0: 'aucune déclaration de confidentialité',
   1: 'comptes confidentiels : seules les données d’identité sont diffusées',
@@ -123,7 +126,7 @@ async function piecesDeposees(sirenBrut) {
       confidentialite: publique(b.confidentiality) ? 'publics' : b.confidentiality,
       donnees_saisies: saisi ? {
         disponibles: true,
-        ...(codeConf !== undefined && codeConf !== '' ? { confidentialite: CONFIDENTIALITE_SAISIS[Number(codeConf)] || `code ${codeConf}` } : {}),
+        ...(codeConnu(codeConf) !== null ? { confidentialite: CONFIDENTIALITE_SAISIS[codeConnu(codeConf)] || `code ${codeConf}` } : {}),
       } : { disponibles: false },
     };
   }).sort(parDate('date_cloture'));
@@ -250,7 +253,7 @@ function lireSaisis(brut) {
     devise: id.codeDevise || 'EUR',
     // La documentation donne « 00 » comme « 0 » : le code se lit sans ses zéros de tête.
     saisie: CODES_SAISIE[/^\d+$/.test(String(id.codeSaisie ?? '')) ? Number(id.codeSaisie) : id.codeSaisie] || (id.codeSaisie ? `code ${id.codeSaisie}` : null),
-    confidentialite: conf !== undefined && conf !== '' ? (CONFIDENTIALITE_SAISIS[Number(conf)] || `code ${conf}`) : null,
+    confidentialite: codeConnu(conf) !== null ? (CONFIDENTIALITE_SAISIS[codeConnu(conf)] || `code ${conf}`) : null,
     chiffres_cles: chiffresCles(type, valeur),
     detail: postes,
   };

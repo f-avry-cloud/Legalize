@@ -137,6 +137,12 @@ client.telecharger = async (cible, { chemin }) => {
   verifier('postes libellés, colonnes nommées', cr.rubrique === 'COMPTE DE RESULTAT' && cr.postes[0].libelle === 'Chiffres d’affaires nets' && cr.postes[0].valeurs['export N'] === 50000, cr);
   verifier('saisie et confidentialité en clair', ds.saisie === 'saisis sans anomalie' && /aucune déclaration/.test(ds.confidentialite), ds);
 
+  const { lireSaisis } = require('../src/inpi/rne-documents');
+  verifier('code de confidentialité absent (null) : non affirmé comme « aucune déclaration »',
+    lireSaisis({ bilanSaisi: { bilan: { identite: { codeTypeBilan: 'C', codeConfidentialite: null }, detail: { pages: [] } } } }).confidentialite === null);
+  verifier('comptes confidentiels (code 1) décrits en clair',
+    /seules les données d’identité/.test(lireSaisis({ bilanSaisi: { bilan: { identite: { codeTypeBilan: 'S', codeConfidentialite: '1' } } } }).confidentialite));
+
   console.log('\nRadiation');
   const { normaliserEntreprise } = require('../src/inpi/normalize');
   const ficheBrute = (extra) => ({ formality: { siren: SIREN, content: { ...extra, personneMorale: { identite: { entreprise: { siren: SIREN, denomination: 'X', formeJuridique: '5710' } }, ...(extra.pm || {}) } } } });
