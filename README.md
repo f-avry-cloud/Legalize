@@ -59,6 +59,12 @@ npm run dev               # serveur avec rechargement (node --watch)
    Référentiels et payloads conformes au contrat d'interface de l'API
    mandataire. Détail : [Formalités INPI](#formalités-inpi-guichet-unique--rne).
 
+7. **Connecteur Claude (Guichet unique)** — le même moteur INPI, piloté depuis
+   une conversation avec Claude (iPhone, Windows, web) : lecture des actes,
+   contrôles, lien de dépôt des pièces, enregistrement après accord explicite
+   de l'avocat, suivi. Ni signature ni paiement. Mise en service :
+   [docs/connecteur.md](docs/connecteur.md).
+
 ## Architecture
 
 ```

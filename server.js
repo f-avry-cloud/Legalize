@@ -35,6 +35,10 @@ app.get(['/', '/index.html'], (req, res) => {
 });
 app.get('/api/version', (req, res) => res.json({ version: VERSION }));
 
+// Connecteur Claude (Guichet unique) : accès par URL secrète et liens signés,
+// indépendant de la session de l'application. Fermé sans CONNECTEUR_SECRET.
+app.use('/api', require('./src/connecteur/routes'));
+
 // Tout le reste de l'API exige la session d'un membre du cabinet.
 const { exigerConnexion } = require('./src/auth');
 app.use('/api', exigerConnexion);
