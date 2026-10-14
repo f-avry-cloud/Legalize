@@ -126,9 +126,17 @@ function vuePiece(p) {
     ...(p.raison ? { raison: p.raison } : {}),
     ...(p.condition ? { condition: p.condition } : {}),
     ...(p.variantes?.length ? { documents_acceptes: p.variantes } : {}),
-    ...(p.fichiers ? { recue: p.fichiers.map((f) => f.nom) } : {}),
+    ...(p.fichiers ? { recue: p.fichiers.map((f) => ({ id: f.id, nom: f.nom })) } : {}),
   };
 }
+
+/** Forme attendue des réponses de qualification, pour que Claude les transmette sans erreur. */
+const FORMATS = {
+  entrants: 'Liste : [{"nom": "Prénom NOM ou dénomination", "nature": "PP" (personne physique) ou "PM" (personne morale), "fonction": valeur d’une des options}]',
+  sortants: 'Liste : [{"nom": "tel qu’inscrit au registre (voir dirigeants_au_registre)", "motif": valeur d’une des options}]',
+  maj: 'Liste : [{"nom": un des dirigeants_au_registre, "motif": valeur d’une des options}]. Renseignez ensuite le champ « maj_<rang> » du groupe MAJDIR (pré-rempli depuis le registre : corrigez seulement ce qui change, par exemple la nouvelle dénomination).',
+  choix: 'Une des valeurs des options (true / false pour oui / non).',
+};
 
 function vueQuestion(qq) {
   return {
@@ -136,6 +144,7 @@ function vueQuestion(qq) {
     ...(qq.options ? { options: qq.options.map(([v, l]) => ({ valeur: v, libelle: l })) } : {}),
     ...(qq.dirigeants_actuels ? { dirigeants_au_registre: qq.dirigeants_actuels } : {}),
     ...(qq.attente ? { en_attente: qq.attente } : {}),
+    ...(FORMATS[qq.type] ? { format: FORMATS[qq.type] } : {}),
     valeur: qq.valeur ?? null,
   };
 }
@@ -204,9 +213,60 @@ async function memoriserEcheance(f) {
   }
 }
 
+/**
+ * Contrôle les réponses de qualification avant de les enregistrer. Une réponse
+ * mal formée était jusqu'ici ignorée en silence (une mise à jour de dirigeant
+ * mal désignée faisait disparaître son justificatif) : elle est désormais
+ * refusée, avec la forme attendue.
+ */
+function validerTypologie(ops, typologie, fiche = {}, existante = {}) {
+  if (typologie === undefined || typologie === null) return null;
+  if (typeof typologie !== 'object' || Array.isArray(typologie)) throw erreur('« typologie » doit être un objet : { identifiant_de_question: réponse }.', 422);
+  const fusion = moteur.normaliserTypologie({ ...existante, ...typologie });
+  const questions = moteur.resoudre(ops, fusion, fiche, {}).questions;
+  const connues = new Set([...Object.keys(moteur.QUESTIONS), 'manuel']);
+  const fautes = [];
+  const valeurs = (qq) => (qq?.options || []).map(([v]) => v);
+  const dans = (v, liste) => liste.some((x) => x === v || String(x) === String(v));
+  for (const [cle, v] of Object.entries(typologie)) {
+    if (!connues.has(cle)) { fautes.push(`« ${cle} » n’est pas une question connue (questions possibles : ${[...connues].join(', ')}).`); continue; }
+    if (cle === 'manuel') {
+      if (!v || typeof v !== 'object' || Object.values(v).some((x) => typeof x !== 'boolean')) fautes.push('« manuel » : { "<cle de la pièce>": true | false }.');
+      continue;
+    }
+    const qq = questions.find((x) => x.id === cle);
+    if (!qq) continue; // question sans objet pour ces opérations : sans effet
+    const lignes = fusion[cle];
+    if (['entrants', 'sortants', 'maj'].includes(qq.type)) {
+      if (!Array.isArray(v)) { fautes.push(`« ${cle} » : ${FORMATS[qq.type]}`); continue; }
+      lignes.forEach((l, i) => {
+        const ou = `« ${cle} » ligne ${i + 1}`;
+        if (!l.nom) fautes.push(`${ou} : « nom » manquant. ${FORMATS[qq.type]}`);
+        if (qq.type === 'entrants') {
+          if (!['PP', 'PM'].includes(l.nature)) fautes.push(`${ou} : « nature » doit valoir "PP" ou "PM".`);
+          if (valeurs(qq).length && !dans(l.fonction, valeurs(qq))) fautes.push(`${ou} : « fonction » parmi ${valeurs(qq).join(', ')}.`);
+        } else if (!dans(l.motif, valeurs(qq))) {
+          fautes.push(`${ou} : « motif » parmi ${valeurs(qq).join(', ')}.`);
+        }
+        if (qq.type === 'maj' && l.nom && fiche?.brut && !moteur.pouvoirActuel(fiche, l.nom)) {
+          fautes.push(`${ou} : « ${l.nom} » ne figure pas parmi les dirigeants du registre (${(qq.dirigeants_actuels || []).join(', ')}).`);
+        }
+      });
+    } else if (qq.type === 'choix' && valeurs(qq).length && !dans(v, valeurs(qq))) {
+      fautes.push(`« ${cle} » : une des valeurs ${valeurs(qq).map((x) => JSON.stringify(x)).join(', ')}.`);
+    }
+  }
+  if (fautes.length) throw erreur(`Réponses de qualification refusées :\n- ${fautes.join('\n- ')}`, 422);
+  return typologie;
+}
+
 async function appliquerSaisies(id, { operations, typologie, reponses }) {
   if (Array.isArray(operations) && operations.length) await parcoursSvc.majOperations(id, operations);
-  if (typologie && typeof typologie === 'object') await parcoursSvc.majTypologie(id, typologie);
+  if (typologie && typeof typologie === 'object') {
+    const [f0] = await q(supabase.from('formalites').select('*').eq('id', id));
+    validerTypologie(f0.operations || [], typologie, f0.fiche || {}, f0.typologie || {});
+    await parcoursSvc.majTypologie(id, typologie);
+  }
   if (reponses && typeof reponses === 'object') await parcoursSvc.majReponses(id, reponses, { origine: 'saisie' });
   const [f] = await q(supabase.from('formalites').select('*').eq('id', id));
   await memoriserEcheance(f);
@@ -256,6 +316,7 @@ async function exigencesFormalite({ operations, siren, typologie = {}, reponses 
   if (siren && nettoyerSiren(siren)) {
     try { fiche = await rne.entreprise(siren); } catch (e) { avertissement = `Fiche du registre indisponible : ${e.message}`; }
   }
+  validerTypologie(ops, typologie, fiche);
   return {
     ...exigences(ops, typologie, fiche, reponses),
     echeance: echeanceDe(ops, reponses),
@@ -278,6 +339,11 @@ async function ouvrirDepotPieces({ reference, siren, operations, typologie, repo
     await appliquerSaisies(id, { operations: operations ? operationsValides(operations) : null, typologie, reponses });
   } else {
     const ops = operationsValides(operations);
+    if (typologie) {
+      let fiche = {};
+      if (siren && nettoyerSiren(siren)) { try { fiche = await rne.entreprise(siren); } catch (e) { fiche = {}; } }
+      validerTypologie(ops, typologie, fiche);
+    }
     const dossier = await dossierLegalize(dossierId);
     const cree = await parcoursSvc.creer({ siren: siren || '', operations: ops, dossier_id: dossier?.id || null });
     id = cree.id;
@@ -310,6 +376,49 @@ async function piecesRecues({ reference }) {
   const f = await chargerParReference(reference);
   const v = await vueDossier(f.id);
   return { reference: v.reference, pieces: v.pieces, manquantes: v.etat.pieces_manquantes, lien_depot_expire: v.lien_depot_expire };
+}
+
+/** Une pièce reçue du dossier, par son numéro ou son nom de fichier. */
+function trouverFichier(v, fichier) {
+  const tous = [
+    ...[...v.pieces.obligatoires, ...v.pieces.a_preciser, ...v.pieces.facultatives].flatMap((l) => (l.recue || []).map((x) => ({ ...x, cle: l.cle, code: l.code }))),
+    ...v.pieces.autres_recues,
+  ];
+  const cle = String(fichier ?? '').trim();
+  const trouves = /^\d+$/.test(cle) ? tous.filter((x) => String(x.id) === cle)
+    : tous.filter((x) => x.nom === cle).concat(tous.filter((x) => x.nom !== cle && x.nom.toLowerCase().includes(cle.toLowerCase())));
+  if (!cle || !trouves.length) throw erreur(`Aucune pièce reçue ne correspond à « ${cle} ». Pièces reçues : ${tous.map((x) => `${x.id} — ${x.nom}`).join(' ; ') || 'aucune'}.`, 404);
+  if (new Set(trouves.map((x) => x.id)).size > 1 && trouves[0].nom !== cle) throw erreur(`Plusieurs pièces correspondent à « ${cle} » : précisez son numéro (${trouves.map((x) => `${x.id} — ${x.nom}`).join(' ; ')}).`, 409);
+  return trouves[0];
+}
+
+async function reclasserPiece({ reference, fichier, cle, code_pj: codePj }) {
+  const f = await chargerModifiable(reference);
+  if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : les pièces se gèrent sur le portail.', 409);
+  const x = trouverFichier(await vueDossier(f.id), fichier);
+  await parcoursSvc.reclasserPiece(x.id, { cle, code: codePj ? String(codePj).trim().toUpperCase() : undefined });
+  const v = await vueDossier(f.id);
+  return { reference: v.reference, reclassee: x.nom, pieces: v.pieces, manquantes: v.etat.pieces_manquantes };
+}
+
+async function retirerPiece({ reference, fichier }) {
+  const f = await chargerModifiable(reference);
+  if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : les pièces se gèrent sur le portail.', 409);
+  const x = trouverFichier(await vueDossier(f.id), fichier);
+  await parcoursSvc.retirerPiece(x.id);
+  const v = await vueDossier(f.id);
+  return { reference: v.reference, retiree: x.nom, pieces: v.pieces, manquantes: v.etat.pieces_manquantes };
+}
+
+/** Types de pièces acceptés par le guichet pour une société (pièces hors liste). */
+function cataloguePieces() {
+  const usage = require('../inpi/data/pieces-guichet.json').valeurs;
+  const { PIECES } = require('../inpi/referentiels');
+  return {
+    pieces: Object.entries(PIECES)
+      .filter(([code]) => !usage[code] || (usage[code].types || []).includes('PM'))
+      .map(([code, p]) => ({ code, libelle: p.libelle })),
+  };
 }
 
 async function controlerFormalite({ reference }) {
@@ -413,7 +522,9 @@ const TYPOLOGIE = {
   type: 'object',
   description: 'Réponses aux questions de qualification, par identifiant de question (voir « questions » dans exigences_formalite). '
     + 'Ex. {"entrants":[{"nom":"Claire MARTIN","nature":"PP","fonction":"dirigeant"}],"sortants":[{"nom":"Jean DUPONT","motif":"demission"}],"statuts_modifies":false}. '
-    + 'Pour trancher une pièce « à préciser » sans question : {"manuel":{"<cle de la pièce>":true|false}}.',
+    + 'Mise à jour d’un dirigeant en place (MAJDIR) : {"mises_a_jour":[{"nom":"BD France","motif":"denomination"}]} (motif : denomination, adresse ou representant). '
+    + 'Chaque question renvoyée par exigences_formalite donne son « format » ; une réponse mal formée est refusée. '
+    + 'Pour rendre due ou écarter une pièce de la liste : {"manuel":{"<cle de la pièce>":true|false}}.',
 };
 const REPONSES = {
   type: 'object',
@@ -481,6 +592,32 @@ const OUTILS = [
     run: piecesRecues,
   },
   {
+    name: 'reclasser_piece',
+    description: 'Range une pièce déjà reçue sous la bonne ligne de la liste (« cle », ex. PJ_20:m0) ou sous un autre type officiel (« code_pj », ex. PJ_20). Désignez la pièce par son numéro ou son nom de fichier (voir pieces_recues).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        reference: REFERENCE, fichier: { type: 'string', description: 'Numéro de la pièce ou nom du fichier reçu.' },
+        cle: { type: 'string', description: 'Ligne de la liste des pièces (« cle »), à préférer quand plusieurs lignes ont le même type.' },
+        code_pj: { type: 'string', description: 'Type officiel de la pièce (PJ_xx), voir catalogue_pieces.' },
+      },
+      required: ['reference', 'fichier'],
+    },
+    run: reclasserPiece,
+  },
+  {
+    name: 'retirer_piece',
+    description: 'Retire du dossier une pièce reçue par erreur (désignée par son numéro ou son nom de fichier).',
+    inputSchema: { type: 'object', properties: { reference: REFERENCE, fichier: { type: 'string' } }, required: ['reference', 'fichier'] },
+    run: retirerPiece,
+  },
+  {
+    name: 'catalogue_pieces',
+    description: 'Types de pièces justificatives acceptés par le guichet pour une société (codes PJ_xx), pour une pièce hors de la liste exigée.',
+    inputSchema: { type: 'object', properties: {} },
+    run: cataloguePieces,
+  },
+  {
     name: 'controler_formalite',
     description: 'Contrôles avant transmission : bloquants, alertes, échéance de dépôt, mode simulation. Aucun enregistrement tant qu’il reste un bloquant.',
     inputSchema: { type: 'object', properties: { reference: REFERENCE }, required: ['reference'] },
@@ -510,4 +647,4 @@ const OUTILS = [
   },
 ];
 
-module.exports = { OUTILS, ORIGINE, empreinte, echeanceDe, vueDossier, chargerParReference, journalDe, modes };
+module.exports = { OUTILS, ORIGINE, empreinte, echeanceDe, vueDossier, chargerParReference, journalDe, modes, validerTypologie, cataloguePieces };

@@ -16,7 +16,8 @@ const express = require('express');
 const { supabase, q, BUCKET, SUPABASE_URL, SUPABASE_KEY, clientService, dansContexte, downloadFile, removeFiles } = require('../supa');
 const parcoursSvc = require('../services/parcours');
 const { pdfLisible, MESSAGE_ILLISIBLE } = require('../inpi/pdf');
-const { empreinte, ORIGINE } = require('./service');
+const { empreinte, ORIGINE, cataloguePieces } = require('./service');
+const { PIECES } = require('../inpi/referentiels');
 
 const MAX_OCTETS = 10 * 1024 * 1024;
 
@@ -52,7 +53,28 @@ async function etat(f) {
       ...d.pieces.a_preciser.map((p) => ligne(p, 'selon_le_cas')),
       ...d.pieces.facultatives.map((p) => ligne(p, 'facultative')),
     ],
+    // Pièces reçues hors de la liste (« Autre pièce »), avec leur type.
+    autres: d.autres_pieces.map((x) => ({ id: x.id, code: x.code, nom: x.nom, taille: x.taille, type: PIECES[x.code]?.libelle || x.code })),
+    types: cataloguePieces().pieces,
   };
+}
+
+/**
+ * La destination d'un fichier : une ligne de la liste (« cle »), ou une pièce
+ * hors liste d'un type officiel du guichet (« code », PJ_xx).
+ */
+async function destination(f, { cle, code }) {
+  const e = await etat(f);
+  if (cle) {
+    const p = e.pieces.find((x) => x.cle === cle);
+    if (!p) throw erreur('Pièce inconnue pour ce dossier.');
+    return { cle: p.cle, code: p.code };
+  }
+  const c = String(code || '').trim().toUpperCase();
+  if (!PIECES[c]) throw erreur('Choisissez le type de la pièce.');
+  // Un type déjà dans la liste y est rangé, s'il n'y figure qu'une fois.
+  const memes = e.pieces.filter((x) => x.code === c);
+  return memes.length === 1 ? { cle: memes[0].cle, code: c } : { cle: c, code: c };
 }
 
 const routeur = express.Router();
@@ -73,9 +95,8 @@ routeur.get('/:jeton/etat', async (req, res) => res.json(await etat(await dossie
 routeur.post('/:jeton/televersement', async (req, res) => {
   const f = await dossierDuLien(req.params.jeton);
   if (f.inpi_id) throw erreur('Le dossier a déjà été transmis au guichet.', 409);
-  const { cle, nom, taille } = req.body || {};
-  const piece = (await etat(f)).pieces.find((p) => p.cle === cle);
-  if (!piece) throw erreur('Pièce inconnue pour ce dossier.');
+  const { cle, code, nom, taille } = req.body || {};
+  const piece = await destination(f, { cle, code });
   if (!/\.pdf$/i.test(String(nom || ''))) throw erreur('Seuls les PDF sont acceptés par le guichet.', 422);
   if (Number(taille) > MAX_OCTETS) throw erreur('Fichier de plus de 10 Mo : le guichet le refuserait.', 422);
   const chemin = parcoursSvc.cheminPiece(f.id, piece.code, nom);
@@ -90,9 +111,8 @@ routeur.post('/:jeton/televersement', async (req, res) => {
 routeur.post('/:jeton/confirmer', async (req, res) => {
   const f = await dossierDuLien(req.params.jeton);
   if (f.inpi_id) throw erreur('Le dossier a déjà été transmis au guichet.', 409);
-  const { cle, chemin, nom } = req.body || {};
-  const piece = (await etat(f)).pieces.find((p) => p.cle === cle);
-  if (!piece) throw erreur('Pièce inconnue pour ce dossier.');
+  const { cle, code, chemin, nom } = req.body || {};
+  const piece = await destination(f, { cle, code });
   if (typeof chemin !== 'string' || !chemin.startsWith(`formalites/${f.id}/${piece.code}_`) || chemin.includes('..')) throw erreur('Envoi non reconnu.');
   const contenu = await downloadFile(chemin);
   const rejet = contenu.length > MAX_OCTETS ? 'Fichier de plus de 10 Mo : le guichet le refuserait.'
@@ -106,6 +126,17 @@ routeur.post('/:jeton/confirmer', async (req, res) => {
     filepath: chemin, taille: contenu.length, origine: ' par l’avocat (lien de dépôt)',
   });
   res.json(await etat(await dossierDuLien(req.params.jeton)));
+});
+
+/** Range un fichier reçu sous une autre pièce de la liste, ou sous un autre type. */
+routeur.post('/:jeton/pieces/:pieceId/reclasser', async (req, res) => {
+  const f = await dossierDuLien(req.params.jeton);
+  if (f.inpi_id) throw erreur('Le dossier a déjà été transmis au guichet.', 409);
+  const [p] = await q(supabase.from('formalite_pieces').select('*').eq('id', req.params.pieceId).eq('formalite_id', f.id));
+  if (!p) throw erreur('Pièce introuvable.', 404);
+  const cible = await destination(f, req.body || {});
+  await parcoursSvc.reclasserPiece(p.id, cible.cle === cible.code && !(await etat(f)).pieces.some((x) => x.cle === cible.cle) ? { code: cible.code } : { cle: cible.cle });
+  res.json(await etat(f));
 });
 
 /** Retire un fichier déposé par erreur, tant que le dossier n'est pas transmis. */
@@ -157,6 +188,10 @@ const PAGE = `<!doctype html>
   .message:empty { display:none; }
   .message.erreur { color:var(--alerte); }
   .vide { color:var(--doux); }
+  .actions { display:flex; gap:10px; align-items:center; flex-shrink:0; }
+  select { font:inherit; font-size:.85rem; max-width:220px; border:1px solid var(--trait); border-radius:8px; padding:4px 6px; background:var(--carte); color:var(--texte); }
+  select.type-autre { display:block; width:100%; max-width:none; margin-top:10px; padding:8px; font-size:.9rem; }
+  ul.fichiers li { flex-wrap:wrap; }
 </style>
 </head>
 <body>
@@ -182,19 +217,70 @@ const PAGE = `<!doctype html>
   }
   function taille(o) { return o ? (o > 1048576 ? (o / 1048576).toFixed(1) + ' Mo' : Math.ceil(o / 1024) + ' Ko') : ''; }
 
-  function envoyer(piece, fichier) {
+  // dest : { cle } pour une ligne de la liste, { code } pour une pièce hors liste.
+  function envoyer(dest, fichier) {
     if (!/\\.pdf$/i.test(fichier.name)) { message('« ' + fichier.name + ' » n’est pas un PDF.', true); return Promise.resolve(); }
     if (fichier.size > 10485760) { message('« ' + fichier.name + ' » dépasse 10 Mo.', true); return Promise.resolve(); }
     message('Envoi de « ' + fichier.name + ' »…');
-    return appel('POST', '/televersement', { cle: piece.cle, nom: fichier.name, taille: fichier.size })
+    return appel('POST', '/televersement', { cle: dest.cle, code: dest.code, nom: fichier.name, taille: fichier.size })
       .then(function (t) {
         var client = window.supabase.createClient(t.stockage.url, t.stockage.cle, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
         return client.storage.from(t.stockage.bucket).uploadToSignedUrl(t.chemin, t.jeton_envoi, fichier, { contentType: 'application/pdf' })
           .then(function (r) { if (r.error) throw new Error('Envoi interrompu (' + r.error.message + '). Réessayez.'); return t; });
       })
-      .then(function (t) { return appel('POST', '/confirmer', { cle: piece.cle, chemin: t.chemin, nom: fichier.name }); })
+      .then(function (t) { return appel('POST', '/confirmer', { cle: dest.cle, code: dest.code, chemin: t.chemin, nom: fichier.name }); })
       .then(function (e) { afficher(e); message('« ' + fichier.name + ' » reçu.'); })
       .catch(function (e) { message(e.message, true); });
+  }
+
+  function boutonFichier(id, libelle, choisir) {
+    var frag = document.createDocumentFragment();
+    var champ = el('input'); champ.type = 'file'; champ.accept = 'application/pdf,.pdf'; champ.multiple = true; champ.id = id;
+    champ.onchange = function () {
+      var fichiers = Array.prototype.slice.call(champ.files || []);
+      champ.value = '';
+      var dest = choisir();
+      if (!dest) return;
+      fichiers.reduce(function (suite, f) { return suite.then(function () { return envoyer(dest, f); }); }, Promise.resolve());
+    };
+    var bouton = el('label', 'bouton', libelle);
+    bouton.htmlFor = id;
+    frag.appendChild(champ); frag.appendChild(bouton);
+    return frag;
+  }
+
+  // Liste déroulante des destinations : les lignes de la liste, puis tous les types du guichet.
+  function choixDestination(e, actuel) {
+    var sel = el('select', 'reclasser');
+    sel.appendChild(new Option('Reclasser…', ''));
+    var g1 = el('optgroup'); g1.label = 'Pièces de la liste';
+    e.pieces.forEach(function (p) { if (p.cle !== actuel) g1.appendChild(new Option(p.piece + (p.personne ? ' — ' + p.personne : ''), 'cle:' + p.cle)); });
+    sel.appendChild(g1);
+    var g2 = el('optgroup'); g2.label = 'Autre type de pièce';
+    e.types.forEach(function (t) { if (t.code !== actuel) g2.appendChild(new Option(t.libelle + ' (' + t.code + ')', 'code:' + t.code)); });
+    sel.appendChild(g2);
+    return sel;
+  }
+
+  function ligneFichier(e, f, actuel) {
+    var li = el('li');
+    li.appendChild(el('span', '', f.nom + (f.taille ? ' (' + taille(f.taille) + ')' : '')));
+    if (e.transmis) return li;
+    var actions = el('span', 'actions');
+    var sel = choixDestination(e, actuel);
+    sel.onchange = function () {
+      if (!sel.value) return;
+      var v = sel.value.split(':'); var corps = v[0] === 'cle' ? { cle: v.slice(1).join(':') } : { code: v[1] };
+      appel('POST', '/pieces/' + f.id + '/reclasser', corps).then(afficher).then(function () { message('« ' + f.nom + ' » reclassé.'); }).catch(function (x) { message(x.message, true); });
+    };
+    var retirer = el('button', 'lien', 'Retirer');
+    retirer.onclick = function () {
+      if (!confirm('Retirer « ' + f.nom + ' » ?')) return;
+      appel('DELETE', '/pieces/' + f.id).then(afficher).then(function () { message('Fichier retiré.'); }).catch(function (x) { message(x.message, true); });
+    };
+    actions.appendChild(sel); actions.appendChild(retirer);
+    li.appendChild(actions);
+    return li;
   }
 
   function afficher(e) {
@@ -217,37 +303,40 @@ const PAGE = `<!doctype html>
         bloc.appendChild(tete);
         if (p.fichiers.length) {
           var ul = el('ul', 'fichiers');
-          p.fichiers.forEach(function (f) {
-            var li = el('li');
-            li.appendChild(el('span', '', f.nom + (f.taille ? ' (' + taille(f.taille) + ')' : '')));
-            if (!e.transmis) {
-              var retirer = el('button', 'lien', 'Retirer');
-              retirer.onclick = function () {
-                if (!confirm('Retirer « ' + f.nom + ' » ?')) return;
-                appel('DELETE', '/pieces/' + f.id).then(afficher).then(function () { message('Fichier retiré.'); }).catch(function (x) { message(x.message, true); });
-              };
-              li.appendChild(retirer);
-            }
-            ul.appendChild(li);
-          });
+          p.fichiers.forEach(function (f) { ul.appendChild(ligneFichier(e, f, p.cle)); });
           bloc.appendChild(ul);
         }
-        if (!e.transmis) {
-          var id = 'f-' + p.cle.replace(/[^\\w-]/g, '_');
-          var champ = el('input'); champ.type = 'file'; champ.accept = 'application/pdf,.pdf'; champ.multiple = true; champ.id = id;
-          champ.onchange = function () {
-            var fichiers = Array.prototype.slice.call(champ.files || []);
-            champ.value = '';
-            fichiers.reduce(function (suite, f) { return suite.then(function () { return envoyer(p, f); }); }, Promise.resolve());
-          };
-          var bouton = el('label', 'bouton', p.fichiers.length ? 'Ajouter un autre PDF' : 'Choisir le PDF');
-          bouton.htmlFor = id;
-          bloc.appendChild(champ); bloc.appendChild(bouton);
-        }
+        if (!e.transmis) bloc.appendChild(boutonFichier('f-' + p.cle.replace(/[^\\w-]/g, '_'), p.fichiers.length ? 'Ajouter un autre PDF' : 'Choisir le PDF', function () { return { cle: p.cle }; }));
         liste.appendChild(bloc);
       });
     });
     if (!e.pieces.length) liste.appendChild(el('p', 'vide', 'Aucune pièce attendue pour le moment.'));
+
+    // Autre pièce : hors de la liste, d'un type officiel choisi.
+    liste.appendChild(el('h2', '', 'Autre pièce'));
+    var autre = el('div', 'piece');
+    autre.appendChild(el('div', 'detail', 'Une pièce qui ne figure pas dans la liste : choisissez son type, puis le PDF.'));
+    if (e.autres.length) {
+      var ua = el('ul', 'fichiers');
+      e.autres.forEach(function (f) {
+        var li = ligneFichier(e, f, f.code);
+        li.firstChild.textContent = f.type + ' — ' + li.firstChild.textContent;
+        ua.appendChild(li);
+      });
+      autre.appendChild(ua);
+    }
+    if (!e.transmis) {
+      var type = el('select', 'type-autre');
+      type.appendChild(new Option('Type de la pièce…', ''));
+      e.types.forEach(function (t) { type.appendChild(new Option(t.libelle + ' (' + t.code + ')', t.code)); });
+      autre.appendChild(type);
+      autre.appendChild(boutonFichier('f-autre', 'Choisir le PDF', function () {
+        if (!type.value) { message('Choisissez d’abord le type de la pièce.', true); return null; }
+        return { code: type.value };
+      }));
+    }
+    liste.appendChild(autre);
+
     var exp = new Date(e.expire);
     if (!isNaN(exp)) liste.appendChild(el('p', 'detail', 'Lien valable jusqu’au ' + exp.toLocaleDateString('fr-FR') + '.'));
   }

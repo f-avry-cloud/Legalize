@@ -74,7 +74,7 @@ function verifier(nom, condition, detail) {
   verifier('notification : 202 sans corps', notif.statut === 202);
   const liste = await rpc('tools/list', {});
   const noms = liste.corps.result.tools.map((t) => t.name);
-  verifier('onze outils, aucun ne signe ni ne paie', noms.length === 11 && !noms.some((x) => /sign|pay/i.test(x)), noms);
+  verifier('quatorze outils, aucun ne signe ni ne paie', noms.length === 14 && !noms.some((x) => /sign|pay/i.test(x)), noms);
   verifier('outil inconnu : erreur JSON-RPC', (await rpc('tools/call', { name: 'payer', arguments: {} })).corps.error?.code === -32602);
   verifier('méthode inconnue : erreur JSON-RPC', (await rpc('resources/read', {})).corps.error?.code === -32601);
 
@@ -181,7 +181,7 @@ function verifier(nom, condition, detail) {
   const sansCle = await rpc('tools/list', {});
   const outilSansCle = await rpc('tools/call', { name: 'lister_formalites', arguments: {} });
   verifier('sans clé de service : connexion possible, l’outil explique ce qui manque',
-    sansCle.statut === 200 && sansCle.corps.result.tools.length === 11
+    sansCle.statut === 200 && sansCle.corps.result.tools.length === 14
     && outilSansCle.corps.result.isError && /SUPABASE_SERVICE_ROLE_KEY/.test(outilSansCle.corps.result.content[0].text), outilSansCle.corps);
   faux.service = service;
 
@@ -195,6 +195,168 @@ function verifier(nom, condition, detail) {
     (await http('GET', '/api/formalites')).corps.every((x) => x.origine !== 'assistant'));
   const act = await http('POST', `/api/formalites-ai/${f.id}/actualiser`);
   verifier('actualisation auprès de l’INPI', act.statut === 200 && act.corps.synchronise === true, act.corps);
+
+  /* -------------------------------------------------------------------
+     Anomalies relevées sur le dossier réel LGZ-2026-00044 (COUVOIR JOSSET,
+     MAJDIR) : justificatif disparu, pièces mal rangées, objet social absent
+     du registre. Guichet simulé, aucun appel à l'API INPI de production. */
+  const { resoudre } = require('../src/inpi/parcours');
+  const { construireParcours } = require('../src/inpi/payload-parcours');
+  const guichet = require('../src/inpi/guichet');
+  const rne = require('../src/inpi/rne');
+
+  // Fiche « COUVOIR JOSSET » : une société dirigeante (BD France) et pas d'objet au registre.
+  const ficheSansObjet = JSON.parse(JSON.stringify(await rne.entreprise('552100554')));
+  const pmSO = ficheSansObjet.brut.formality.content.personneMorale;
+  delete pmSO.identite.description.objet;
+  ficheSansObjet.objet = null;
+  pmSO.composition.pouvoirs.push({ typeDePersonne: 'ENTREPRISE', roleEntreprise: '73',
+    entreprise: { denomination: 'BD France', siren: '552032534', formeJuridique: '5710', lieuRegistre: 'BREST' },
+    adresseEntreprise: { codePostal: '29200', commune: 'BREST', voie: 'du Port', typeVoie: 'RUE', numVoie: '1' } });
+  ficheSansObjet.dirigeants = [...(ficheSansObjet.dirigeants || []), { nom_complet: 'BD France' }];
+
+  console.log('\nAnomalie 1 — mise à jour d’un dirigeant (MAJDIR) et pièces');
+  const formeClaude = { mises_a_jour: [{ dirigeant: 'BD France', changements: ['denomination'], nouvelle_denomination: 'DanHatch France' }], statuts_modifies: false };
+  const rMaj = resoudre(['MAJDIR'], formeClaude, ficheSansObjet);
+  const kbis = rMaj.pieces.obligatoires.find((p) => p.code === 'PJ_20' && p.personne === 'BD France');
+  verifier('ligne décrite par « dirigeant » / « changements » reconnue : Kbis de BD France obligatoire', kbis?.cle === 'PJ_20:m0', rMaj.pieces);
+  verifier('le champ de la société dirigeante est demandé (pré-rempli du registre)',
+    rMaj.champs.some((g) => g.op === 'MAJDIR' && g.champs.some((c) => c.name === 'maj_0' && c.prerempli?.denomination === 'BD France')), rMaj.champs);
+  const illisible = resoudre(['MAJDIR'], { mises_a_jour: [{ quoi: 'inconnu' }], statuts_modifies: false, manuel: { 'maj:MAJDIR': true } }, ficheSansObjet);
+  verifier('manuel["maj:MAJDIR"] = true : le justificatif réapparaît, obligatoire, même après statuts_modifies',
+    illisible.pieces.obligatoires.some((p) => p.cle === 'maj:MAJDIR' && p.code === 'PJ_20'), illisible.pieces);
+  const sansCoche = resoudre(['MAJDIR'], { mises_a_jour: [], statuts_modifies: false }, ficheSansObjet);
+  verifier('sans réponse ni coche : justificatif « à préciser »', sansCoche.pieces.a_preciser.some((p) => p.cle === 'maj:MAJDIR'));
+  verifier('décoché : le justificatif à préciser sort de la liste',
+    !resoudre(['MAJDIR'], { mises_a_jour: [], statuts_modifies: false, manuel: { 'maj:MAJDIR': false } }, ficheSansObjet).pieces.a_preciser.some((p) => p.cle === 'maj:MAJDIR'));
+  verifier('toute pièce « à préciser » cochée devient obligatoire',
+    resoudre(['35M'], { manuel: { 'personnes:35M': true } }, ficheSansObjet).pieces.obligatoires.some((p) => p.cle === 'personnes:35M'));
+
+  const { validerTypologie } = require('../src/connecteur/service');
+  const refus = (fn) => { try { fn(); return null; } catch (e) { return e.message; } };
+  verifier('réponse mal formée refusée en clair (motif inconnu, dirigeant absent du registre)',
+    /motif/.test(refus(() => validerTypologie(['MAJDIR'], { mises_a_jour: [{ nom: 'Inconnu SA', motif: 'x' }] }, ficheSansObjet)) || '')
+    && /ne figure pas parmi les dirigeants/.test(refus(() => validerTypologie(['MAJDIR'], { mises_a_jour: [{ nom: 'Zorglub', motif: 'adresse' }] }, ficheSansObjet)) || ''));
+  verifier('question inconnue refusée', /n’est pas une question connue/.test(refus(() => validerTypologie(['MAJDIR'], { dirigeants: [] }, ficheSansObjet)) || ''));
+  verifier('forme de Claude acceptée telle quelle', refus(() => validerTypologie(['MAJDIR'], formeClaude, ficheSansObjet)) === null);
+  const exM = await outil('exigences_formalite', { operations: ['MAJDIR'], siren: '552100554' });
+  verifier('chaque question donne son format', exM.json.questions.find((qq) => qq.id === 'mises_a_jour')?.format?.includes('motif'), exM.json.questions);
+
+  // Dossier réel reconstitué : la fiche sans objet, les deux PDF rangés sous le pouvoir.
+  const ouvM = await outil('ouvrir_depot_pieces', { siren: '552100554', operations: ['MAJDIR'] });
+  const refM = ouvM.json.dossier.reference;
+  const fM = tables.formalites.find((x) => x.reference === refM);
+  fM.fiche = ficheSansObjet;
+  const r2 = await outil('renseigner_formalite', { reference: refM, typologie: formeClaude, reponses: { commun: { date_decision: '2026-09-01' } } });
+  verifier('dossier : Kbis de BD France exigé', r2.json.pieces.obligatoires.some((p) => p.cle === 'PJ_20:m0'), r2.json.pieces);
+  const jetonM = ouvM.json.lien_depot.split('/').pop();
+  const deposerM = async (corps, nom) => {
+    const t = await http('POST', `/depot/${jetonM}/televersement`, { ...corps, nom, taille: PDF.length });
+    if (t.statut !== 200) return t;
+    fichiers.set(t.corps.chemin, PDF);
+    return http('POST', `/depot/${jetonM}/confirmer`, { ...corps, chemin: t.corps.chemin, nom });
+  };
+  const kbisNom = 'DANF - 2026.09.23 - KBis du RCS Brest (siège).pdf';
+  await deposerM({ cle: 'PJ_51' }, kbisNom);
+  await deposerM({ cle: 'PJ_51' }, 'COUVOIR JOSSET - Procuration.pdf');
+  const etatM = (await http('GET', `/depot/${jetonM}/etat`)).corps;
+  verifier('la page propose un emplacement par pièce de la liste, plus « Autre pièce »',
+    etatM.pieces.some((p) => p.cle === 'PJ_20:m0') && etatM.pieces.some((p) => p.cle === 'PJ_51') && etatM.types.some((t) => t.code === 'PJ_97'), etatM.pieces.map((p) => p.cle));
+  const rec = await outil('reclasser_piece', { reference: refM, fichier: 'KBis du RCS Brest', code_pj: 'PJ_20' });
+  verifier('reclasser_piece : le Kbis passe de PJ_51 à PJ_20 (ligne de BD France)',
+    !rec.erreur && rec.json.pieces.obligatoires.find((p) => p.cle === 'PJ_20:m0').recue.some((x) => x.nom === kbisNom)
+    && !rec.json.pieces.obligatoires.find((p) => p.cle === 'PJ_51').recue.some((x) => x.nom === kbisNom), rec.texte);
+  verifier('reclassement journalisé', tables.formalite_evenements.some((e) => e.formalite_id === fM.id && /reclassée/.test(e.message)));
+  const autreM = await deposerM({ code: 'PJ_97' }, 'Liste des sièges.pdf');
+  verifier('« Autre pièce » : PDF d’un type choisi, hors liste', autreM.statut === 200 && autreM.corps.autres.some((x) => x.code === 'PJ_97'), autreM.corps);
+  const idAutre = autreM.corps.autres.find((x) => x.code === 'PJ_97').id;
+  const viaPage = await http('POST', `/depot/${jetonM}/pieces/${idAutre}/reclasser`, { cle: 'PJ_51' });
+  verifier('reclasser depuis la page', viaPage.statut === 200 && viaPage.corps.pieces.find((p) => p.cle === 'PJ_51').fichiers.some((x) => x.id === idAutre), viaPage.corps);
+  verifier('type inconnu refusé', (await outil('reclasser_piece', { reference: refM, fichier: String(idAutre), code_pj: 'PJ_XYZ' })).erreur);
+  const ret = await outil('retirer_piece', { reference: refM, fichier: String(idAutre) });
+  verifier('retirer_piece', !ret.erreur && !tables.formalite_pieces.some((x) => x.id === idAutre), ret.texte);
+
+  console.log('\nAnomalie 2 — objet social absent du registre');
+  const exO = resoudre(['MAJDIR'], formeClaude, ficheSansObjet);
+  const champObjet = exO.champs.find((g) => g.op === '_registre')?.champs.find((c) => c.name === 'objet');
+  verifier('objet absent du registre : demandé (groupe _registre, requis)', champObjet?.requis === true, exO.champs);
+  const avecObjet = resoudre(['MAJDIR'], formeClaude, await rne.entreprise('552100554'));
+  verifier('objet présent au registre : pas demandé', !(avecObjet.champs.find((g) => g.op === '_registre')?.champs || []).some((c) => c.name === 'objet'));
+  verifier('demandé quelle que soit l’opération (10M, 11M, 35M, 15M)',
+    ['10M', '11M', '35M', '15M'].every((op) => resoudre([op], {}, ficheSansObjet).champs.find((g) => g.op === '_registre')?.champs.some((c) => c.name === 'objet')));
+  verifier('pas demandé pour une cessation (40M)', !(resoudre(['40M'], {}, ficheSansObjet).champs.find((g) => g.op === '_registre')?.champs || []).some((c) => c.name === 'objet'));
+  const ctlO = await outil('controler_formalite', { reference: refM });
+  verifier('controler_formalite : bloquant « objet social » avant l’enregistrement', !ctlO.json.pret && ctlO.json.bloquants.some((b) => /Objet social/.test(b)), ctlO.json.bloquants);
+  const objet = 'Accouvage, sélection et commerce de volailles.';
+  const rO = await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { objet } } });
+  verifier('objet renseigné : plus de bloquant à ce titre', !rO.json.etat.champs_manquants.some((m) => /Objet/.test(m)), rO.json.etat.champs_manquants);
+  const corpsM = construireParcours({ ...fM, reponses: fM.reponses, typologie: fM.typologie, fiche: fM.fiche, pieces: [] }).corps;
+  const contenu = corpsM.formality?.content || corpsM.content || corpsM.newFormality?.content || {};
+  verifier('objet injecté dans le contenu envoyé au guichet', contenu.personneMorale?.identite?.description?.objet === objet, contenu.personneMorale?.identite?.description);
+
+  console.log('\nToute donnée refusée par le guichet devient une donnée à compléter');
+  const original = guichet.deposer;
+  guichet.deposer = async () => { throw Object.assign(new Error('Données refusées par le guichet'), { status: 400, detail: { violations: [
+    { propertyPath: 'content.personneMorale.identite.description.dateFinExistence', message: 'Ce champ est obligatoire.' },
+  ] } }); };
+  // Le dossier complet, pour atteindre le guichet.
+  const lignesM = (await outil('pieces_recues', { reference: refM })).json.pieces.obligatoires;
+  for (const l of lignesM.filter((x) => !x.recue.length)) await deposerM({ cle: l.cle }, `${l.code}.pdf`);
+  await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { genre_0: '2' }, MAJDIR: { maj_0: { ...rMaj.champs.find((g) => g.op === 'MAJDIR').champs[0].prerempli, denomination: 'DanHatch France' } } } });
+  const ctlPret = await outil('controler_formalite', { reference: refM });
+  const echec = await outil('enregistrer_formalite', { reference: refM, confirmation_avocat: true });
+  guichet.deposer = original;
+  verifier('refus du guichet rendu en clair, avec le champ en cause', ctlPret.json.pret && echec.erreur && /dateFinExistence/.test(echec.texte), { ctl: ctlPret.json.bloquants, echec: echec.texte });
+  const apresRefus = await outil('controler_formalite', { reference: refM });
+  verifier('le champ refusé devient un bloquant à compléter', apresRefus.json.bloquants.some((b) => /refusée par le guichet.*dateFinExistence/.test(b)), apresRefus.json.bloquants);
+  const champRejet = (await outil('renseigner_formalite', { reference: refM })).json.champs
+    .find((g) => g.groupe === '_registre').champs.find((c) => /dateFinExistence/.test(c.label));
+  await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { [champRejet.name]: '2125-01-01' } } });
+  const corpsR = construireParcours({ ...fM, pieces: [] }).corps;
+  const contenuR = corpsR.formality?.content || corpsR.content || corpsR.newFormality?.content || {};
+  verifier('la valeur saisie est réinjectée à l’endroit désigné par le guichet',
+    contenuR.personneMorale?.identite?.description?.dateFinExistence === '2125-01-01' && contenuR.personneMorale.identite.description.objet === objet, contenuR.personneMorale?.identite?.description);
+  guichet.deposer = async () => { throw Object.assign(new Error('Données refusées par le guichet'), { status: 400, detail: { violations: [
+    { propertyPath: 'content.personneMorale.composition.pouvoirs[0].individu.descriptionPersonne.nomUsage', message: 'Valeur attendue.' },
+  ] } }); };
+  await outil('enregistrer_formalite', { reference: refM, confirmation_avocat: true });
+  guichet.deposer = original;
+  verifier('les refus successifs s’additionnent : le premier, déjà corrigé, reste réinjecté',
+    ['dateFinExistence', 'nomUsage'].every((k) => (fM.typologie._rejets || []).some((r) => r.champ.includes(k))), fM.typologie._rejets);
+  const champ2 = (await outil('renseigner_formalite', { reference: refM })).json.champs
+    .find((g) => g.groupe === '_registre').champs.find((c) => /nomUsage/.test(c.label));
+  verifier('libellé lisible du champ refusé', /dirigeant n° 1/.test(champ2?.label || ''), champ2);
+  await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { [champ2.name]: 'THOMAS' } } });
+  const contenu3 = (() => { const c = construireParcours({ ...fM, pieces: [] }).corps; return c.formality?.content || c.content || c.newFormality?.content || {}; })();
+  verifier('les deux valeurs partent au guichet', contenu3.personneMorale.identite.description.dateFinExistence === '2125-01-01'
+    && contenu3.personneMorale.composition.pouvoirs[0].individu.descriptionPersonne.nomUsage === 'THOMAS');
+  const enfin = await outil('enregistrer_formalite', { reference: refM, confirmation_avocat: true });
+  verifier('dossier corrigé : enregistré (guichet simulé)', enfin.json?.enregistre === true && enfin.json.simule === true, enfin.texte);
+  verifier('après le dépôt réussi, les refus sont soldés', !(fM.typologie._rejets || []).length);
+
+  console.log('\nCouverture de tout le catalogue d’opérations');
+  const moteur = require('../src/inpi/parcours');
+  const { PIECES } = require('../src/inpi/referentiels');
+  const toutes = Object.keys(moteur.OPERATIONS).filter((op) => !moteur.infoOperation(op)?.creation);
+  const typologiePleine = {
+    entrants: [{ nom: 'Claire MARTIN', nature: 'PP', fonction: 'dirigeant' }, { nom: 'HOLDING X', nature: 'PM', fonction: 'dirigeant' }],
+    sortants: [{ nom: 'Léa THOMAS', motif: 'demission' }], mises_a_jour: [{ nom: 'BD France', motif: 'denomination' }],
+  };
+  const inconnues = [];
+  const sansFormat = [];
+  const sansObjet = [];
+  for (const op of toutes) {
+    for (const t of [{}, typologiePleine]) {
+      const r = moteur.resoudre([op], t, ficheSansObjet);
+      for (const p of [...r.pieces.obligatoires, ...r.pieces.a_preciser, ...r.pieces.facultatives]) if (!PIECES[p.code]) inconnues.push(`${op} ${p.code}`);
+      for (const qq of r.questions) if (!['entrants', 'sortants', 'maj', 'choix'].includes(qq.type)) sansFormat.push(`${op} ${qq.id}`);
+      const demande = (r.champs.find((g) => g.op === '_registre')?.champs || []).some((c) => c.name === 'objet');
+      if (!demande && !['40M', '28M', '41M'].includes(op)) sansObjet.push(op);
+    }
+  }
+  verifier(`${toutes.length} opérations : toute pièce exigée est un type reconnu par le guichet`, !inconnues.length, inconnues);
+  verifier('toute question a un format documenté pour Claude', !sansFormat.length, sansFormat);
+  verifier('objet absent du registre : demandé pour toute modification', !sansObjet.length, [...new Set(sansObjet)]);
 
   instance.close();
   console.log(`\n${ok} vérifications${process.exitCode ? ' — ÉCHECS ci-dessus' : ' — tout est vert'}`);

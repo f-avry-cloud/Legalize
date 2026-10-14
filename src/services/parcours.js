@@ -294,6 +294,36 @@ async function majPiece(pieceId, { version, a_signer }) {
   return lire(p.formalite_id);
 }
 
+/**
+ * Range une pièce reçue sous une autre ligne de la liste (`cle`) ou sous un
+ * autre type officiel du guichet (`code`, pièce hors liste).
+ */
+async function reclasserPiece(pieceId, { cle, code } = {}) {
+  const p = await db(supabase.from('formalite_pieces').select('*').eq('id', pieceId).single());
+  const f = await charger(p.formalite_id); verifierOuvert(f);
+  const d = await lire(f.id);
+  const lignes = [...d.pieces.obligatoires, ...d.pieces.a_preciser, ...d.pieces.facultatives];
+  let cible;
+  if (cle) {
+    cible = lignes.find((l) => l.cle === cle);
+    if (!cible) throw erreur(`Aucune ligne « ${cle} » dans la liste des pièces de ce dossier.`, 422, { details: { lignes: lignes.map((l) => ({ cle: l.cle, code: l.code, piece: l.court })) } });
+  } else if (code) {
+    const memes = lignes.filter((l) => l.code === code);
+    if (memes.length > 1) {
+      throw erreur(`Plusieurs lignes portent le type ${code} : précisez laquelle.`, 422, { details: { lignes: memes.map((l) => ({ cle: l.cle, personne: l.personne || null })) } });
+    }
+    cible = memes[0] || null;
+    if (!cible && !require('../inpi/referentiels').PIECES[code]) throw erreur(`Type de pièce inconnu du guichet : ${code}.`, 422);
+  } else {
+    throw erreur('Indiquez la ligne (cle) ou le type de pièce (code PJ_xx).');
+  }
+  const nouveau = cible ? { code: cible.code, cle: cible.cle } : { code, cle: code };
+  if (nouveau.cle === p.cle && nouveau.code === p.code) return d;
+  await db(supabase.from('formalite_pieces').update(nouveau).eq('id', pieceId).select());
+  await journal(f.id, 'piece', `Pièce reclassée : ${p.filename} — ${p.code} → ${nouveau.code}${cible?.personne ? ` (${cible.personne})` : ''}.`);
+  return lire(f.id);
+}
+
 async function retirerPiece(pieceId) {
   const p = await db(supabase.from('formalite_pieces').select('*').eq('id', pieceId).single());
   await db(supabase.from('formalite_pieces').delete().eq('id', pieceId).select());
@@ -384,7 +414,10 @@ async function deposer(id) {
     // que le formulaire ciblé propose aussitôt de les corriger.
     const violations = (e.detail?.violations || []).map((v) => ({ champ: v.propertyPath, message: v.message }));
     if (violations.length) {
-      await db(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), _rejets: violations } }).eq('id', id).select());
+      // Les refus s'additionnent jusqu'au dépôt réussi : une donnée déjà
+      // corrigée reste réinjectée si le dépôt suivant échoue sur une autre.
+      const cumul = [...(f.typologie?._rejets || []).filter((r) => !violations.some((v) => v.champ === r.champ)), ...violations];
+      await db(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), _rejets: cumul } }).eq('id', id).select());
       await journal(id, 'depot', `Dépôt refusé par le guichet : ${violations.length} donnée(s) à corriger.`, { violations });
     }
     throw e;
@@ -424,5 +457,5 @@ function referentiels() {
 
 module.exports = {
   TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses,
-  ajouterPiece, inscrirePiece, cheminPiece, majPiece, retirerPiece, analyser, apercu, deposer,
+  ajouterPiece, inscrirePiece, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
 };

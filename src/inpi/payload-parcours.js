@@ -391,7 +391,7 @@ function construireCessation(dossier, op) {
   const fiche = dossier.fiche || {};
   const r = { ...(dossier.reponses?.commun || {}), ...(dossier.reponses?.[op] || {}) };
   const c = socle(copie(contenuAnterieur(fiche)));
-  completerRegistre(c, dossier.reponses?._registre || {});
+  completerRegistre(c, dossier.reponses?._registre || {}, dossier.typologie?._rejets);
   c.evenementCessation = op;
   c.natureCessation = '1';
   // Pouvoirs existants : inchangés (exigé par le guichet pour une cessation).
@@ -429,7 +429,26 @@ function dirigeants(c, r, D, fiche, t) {
 }
 
 /** Reporte les compléments saisis sur les dirigeants déjà inscrits (par rang). */
-function completerRegistre(content, r) {
+function completerRegistre(content, r, rejets = []) {
+  // Rubriques de la société absentes du registre (voir REVALIDES dans parcours.js).
+  if (content.personneMorale && ['objet', 'duree', 'date_cloture', 'capital', 'adresse_siege'].some((k) => !vide(r[k]))) {
+    const desc = chemin(content, 'personneMorale', 'identite', 'description');
+    if (!vide(r.objet)) desc.objet = String(r.objet).trim();
+    if (!vide(r.duree)) desc.duree = Number(r.duree);
+    if (!vide(r.date_cloture)) desc.dateClotureExerciceSocial = clotureInpi(r.date_cloture);
+    if (!vide(r.capital)) {
+      desc.montantCapital = Number(String(r.capital).replace(/\s/g, '').replace(',', '.'));
+      desc.deviseCapital = desc.deviseCapital || 'EUR';
+    }
+    if (r.adresse_siege?.codePostal) chemin(content, 'personneMorale', 'adresseEntreprise').adresse = adresseInpi(r.adresse_siege);
+  }
+  // Données refusées par le guichet : la valeur saisie va à l'endroit désigné.
+  const { cleRejet } = require('./parcours');
+  for (const rej of rejets || []) {
+    const ch = String(rej?.champ || '');
+    const v = r[cleRejet(ch)];
+    if (/^content\./.test(ch) && !vide(v)) poserChemin(content, ch.replace(/^content\./, ''), v);
+  }
   const pouvoirs = content.personneMorale?.composition?.pouvoirs || [];
   pouvoirs.forEach((p, i) => {
     const d = p.individu?.descriptionPersonne;
@@ -441,6 +460,30 @@ function completerRegistre(content, r) {
       if (p.entreprise) p.adresseEntreprise = a; else if (p.individu) p.individu.adresseDomicile = a;
     }
   });
+}
+
+const vide = (v) => v === undefined || v === null || String(v).trim() === '';
+
+/**
+ * Pose une valeur à un chemin du guichet (« personneMorale.identite.description.objet »,
+ * « …pouvoirs[0].individu… »), en gardant le type de la valeur déjà présente.
+ */
+function poserChemin(objet, cheminTexte, valeur) {
+  const segments = String(cheminTexte).split('.').flatMap((s) => {
+    const m = /^([^[\]]+)((?:\[\d+\])*)$/.exec(s);
+    return m ? [m[1], ...[...m[2].matchAll(/\[(\d+)\]/g)].map((x) => Number(x[1]))] : [s];
+  });
+  let o = objet;
+  for (let i = 0; i < segments.length - 1; i += 1) {
+    const k = segments[i];
+    if (o[k] === undefined || o[k] === null || typeof o[k] !== 'object') o[k] = typeof segments[i + 1] === 'number' ? [] : {};
+    o = o[k];
+  }
+  const fin = segments[segments.length - 1];
+  const actuel = o[fin];
+  o[fin] = typeof actuel === 'number' ? Number(valeur)
+    : typeof actuel === 'boolean' ? (valeur === true || String(valeur).toLowerCase() === 'true' || String(valeur).toLowerCase() === 'oui')
+      : valeur;
 }
 
 /** Opérations déposables automatiquement aujourd'hui. */
@@ -558,7 +601,10 @@ function construireCreation(dossier) {
  * @param {object} dossier { operations, typologie, reponses: { commun, [op] }, fiche, siren, reference, libelle, pieces }
  * @returns {{endpoint, methode, corps}}
  */
-function construireParcours(dossier) {
+function construireParcours(dossierRecu) {
+  // Mêmes réponses que celles que le moteur a lues pour les pièces et les champs.
+  const { normaliserTypologie } = require('./parcours');
+  const dossier = { ...dossierRecu, typologie: normaliserTypologie(dossierRecu.typologie || {}) };
   const ops = dossier.operations || [];
   if (ops.some((op) => ['01M', '02M'].includes(op))) return construireCreation(dossier);
   const cessation = ops.find((op) => CESSATIONS[op]);
@@ -574,7 +620,7 @@ function construireParcours(dossier) {
 
   const precedent = contenuAnterieur(fiche);
   const content = socle(copie(precedent));
-  completerRegistre(content, dossier.reponses?._registre || {});
+  completerRegistre(content, dossier.reponses?._registre || {}, dossier.typologie?._rejets);
   for (const op of ops) {
     const r = { ...commun, ...(dossier.reponses?.[op] || {}) };
     APPLIQUER[op](content, r, dateInpi(r.date_effet) || D, fiche, t);

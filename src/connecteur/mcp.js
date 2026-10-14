@@ -21,7 +21,8 @@ const VERSIONS_PROTOCOLE = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const CONSIGNES = [
   'Connecteur de formalités au Guichet unique de l’INPI pour le cabinet. Vous assistez un avocat mandataire.',
   'Déroulé : fiche_entreprise → exigences_formalite → ouvrir_depot_pieces (lien de dépôt des PDF à donner à l’avocat) → renseigner_formalite → pieces_recues → controler_formalite → récapitulatif de validation → enregistrer_formalite → statut_formalite.',
-  'Les PDF joints à la conversation ne peuvent pas être transmis par l’outil : ils passent par le lien de ouvrir_depot_pieces.',
+  'Les PDF joints à la conversation ne peuvent pas être transmis par l’outil : ils passent par le lien de ouvrir_depot_pieces. Une pièce rangée sous la mauvaise ligne se corrige avec reclasser_piece (ou retirer_piece).',
+  'Chaque question de qualification indique son « format » : respectez-le, une réponse mal formée est refusée. Les « Données du registre à compléter » (objet social absent du registre, donnée refusée par le guichet…) sont à demander à l’avocat.',
   'N’appelez enregistrer_formalite qu’après l’accord explicite de l’avocat (« je confirme ») sur un récapitulatif complet, avec confirmation_avocat: true. Aucun outil ne signe ni ne paie : la signature et le paiement se font sur le portail.',
   'Si un résultat indique guichet_simulation: true, dites-le à l’avocat : rien n’est transmis à l’INPI.',
   'N’inventez aucune donnée ; ne recopiez pas inutilement les données personnelles (numéro de sécurité sociale, adresse personnelle).',

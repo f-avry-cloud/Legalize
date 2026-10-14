@@ -350,7 +350,8 @@ const MOTIFS_DEPART = [
  * @param {object} t réponses de typologie (dont `manuel` : pièces cochées à la main)
  * @param {object} fiche fiche normalisée de la société (forme, dirigeants…)
  */
-function resoudre(operations, t = {}, fiche = {}, rep = {}) {
+function resoudre(operations, typologie = {}, fiche = {}, rep = {}) {
+  const t = normaliserTypologie(typologie);
   const ops = operations.filter((c) => ficheOp(c));
   const estCreation = ops.some((c) => infoOperation(c)?.creation);
   const forme = (estCreation ? creation.forme(t)?.code : fiche.forme_juridique_code) || '';
@@ -442,6 +443,7 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
     }
     // Mise à jour d'un dirigeant en place : la pièce qui établit le changement.
     if (regles.misesAJour) {
+      const avant = pieces.size;
       for (const [i, m] of (t.mises_a_jour || []).entries()) {
         if (!m?.nom) continue;
         const pm = estPersonneMorale(fiche, m.nom);
@@ -449,8 +451,16 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
         else if (pm) ajouter(`PJ_20:m${i}`, 'PJ_20', 'obligatoire', op, { personne: m.nom, raison: 'Kbis à jour, sous la nouvelle dénomination ou à la nouvelle adresse' });
         else if (m.motif === 'denomination') ajouter(`PJ_11:m${i}`, 'PJ_11', 'obligatoire', op, { personne: m.nom, raison: 'pièce d’identité sous le nouveau nom' });
       }
-      if (!(t.mises_a_jour || []).length) {
-        ajouter(`maj:${op}`, 'PJ_20', 'a_preciser', op, { court: 'Justificatif du changement', condition: 'Kbis à jour pour une société, pièce d’identité pour une personne', question: 'mises_a_jour' });
+      // Aucune ligne déclarée : le justificatif reste à apprécier. Le cocher
+      // (manuel['maj:MAJDIR'] = true) le rend obligatoire, même quand les
+      // lignes déclarées n'en appellent aucun (changement d'adresse…).
+      const cleMaj = `maj:${op}`;
+      const aucuneLigne = !(t.mises_a_jour || []).length;
+      if (pieces.size === avant && (manuel[cleMaj] === true || (aucuneLigne && manuel[cleMaj] !== false))) {
+        ajouter(cleMaj, 'PJ_20', manuel[cleMaj] === true ? 'obligatoire' : 'a_preciser', op, {
+          court: 'Justificatif du changement', condition: 'Kbis à jour pour une société, pièce d’identité pour une personne', question: 'mises_a_jour',
+          ...(manuel[cleMaj] === true ? { manuel: true } : {}),
+        });
       }
     }
     // Compléments proposés par le guichet selon la situation.
@@ -501,6 +511,12 @@ function resoudre(operations, t = {}, fiche = {}, rep = {}) {
   if (ops.length) {
     ajouter('PJ_51', 'PJ_51', 'obligatoire', ops[0], { raison: 'le cabinet dépose en qualité de mandataire : pouvoir signé par le représentant légal', redigeable: true });
     pieces.get('PJ_51').pour = ops.map(nomOperation);
+  }
+  // Le choix manuel vaut pour toute pièce, quelle que soit la règle qui l'a
+  // posée : cochée, elle est due ; décochée, une pièce « à apprécier » sort.
+  for (const [cle, p] of pieces) {
+    if (manuel[cle] === true && p.categorie !== 'obligatoire') Object.assign(p, { categorie: 'obligatoire', manuel: true });
+    else if (manuel[cle] === false && p.categorie === 'a_preciser') pieces.delete(cle);
   }
   const liste = [...pieces.values()];
   return {
@@ -649,7 +665,7 @@ function champs(ops, t, fiche, rep = {}) {
         sous_requis: ['denomination', 'siren', 'forme_juridique_code', 'adresse.codePostal', 'adresse.commune'] }],
     '40M': [{ name: 'date_cessation', label: 'Date de cessation totale d’activité', type: 'date', requis: true }],
   };
-  const complements = complementsRegistre(fiche, t._rejets || []);
+  const complements = complementsRegistre(fiche, t._rejets || [], ops);
   if (modifs.length && complements.length) {
     groupes.push({
       op: '_registre', titre: 'Données du registre à compléter',
@@ -705,9 +721,10 @@ function champs(ops, t, fiche, rep = {}) {
  * des dirigeants personnes physiques, greffe d'immatriculation des
  * personnes morales qui exercent un mandat.
  */
-function complementsRegistre(fiche, rejets = []) {
+function complementsRegistre(fiche, rejets = [], ops = []) {
   const pouvoirs = fiche?.brut?.formality?.content?.personneMorale?.composition?.pouvoirs || [];
   const out = [];
+  const refuse = (re) => rejets.some((r) => re.test(r?.champ || ''));
   // Adresses refusées lors d'un dépôt précédent : à corriger avant de redéposer.
   const adressesRefusees = new Set(rejets
     .map((r) => /composition\.pouvoirs\[(\d+)\]\.(adresseEntreprise|individu\.adresseDomicile)/.exec(r.champ || ''))
@@ -732,7 +749,100 @@ function complementsRegistre(fiche, rejets = []) {
         actuel: [a.numVoie, a.typeVoie, a.voie, a.codePostal, a.commune].filter(Boolean).join(' ') });
     }
   });
+
+  // Le guichet revalide l'identité de la société à chaque modification : une
+  // rubrique absente du registre (objet, durée…) fait rejeter le dépôt. Une
+  // cessation en est dispensée (description non exigée).
+  const seuleCessation = ops.length > 0 && ops.every((c) => CESSATIONS_GU.has(c));
+  if ((fiche?.brut || fiche?.denomination) && !seuleCessation) {
+    for (const r of REVALIDES) {
+      if (r.si && !r.si(fiche)) continue;
+      if (r.manque(fiche) || refuse(r.chemin)) {
+        out.push({ name: r.name, label: r.label, type: r.type, requis: true, aide: r.aide || 'Absent du registre ou refusé par le guichet : il l’exige à chaque dépôt.' });
+      }
+    }
+  }
+
+  // Toute autre donnée refusée par le guichet lors d'un dépôt précédent devient
+  // une donnée à compléter, réinjectée à l'endroit exact qu'il a désigné : une
+  // exigence nouvelle du guichet se corrige sans attendre une mise à jour.
+  const dejaTraites = [/composition\.pouvoirs\[\d+\]\.(adresseEntreprise|individu\.adresseDomicile)/, ...REVALIDES.map((r) => r.chemin)];
+  const vus = new Set();
+  for (const r of rejets) {
+    const ch = String(r?.champ || '');
+    if (!/^content\./.test(ch) || dejaTraites.some((re) => re.test(ch)) || vus.has(ch)) continue;
+    vus.add(ch);
+    out.push({ name: cleRejet(ch), label: `Donnée refusée par le guichet : ${cheminLisible(ch)}`, type: 'text', requis: true,
+      aide: r.message || 'Valeur exigée par le guichet.', chemin_inpi: ch });
+  }
   return out;
+}
+
+/** Formalités de cessation déposées comme telles au guichet (sans description de la société). */
+const CESSATIONS_GU = new Set(['40M', '28M', '41M']);
+
+const vide = (v) => v === undefined || v === null || String(v).trim() === '';
+const descriptionPM = (fiche) => fiche?.brut?.formality?.content?.personneMorale?.identite?.description || {};
+const formePM = (fiche) => String(fiche?.forme_juridique_code || fiche?.brut?.formality?.content?.personneMorale?.identite?.entreprise?.formeJuridique || '');
+const societeCommerciale = (fiche) => /^5[4-7]/.test(formePM(fiche));
+
+/**
+ * Rubriques de la société que le guichet revalide à chaque modification (dictionnaire
+ * de l'API : GU_DPM001 objet, GU_DPM003 durée, GU_DPM009 capital ; date de clôture
+ * obligatoire pour les formes 54xx à 57xx ; adresse du siège). Absentes du registre,
+ * elles sont demandées ; refusées par le guichet, elles sont redemandées.
+ */
+const REVALIDES = [
+  { name: 'objet', label: 'Objet social (tel qu’il figure aux statuts)', type: 'textarea', chemin: /identite\.description\.objet$/,
+    manque: (f) => vide(f.brut ? descriptionPM(f).objet : f.objet) },
+  { name: 'duree', label: 'Durée de la société, en années (statuts)', type: 'number', chemin: /identite\.description\.duree$/,
+    manque: (f) => f.brut && vide(descriptionPM(f).duree), si: societeCommerciale },
+  { name: 'date_cloture', label: 'Date de clôture de l’exercice social (jour et mois, par exemple 31/12)', type: 'text', chemin: /dateClotureExerciceSocial$/,
+    manque: (f) => f.brut && vide(descriptionPM(f).dateClotureExerciceSocial), si: societeCommerciale },
+  { name: 'capital', label: 'Montant du capital social, en euros', type: 'money', chemin: /identite\.description\.montantCapital$/,
+    manque: (f) => vide(f.brut ? descriptionPM(f).montantCapital : f.capital), si: societeCommerciale },
+  { name: 'adresse_siege', label: 'Adresse du siège social', type: 'adresse', chemin: /^content\.personneMorale\.adresseEntreprise\.adresse/,
+    manque: (f) => {
+      const a = f.brut ? f.brut.formality?.content?.personneMorale?.adresseEntreprise?.adresse : f.adresse;
+      return vide(a?.codePostal) || vide(a?.commune);
+    } },
+];
+
+/** Nom stable du champ qui répond à une donnée refusée par le guichet. */
+function cleRejet(chemin) {
+  return `rejet_${require('crypto').createHash('sha1').update(String(chemin)).digest('hex').slice(0, 10)}`;
+}
+
+function cheminLisible(ch) {
+  return String(ch).replace(/^content\./, '')
+    .replace(/composition\.pouvoirs\[(\d+)\]/, (_, i) => `dirigeant n° ${Number(i) + 1}`)
+    .replace(/\./g, ' › ');
+}
+
+/**
+ * Réponses de qualification telles que Claude ou l'écran les transmettent,
+ * ramenées à la forme du moteur : une ligne de mise à jour désignée par
+ * « dirigeant » ou décrite par « changements » est reconnue au lieu d'être
+ * ignorée en silence (elle supprimait le justificatif du changement).
+ */
+const ALIAS_CHANGEMENT = { denomination: 'denomination', nom: 'denomination', nouvelle_denomination: 'denomination', adresse: 'adresse', representant: 'representant', representant_permanent: 'representant' };
+function normaliserTypologie(t = {}) {
+  if (!Array.isArray(t.mises_a_jour) && !Array.isArray(t.entrants) && !Array.isArray(t.sortants)) return t;
+  const ligne = (m) => (m && typeof m === 'object' ? m : {});
+  const nom = (m) => m.nom || m.dirigeant || m.denomination || m.personne || '';
+  return {
+    ...t,
+    ...(Array.isArray(t.mises_a_jour) ? {
+      mises_a_jour: t.mises_a_jour.map((m0) => {
+        const m = ligne(m0);
+        const changement = [m.motif, ...(Array.isArray(m.changements) ? m.changements : [m.changements])]
+          .map((c) => ALIAS_CHANGEMENT[String(c || '').toLowerCase()]).find(Boolean);
+        return { ...m, nom: nom(m), motif: changement || m.motif || null };
+      }),
+    } : {}),
+    ...(Array.isArray(t.entrants) ? { entrants: t.entrants.map((e) => ({ ...ligne(e), nom: nom(ligne(e)) })) } : {}),
+    ...(Array.isArray(t.sortants) ? { sortants: t.sortants.map((x) => ({ ...ligne(x), nom: nom(ligne(x)) })) } : {}),
+  };
 }
 
 const NATURES_GERANCE = [['1', 'Gérance majoritaire'], ['3', 'Minoritaire ou égalitaire, avec société associée'], ['4', 'Minoritaire ou égalitaire, sans société associée'],
@@ -808,4 +918,7 @@ function operationsProposees() {
   }).filter(Boolean);
 }
 
-module.exports = { OPERATIONS, QUESTIONS, REGLES, infoOperation, pouvoirActuel, ficheOp, resoudre, operationsProposees, nomOperation, piecesEntrant, evenementAttendu };
+module.exports = {
+  OPERATIONS, QUESTIONS, REGLES, FONCTIONS, MOTIFS_DEPART, CHANGEMENTS, REVALIDES, infoOperation, pouvoirActuel, ficheOp, resoudre,
+  operationsProposees, nomOperation, piecesEntrant, evenementAttendu, normaliserTypologie, cleRejet,
+};
