@@ -609,12 +609,16 @@ async function consulterFormaliteGuichet({ reference }) {
     if (e.status !== 404) throw e;
     // Introuvable sous cet identifiant : ce que le compte mandataire voit pour la société.
     let visibles = [];
-    try { visibles = await guichet.lister({ siren: f.siren }); } catch (e2) { visibles = [{ erreur: e2.message }]; }
+    try {
+      visibles = await guichet.lister({ siren: f.siren });
+      if (!visibles.length) visibles = await guichet.lister({ itemsPerPage: 10 });
+    } catch (e2) { visibles = [{ erreur: e2.message }]; }
     return {
       reference: f.reference,
       introuvable: `Le guichet ne trouve pas la formalité n° ${f.inpi_id} (liasse ${f.numero_liasse || '—'}) sur le compte du connecteur.`,
-      formalites_du_compte_pour_ce_siren: visibles.map((x) => (x.erreur ? x : {
-        identifiant: x.inpi_id, liasse: x.numero_liasse, statut: statutInfo(x.statut).libelle, statut_brut: x.statut_brut, date: x.statut_date, montant: x.montant,
+      formalites_visibles_du_compte: visibles.map((x) => (x.erreur ? x : {
+        identifiant: x.inpi_id, liasse: x.numero_liasse, societe: x.denomination || x.brut?.companyName || null, siren: x.siren || x.brut?.siren || null,
+        statut: statutInfo(x.statut).libelle, statut_brut: x.statut_brut, date: x.statut_date, montant: x.montant,
       })),
     };
   }
