@@ -137,6 +137,13 @@ client.telecharger = async (cible, { chemin }) => {
   verifier('postes libellés, colonnes nommées', cr.rubrique === 'COMPTE DE RESULTAT' && cr.postes[0].libelle === 'Chiffres d’affaires nets' && cr.postes[0].valeurs['export N'] === 50000, cr);
   verifier('saisie et confidentialité en clair', ds.saisie === 'saisis sans anomalie' && /aucune déclaration/.test(ds.confidentialite), ds);
 
+  console.log('\nRadiation');
+  const { normaliserEntreprise } = require('../src/inpi/normalize');
+  const ficheBrute = (extra) => ({ formality: { siren: SIREN, content: { ...extra, personneMorale: { identite: { entreprise: { siren: SIREN, denomination: 'X', formeJuridique: '5710' } }, ...(extra.pm || {}) } } } });
+  verifier('radiation lue dans natureCessationEntreprise', normaliserEntreprise(ficheBrute({ natureCessationEntreprise: { dateRadiation: '2024-05-02' } })).date_radiation === '2024-05-02');
+  verifier('radiation lue dans detailCessationEntreprise', normaliserEntreprise(ficheBrute({ pm: { detailCessationEntreprise: { dateRadiation: '2023-01-10', dateCessationTotaleActivite: '2022-12-31' } } })).radiee === true);
+  verifier('société sans radiation : active', normaliserEntreprise(ficheBrute({})).radiee === false);
+
   console.log('\nLecture seule');
   verifier('aucun dossier de formalité créé ni modifié', tables.formalites.length === 0 && tables.formalite_pieces.length === 0 && tables.formalite_evenements.length === 0);
   verifier('seuls des appels de lecture (GET) au registre', appels.every((ch) => !/sso|formalit/.test(ch)));

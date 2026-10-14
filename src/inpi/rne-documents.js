@@ -127,9 +127,16 @@ async function piecesDeposees(sirenBrut) {
       } : { disponibles: false },
     };
   }).sort(parDate('date_cloture'));
+  // Statut au registre (radiée ou non) : utile pour lire les pièces d'une société disparue.
+  let statut = null;
+  try {
+    const fiche = await require('./rne').entreprise(siren);
+    statut = fiche.radiee ? `radiée${fiche.date_radiation ? ` le ${fiche.date_radiation}` : ''}` : 'immatriculée';
+  } catch (e) { statut = null; }
   return {
     siren: formaterSiren(siren),
     denomination: (r?.actes || [])[0]?.denomination?.trim() || (r?.bilans || [])[0]?.denomination?.trim() || null,
+    ...(statut ? { statut } : {}),
     actes,
     bilans,
   };

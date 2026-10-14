@@ -130,6 +130,12 @@ function normaliserEntreprise(json) {
   const forme = formeJuridique(codeForme);
   const etabPrincipal = socle.etablissementPrincipal || null;
   const activites = etabPrincipal?.activites || socle.activites || [];
+  // La radiation figure, selon le dictionnaire INPI, dans le bloc de nature de
+  // cessation (Company.natureCessationEntreprise) ou dans le détail de
+  // cessation de la personne : lire le seul champ de l'identité la manquait.
+  const cessation = socle.detailCessationEntreprise || {};
+  const dateRadiation = entreprise.dateRadiation || contenu.natureCessationEntreprise?.dateRadiation
+    || cessation.dateRadiation || '';
 
   const identitePP = pp ? (pp.identite?.entrepreneur?.descriptionPersonne || {}) : null;
 
@@ -153,7 +159,8 @@ function normaliserEntreprise(json) {
     objet: description.objet || '',
     date_immatriculation: entreprise.dateImmat || entreprise.dateImmatriculation || '',
     date_debut_activite: entreprise.dateDebutActiv || '',
-    date_radiation: entreprise.dateRadiation || '',
+    date_radiation: dateRadiation,
+    date_cessation: cessation.dateCessationTotaleActivite || '',
     code_ape: entreprise.codeApe || activites[0]?.codeApe || '',
     activite_principale: activites[0]?.descriptionDetaillee || activites[0]?.categorisationActivite1 || '',
     adresse: normaliserAdresse(socle.adresseEntreprise),
@@ -167,7 +174,7 @@ function normaliserEntreprise(json) {
       enseigne: e.descriptionEtablissement?.enseigne || '',
       adresse: normaliserAdresse(e.adresse),
     })),
-    radiee: Boolean(entreprise.dateRadiation),
+    radiee: Boolean(dateRadiation),
     brut: json,
   };
 }

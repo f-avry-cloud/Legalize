@@ -294,7 +294,7 @@ async function ficheEntreprise({ siren }) {
     capital: f.capital ?? null, devise: f.devise_capital || null, adresse: f.adresse?.texte || null,
     objet: f.objet || null, activite_principale: f.activite_principale || null,
     date_immatriculation: f.date_immatriculation || null, date_cloture: f.date_cloture || null,
-    radiee: Boolean(f.radiee), dirigeants: (f.dirigeants || []).map((d) => ({ nom: d.nom_complet, fonction: d.role_libelle || d.role || null })),
+    radiee: Boolean(f.radiee), ...(f.date_radiation ? { date_radiation: f.date_radiation } : {}), dirigeants: (f.dirigeants || []).map((d) => ({ nom: d.nom_complet, fonction: d.role_libelle || d.role || null })),
     ...modes(),
   };
 }
