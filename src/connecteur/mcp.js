@@ -43,6 +43,11 @@ const echec = (id, code, message) => ({ jsonrpc: '2.0', id: id ?? null, error: {
 async function appeler(nom, args) {
   const outil = OUTILS.find((o) => o.name === nom);
   if (!outil) return null;
+  // Sans clé de service, la connexion et la liste des outils restent
+  // possibles : seul l'appel d'un outil explique ce qui manque.
+  if (!clientService()) {
+    return { isError: true, content: [{ type: 'text', text: 'Connecteur incomplet : la clé secrète Supabase (variable SUPABASE_SERVICE_ROLE_KEY) n’est pas encore enregistrée dans Vercel. Indiquez à l’avocat de l’ajouter puis de redéployer.' }] };
+  }
   try {
     const resultat = await outil.run(args || {});
     return { content: [{ type: 'text', text: JSON.stringify(resultat, null, 1) }] };
@@ -98,8 +103,6 @@ routeur.all('/:jeton', async (req, res) => {
   if (!jetonValide(req.params.jeton)) return res.status(404).json({ error: 'Introuvable' });
   if (req.method !== 'POST') return res.set('Allow', 'POST').status(405).json({ error: 'Méthode non autorisée' });
   const service = clientService();
-  if (!service) return res.status(503).json(echec(null, -32000, 'Connecteur non configuré : clé de service Supabase absente.'));
-
   const lot = Array.isArray(req.body) ? req.body : [req.body];
   const reponses = [];
   await dansContexte({ client: service, utilisateur: null }, async () => {

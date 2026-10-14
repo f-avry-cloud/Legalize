@@ -178,7 +178,11 @@ function verifier(nom, condition, detail) {
 
   const service = faux.service;
   faux.service = null;
-  verifier('sans clé de service : connecteur fermé (503)', (await rpc('ping', {})).statut === 503);
+  const sansCle = await rpc('tools/list', {});
+  const outilSansCle = await rpc('tools/call', { name: 'lister_formalites', arguments: {} });
+  verifier('sans clé de service : connexion possible, l’outil explique ce qui manque',
+    sansCle.statut === 200 && sansCle.corps.result.tools.length === 11
+    && outilSansCle.corps.result.isError && /SUPABASE_SERVICE_ROLE_KEY/.test(outilSansCle.corps.result.content[0].text), outilSansCle.corps);
   faux.service = service;
 
   console.log('\nOnglet « Suivi Formalités AI »');
