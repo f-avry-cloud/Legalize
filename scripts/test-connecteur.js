@@ -249,6 +249,11 @@ function verifier(nom, condition, detail) {
   fM.fiche = ficheSansObjet;
   const r2 = await outil('renseigner_formalite', { reference: refM, typologie: formeClaude, reponses: { commun: { date_decision: '2026-09-01' } } });
   verifier('dossier : Kbis de BD France exigé', r2.json.pieces.obligatoires.some((p) => p.cle === 'PJ_20:m0'), r2.json.pieces);
+  verifier('le pré-remplissage du registre ne vaut pas déclaration du changement',
+    r2.json.etat.champs_manquants.some((m) => /BD France.*changement à déclarer/.test(m)), r2.json.etat.champs_manquants);
+  const prerempliBD = r2.json.champs.find((g) => g.groupe === 'MAJDIR').champs.find((c) => c.name === 'maj_0').valeur;
+  const inchangee = await outil('renseigner_formalite', { reference: refM, reponses: { MAJDIR: { maj_0: prerempliBD } } });
+  verifier('dénomination recopiée à l’identique : bloquant', inchangee.json.etat.champs_manquants.some((m) => /identique/.test(m)), inchangee.json.etat.champs_manquants);
   const jetonM = ouvM.json.lien_depot.split('/').pop();
   const deposerM = async (corps, nom) => {
     const t = await http('POST', `/depot/${jetonM}/televersement`, { ...corps, nom, taille: PDF.length });

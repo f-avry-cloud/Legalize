@@ -142,8 +142,9 @@ async function lire(id) {
   const groupes = res.champs.map((g) => ({
     ...g,
     champs: g.champs.map((c) => {
-      const v = rep[g.op]?.[c.name] ?? (c.defaut !== undefined ? c.defaut : (c.prerempli || null));
-      const manque = rempli(v, c) ? creationPc.manquants(c, v) : [];
+      const saisi = rep[g.op]?.[c.name];
+      const v = saisi ?? (c.defaut !== undefined ? c.defaut : (c.prerempli || null));
+      const manque = rempli(v, c) ? [...creationPc.manquants(c, v), ...changementNonDeclare(c, saisi)] : [];
       return { ...c, valeur: v, rempli: rempli(v, c) && !manque.length, manquants: manque, origine: rep._origine?.[`${g.op}.${c.name}`] || null };
     }),
   }));
@@ -193,6 +194,27 @@ async function lire(id) {
         && !pieces.some((p) => p.version === 'provisoire'),
     },
   };
+}
+
+/**
+ * Un champ pré-rempli depuis le registre ne déclare pas le changement : il
+ * doit être saisi, et la donnée qui change doit différer de l'actuelle. Sans
+ * cela, la formalité partirait au greffe sans la modification.
+ */
+function changementNonDeclare(c, saisi) {
+  if (!c.saisie_requise) return [];
+  if (saisi === undefined || saisi === null) return ['changement à déclarer (les données affichées sont celles du registre)'];
+  const norme = (x) => String(x ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const avant = c.prerempli || {};
+  if (c.change === 'denomination') {
+    const apres = saisi.denomination ?? saisi.nom;
+    if (norme(apres) === norme(avant.denomination ?? avant.nom)) return ['nouvelle dénomination identique à celle du registre'];
+  }
+  if (c.change === 'adresse') {
+    const cle = (a) => ['numVoie', 'typeVoie', 'voie', 'codePostal', 'commune'].map((k) => norme(a?.[k])).join('|');
+    if (cle(saisi.adresse) === cle(avant.adresse)) return ['nouvelle adresse identique à celle du registre'];
+  }
+  return [];
 }
 
 function resumePiece(p) {

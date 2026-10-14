@@ -680,14 +680,16 @@ function champs(ops, t, fiche, rep = {}) {
         if (!m?.nom) continue;
         const actuel = pouvoirActuel(fiche, m.nom);
         const libelle = `${m.nom} — ${(CHANGEMENTS.find(([c]) => c === m.motif) || [null, 'changement'])[1].toLowerCase()}`;
+        // Le pré-remplissage reprend le registre : il ne vaut pas déclaration du
+        // changement, qui doit être saisi (saisie_requise), et différer (change).
         liste.push(actuel?.entreprise
-          ? { name: `maj_${i}`, label: libelle, type: 'personne_morale', requis: true, representant_requis: m.motif === 'representant',
+          ? { name: `maj_${i}`, label: libelle, type: 'personne_morale', requis: true, saisie_requise: true, change: m.motif, representant_requis: m.motif === 'representant',
             aide: 'Les données actuelles du registre sont reprises : corrigez ce qui change.', sous_requis: ['denomination', 'adresse.codePostal', 'adresse.commune'],
             prerempli: {
               denomination: actuel.entreprise.denomination, siren: actuel.entreprise.siren, forme_juridique_code: actuel.entreprise.formeJuridique,
               greffe: actuel.entreprise.lieuRegistre, adresse: adresseFiche(actuel.adresseEntreprise),
             } }
-          : { name: `maj_${i}`, label: libelle, type: 'personne', requis: true, aide: 'Les données actuelles du registre sont reprises : corrigez ce qui change.',
+          : { name: `maj_${i}`, label: libelle, type: 'personne', requis: true, saisie_requise: true, change: m.motif, aide: 'Les données actuelles du registre sont reprises : corrigez ce qui change.',
             sous_requis: ['nom', 'adresse.codePostal', 'adresse.commune'],
             prerempli: {
               nom: actuel?.individu?.descriptionPersonne?.nom, prenoms: (actuel?.individu?.descriptionPersonne?.prenoms || []).join(' '),
