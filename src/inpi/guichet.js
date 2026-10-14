@@ -36,7 +36,8 @@ function motifSimulation() {
 function montantDe(brute) {
   const panier = Array.isArray(brute?.carts) ? brute.carts[0] : brute?.carts;
   const total = panier?.total ?? brute?.amount ?? null;
-  return total === null || total === undefined ? null : Number(total);
+  // Le guichet compte en centimes (OpenAPI : « Total TTC en centimes d'euros du panier »).
+  return total === null || total === undefined ? null : Math.round(Number(total)) / 100;
 }
 
 /** Projette une formalité du Guichet unique sur le modèle interne. */
@@ -306,6 +307,12 @@ async function supprimer(id) {
   return { ok: true };
 }
 
+/** La formalité telle que le guichet la conserve (lecture seule, JSON complet). */
+async function brut(id) {
+  if (String(id).startsWith('SIM-')) return mock.statutSimule(id);
+  return appel('guichet', { chemin: chemin(config.guichet.paths.formalite, { id }) });
+}
+
 async function listerPieces(id) {
   if (String(id).startsWith('SIM-')) return [];
   const rep = await appel('guichet', { chemin: chemin(config.guichet.paths.piecesFormalite, { id }) });
@@ -316,6 +323,6 @@ async function listerPieces(id) {
 
 module.exports = {
   deposer, mettreAJour, lire, lister, listerTout, regularisations, historique,
-  signer, synthese, payer, ajouterPiece, listerPieces, supprimer,
+  signer, synthese, payer, ajouterPiece, listerPieces, supprimer, brut,
   normaliserFormalite, simulationActive, motifSimulation,
 };

@@ -168,7 +168,7 @@ function deposerSimule(requete) {
     referenceMandataire: enveloppe.referenceMandataire || null,
     status: 'RECEIVED',
     statusDate: new Date().toISOString(),
-    carts: { total: depots.get(id).montant },
+    carts: { total: Math.round(depots.get(id).montant * 100) }, // en centimes, comme le guichet
     _simule: true,
   };
 }
@@ -207,7 +207,7 @@ function statutSimule(id) {
     liasseNumber: id,
     status: etat.etape,
     statusDate: new Date().toISOString(),
-    carts: { total: etat.montant, paymentDate: etat.paiement || null },
+    carts: { total: Math.round(etat.montant * 100), paymentDate: etat.paiement || null },
     signedDate: etat.signature || null,
     regularisations,
     _simule: true,

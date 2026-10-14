@@ -576,6 +576,59 @@ async function telechargerComptes({ id, pages }) {
   return { comptes: r.meta, ...remise, donnees_saisies: r.saisis || { disponibles: false }, texte: vueTexte(r.texte) };
 }
 
+/* --------------------------------------------- formalité vue du guichet */
+
+/** Valeurs vides d'un objet, avec leur chemin : ce que le portail demandera de compléter. */
+function champsVides(o, prefixe = '', out = [], profondeur = 0) {
+  if (!o || typeof o !== 'object' || profondeur > 8 || out.length > 200) return out;
+  for (const [k, v] of Object.entries(o)) {
+    const ch = prefixe ? (Array.isArray(o) ? `${prefixe}[${k}]` : `${prefixe}.${k}`) : k;
+    if (v === null || v === '') out.push(ch);
+    else if (typeof v === 'object') champsVides(v, ch, out, profondeur + 1);
+  }
+  return out;
+}
+
+/**
+ * La formalité telle que le guichet l'a enregistrée : statut, frais, pièces,
+ * données vides, et le texte du document de synthèse que le portail présente
+ * à la signature. Lecture seule.
+ */
+async function consulterFormaliteGuichet({ reference }) {
+  const f = await chargerParReference(reference);
+  if (!f.inpi_id) throw erreur('Ce dossier n’a pas encore été enregistré au guichet.', 409);
+  if (String(f.inpi_id).startsWith('SIM-')) throw erreur('Dossier simulé : il n’existe pas au guichet.', 409);
+  const brut = await guichet.brut(f.inpi_id);
+  const norm = guichet.normaliserFormalite(brut, f.inpi_id);
+  const panier = Array.isArray(brut?.carts) ? brut.carts[0] : brut?.carts;
+  const frais = (panier?.cartRates || []).map((r) => ({
+    libelle: r.rate?.label || r.rate?.libelle || r.label || r.rate?.code || null,
+    code: r.rate?.code || r.code || null,
+    montant: typeof r.amount === 'number' ? r.amount / 100 : null,
+  }));
+  let pieces = [];
+  try { pieces = await guichet.listerPieces(f.inpi_id); } catch (e) { pieces = [{ erreur: e.message }]; }
+  let synthese = null;
+  try {
+    const pdf = await guichet.synthese(f.inpi_id);
+    const t = await require('../inpi/texte-pdf').textePdf(pdf, { budgetMs: 20000, maxCaracteres: 40000 });
+    synthese = { pages: t.pages_total, texte: t.texte, ...(t.pages_restantes.length ? { pages_non_lues: t.pages_restantes.join(',') } : {}) };
+  } catch (e) { synthese = { indisponible: e.message }; }
+  const contenu = brut?.content || {};
+  return {
+    reference: f.reference,
+    inpi: { identifiant: f.inpi_id, liasse: norm.numero_liasse, statut: statutInfo(norm.statut).libelle, statut_brut: norm.statut_brut },
+    frais: { total_ttc: norm.montant, detail: frais },
+    evenements_reconnus: brut?.events || [],
+    pieces_au_guichet: pieces,
+    donnees_vides: {
+      formalite: champsVides(Object.fromEntries(Object.entries(brut || {}).filter(([k]) => !['content', 'carts', 'attachments'].includes(k)))).slice(0, 60),
+      contenu: champsVides(contenu).slice(0, 150),
+    },
+    synthese_portail: synthese,
+  };
+}
+
 /* ------------------------------------------------------------ définitions */
 
 const REFERENCE = { type: 'string', description: 'Référence du dossier renvoyée par ouvrir_depot_pieces (ex. LGZ-2026-00012).' };
@@ -700,6 +753,13 @@ const OUTILS = [
     description: 'Statut à jour d’un dossier (relu auprès du guichet s’il est enregistré), action attendue et par qui, régularisations demandées, journal.',
     inputSchema: { type: 'object', properties: { reference: REFERENCE }, required: ['reference'] },
     run: statutFormalite,
+  },
+  {
+    name: 'consulter_formalite_guichet',
+    description: 'La formalité telle que le guichet unique l’a enregistrée : statut, détail des frais, pièces reçues, données restées vides, '
+      + 'et le texte du document de synthèse présenté à la signature. À utiliser quand le portail réclame des informations avant de signer. Lecture seule.',
+    inputSchema: { type: 'object', properties: { reference: REFERENCE }, required: ['reference'] },
+    run: consulterFormaliteGuichet,
   },
   {
     name: 'lister_pieces_deposees',
