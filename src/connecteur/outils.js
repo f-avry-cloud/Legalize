@@ -358,4 +358,6 @@ module.exports = {
   formalites, exigences, rechercherEntreprise, ficheEntreprise, controlerFormalite,
   ouvrirDepotPieces, listerPiecesRecues, enregistrerFormalite, statutFormalite, listerFormalites,
   modeGuichet, ACTIONS,
+  // Briques réutilisées par l'outil en ligne de commande (scripts/gu.js).
+  synthese, apercu, lisible, exigerType,
 };

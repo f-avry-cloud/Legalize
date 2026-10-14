@@ -65,6 +65,12 @@ npm run dev               # serveur avec rechargement (node --watch)
    de l'avocat, suivi. Ni signature ni paiement. Mise en service :
    [docs/connecteur.md](docs/connecteur.md).
 
+8. **Formalités avec Claude Code** — un dossier par session Claude Code dans le
+   cloud (iPhone, Windows), PDF joints envoyés au Guichet unique, registre et
+   tableau de suivi dans OneDrive, e-mail de suivi chaque matin. Outil
+   `scripts/gu.js`, skill `dossier-formalite` :
+   [docs/claude-code-formalites.md](docs/claude-code-formalites.md).
+
 ## Architecture
 
 ```
