@@ -168,6 +168,8 @@ const PC_ETAPES = [
 
 async function vueParcours(id) {
   [pcDossier] = await Promise.all([apiParcours('GET', `/parcours/${id}`), getEtatInpi(), pcReferentiels()]);
+  // Un dossier mené par l'assistant se suit dans son onglet, sans modification ici.
+  if (pcDossier.origine === 'assistant') { location.replace(`#/formalites-ai/${id}`); return; }
   if (!pcEtape || pcEtape.id !== id) pcEtape = { id, nom: etapeConseillee(pcDossier) };
   pcAfficher();
 }

@@ -17,6 +17,8 @@ const router = express.Router();
 router.use(require('./routes-formalites'));
 router.use(require('./routes-rmt'));
 router.use(require('./routes-parcours'));
+// Suivi des formalités menées par Claude via le connecteur (lecture seule).
+router.use(require('./routes-formalites-ai'));
 // Dossiers, clients, contacts : le suivi des missions du cabinet.
 router.use(require('./modules/dossiers/routes'));
 // Revue quotidienne des mails : propositions de l'assistant, validées ici.

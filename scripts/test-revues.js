@@ -64,7 +64,7 @@ function verifier(nom, condition, detail) {
     { id: 1, revue_id: 1, dossier_cle: 'alpha', nature: 'creer_dossier', statut: 'proposee', justification: 'Fil Alpha actif',
       donnees: { titre: 'Alpha — acquisition', type: 'acquisition', client_nom: 'Fonds Exemple', client_nature: 'societe',
         parties: [{ denomination: 'ALPHA SAS', role: 'cible' }], donnees: { date_closing_visee: '2026-10-14' } } },
-    { id: 2, revue_id: 1, dossier_cle: 'alpha', nature: 'creer_tache', statut: 'proposee', donnees: { titre: 'Relire les quatre projets', echeance: '2026-10-12' } },
+    { id: 2, revue_id: 1, dossier_cle: 'alpha', nature: 'creer_tache', statut: 'proposee', donnees: { titre: 'Relire les quatre projets', echeance: require('../src/modules/revues/service').jourParis(5) } },
     { id: 3, revue_id: 1, dossier_cle: 'alpha', nature: 'ajouter_contact', statut: 'proposee', donnees: { prenom: 'Charlotte', nom: 'Exemple', email: 'Avocat@Confrere.test', fonction: 'Avocat (conseil des porteurs)' } },
     { id: 4, revue_id: 1, dossier_cle: 'alpha', nature: 'creer_echeance', statut: 'proposee', donnees: { libelle: 'Closing', date: '2026-10-14' } },
     { id: 5, revue_id: 1, dossier_cle: 'beta', nature: 'creer_dossier', statut: 'proposee', donnees: { titre: 'Beta', type: 'question_ponctuelle', client_nom: 'Beta' } },

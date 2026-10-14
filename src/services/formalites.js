@@ -477,10 +477,14 @@ async function lister(filtres = {}) {
   if (filtres.statut) requete = requete.eq('statut', filtres.statut);
   if (filtres.societe_id) requete = requete.eq('societe_id', filtres.societe_id);
   if (filtres.type) requete = requete.eq('type', filtres.type);
-  const [formalites, societes] = await Promise.all([
+  if (filtres.origine) requete = requete.eq('origine', filtres.origine);
+  const [lignes, societes] = await Promise.all([
     db(requete),
     db(supabase.from('societes').select('id, denomination')),
   ]);
+  // Les dossiers ouverts par l'assistant (connecteur Guichet unique) ont leur
+  // propre onglet, en lecture seule : l'écran des formalités ne les modifie pas.
+  const formalites = filtres.horsAssistant ? lignes.filter((f) => f.origine !== 'assistant') : lignes;
   const aujourdhui = new Date().toISOString().slice(0, 10);
   return formalites.map((f) => {
     const info = statutInfo(f.statut);
@@ -502,7 +506,7 @@ async function lister(filtres = {}) {
 
 /** Tableau de bord : ce qui attend une action de notre côté d'abord. */
 async function tableauDeBord() {
-  const formalites = await lister();
+  const formalites = await lister({ horsAssistant: true });
   const parStatut = {};
   for (const f of formalites) parStatut[f.statut] = (parStatut[f.statut] || 0) + 1;
 

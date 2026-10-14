@@ -119,7 +119,18 @@ function requete(table) {
 }
 
 const faux = {
-  supabase: { from: (table) => requete(table) },
+  supabase: {
+    from: (table) => requete(table),
+    // Adresse d'envoi signée (page de dépôt du connecteur) : le test dépose
+    // ensuite le fichier lui-même dans `fichiers`.
+    storage: {
+      from: () => ({
+        async createSignedUploadUrl(chemin) {
+          return { data: { signedUrl: `${faux.urlStockage}/storage/v1/object/upload/sign/documents/${chemin}?token=t`, token: 't', path: chemin }, error: null };
+        },
+      }),
+    },
+  },
   async q(promise) {
     const { data, error } = await promise;
     if (error) { const e = new Error(error.message); e.status = /0 rows/.test(error.message) ? 404 : 500; throw e; }
@@ -130,8 +141,14 @@ const faux = {
   async downloadFile(chemin) { return fichiers.get(chemin) || Buffer.from(''); },
   async removeFiles(chemins) { (chemins || []).forEach((c) => fichiers.delete(c)); return (chemins || []).length; },
   BUCKET: 'documents',
+  SUPABASE_URL: 'https://stockage.test',
+  SUPABASE_KEY: 'cle-publique-test',
   // Pas de session dans les tests unitaires : ni contexte ni utilisateur.
   garderContexte: (middleware) => middleware,
+  // Client « service » du connecteur : présent par défaut, retiré par un test.
+  service: {},
+  urlStockage: 'https://stockage.test',
+  clientService: () => faux.service,
   dansContexte: (valeurs, suite) => suite(),
   // Membre connecté simulé : faux.connecte = { id, … }.
   connecte: null,

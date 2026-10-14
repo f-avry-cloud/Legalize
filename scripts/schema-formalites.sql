@@ -109,3 +109,12 @@ alter table formalite_pieces add column if not exists version text not null defa
 alter table formalite_pieces add column if not exists a_signer boolean not null default false;
 alter table formalite_pieces add column if not exists extraction jsonb;
 create index if not exists formalite_pieces_cle_idx on formalite_pieces (formalite_id, cle);
+
+-- ---------------------------------------------------------------------------
+-- Connecteur « Guichet unique » (Claude hors de l'application) : les dossiers
+-- qu'il ouvre portent l'origine « assistant ». Le lien de dépôt des pièces
+-- envoyé à l'avocat n'est conservé que sous forme d'empreinte (sha256) et
+-- expire au bout de 7 jours.
+alter table formalites add column if not exists depot_jeton text unique;
+alter table formalites add column if not exists depot_expire timestamptz;
+create index if not exists formalites_origine_idx on formalites (origine);

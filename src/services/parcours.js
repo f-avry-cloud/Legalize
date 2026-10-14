@@ -159,6 +159,7 @@ async function lire(id) {
     id: f.id,
     reference: f.reference,
     libelle: f.libelle,
+    origine: f.origine || 'locale',
     statut: f.statut,
     inpi_id: f.inpi_id,
     numero_liasse: f.numero_liasse,
@@ -252,14 +253,26 @@ async function ajouterPiece(id, { cle, code, version = 'definitive', a_signer = 
   if (fichier.size > 10 * 1024 * 1024) throw erreur('Fichier de plus de 10 Mo : le guichet le refuserait.', 422);
   // Constaté par essai : le guichet refuse un PDF abîmé (« pièce jointe corrompue »).
   if (!(await pdfLisible(fichier.buffer))) throw erreur(MESSAGE_ILLISIBLE, 422);
-  const nom = fichier.originalname.replace(/[^\w.\-]+/g, '_');
-  const chemin = `formalites/${id}/${code}_${Date.now()}_${nom}`;
+  const chemin = cheminPiece(id, code, fichier.originalname);
   await uploadFile(chemin, fichier.buffer, 'application/pdf');
+  return inscrirePiece(id, { cle, code, version, a_signer, filename: fichier.originalname, filepath: chemin, taille: fichier.size });
+}
+
+/** Emplacement d'une pièce dans le stockage. */
+function cheminPiece(id, code, nomFichier) {
+  return `formalites/${id}/${code}_${Date.now()}_${String(nomFichier).replace(/[^\w.\-]+/g, '_')}`;
+}
+
+/**
+ * Inscrit au dossier une pièce déjà présente dans le stockage (chargée par
+ * l'écran, ou déposée par l'avocat depuis le lien du connecteur).
+ */
+async function inscrirePiece(id, { cle, code, version = 'definitive', a_signer = false, filename, filepath, taille, origine = '' }) {
   const piece = await db(supabase.from('formalite_pieces').insert({
-    formalite_id: id, code, cle: cle || code, libelle: '', filename: fichier.originalname, filepath: chemin,
-    taille: fichier.size, version: version === 'provisoire' ? 'provisoire' : 'definitive', a_signer: a_signer === true || a_signer === 'true',
+    formalite_id: id, code, cle: cle || code, libelle: '', filename, filepath,
+    taille, version: version === 'provisoire' ? 'provisoire' : 'definitive', a_signer: a_signer === true || a_signer === 'true',
   }).select().single());
-  await journal(id, 'piece', `Pièce chargée : ${code} (${fichier.originalname})${piece.version === 'provisoire' ? ', version provisoire' : ''}.`);
+  await journal(id, 'piece', `Pièce chargée${origine} : ${code} (${filename})${piece.version === 'provisoire' ? ', version provisoire' : ''}.`);
   // Une version définitive remplace les brouillons de la même pièce (pouvoir rédigé, acte provisoire…).
   if (piece.version === 'definitive') {
     const brouillons = (await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).eq('cle', cle || code)))
@@ -411,5 +424,5 @@ function referentiels() {
 
 module.exports = {
   TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses,
-  ajouterPiece, majPiece, retirerPiece, analyser, apercu, deposer,
+  ajouterPiece, inscrirePiece, cheminPiece, majPiece, retirerPiece, analyser, apercu, deposer,
 };

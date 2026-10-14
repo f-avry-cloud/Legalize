@@ -146,6 +146,7 @@ router.get('/formalites', async (req, res) => {
   res.json(await formalites.lister({
     statut: req.query.statut, type: req.query.type,
     societe_id: req.query.societe_id ? Number(req.query.societe_id) : undefined,
+    horsAssistant: true,
   }));
 });
 

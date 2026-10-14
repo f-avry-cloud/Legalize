@@ -34,6 +34,21 @@ function clientPour(jeton) {
   });
 }
 
+/**
+ * Client « service » : agit sans session, au-dessus des règles d'accès. Réservé
+ * au connecteur Guichet unique (Claude hors de l'application) et à la page de
+ * dépôt des pièces, qui s'authentifient par leur propre jeton. La clé ne vit
+ * que dans les variables d'environnement du serveur ; sans elle, ces deux
+ * entrées restent fermées.
+ */
+let SERVICE = null;
+function clientService() {
+  const cle = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!cle) return null;
+  if (!SERVICE) SERVICE = createClient(SUPABASE_URL, cle, OPTIONS);
+  return SERVICE;
+}
+
 const contexte = new AsyncLocalStorage();
 
 /** Exécute la suite de la requête avec le client et l'utilisateur donnés. */
@@ -114,5 +129,5 @@ async function removeFiles(paths) {
 
 module.exports = {
   supabase, q, qCount, uploadFile, downloadFile, removeFiles, BUCKET,
-  SUPABASE_URL, SUPABASE_KEY, anonyme, clientPour, dansContexte, garderContexte, utilisateurCourant,
+  SUPABASE_URL, SUPABASE_KEY, anonyme, clientPour, clientService, dansContexte, garderContexte, utilisateurCourant,
 };

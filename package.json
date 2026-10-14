@@ -21,7 +21,8 @@
     "test:acces": "node scripts/test-acces.js",
     "test:dossiers": "node scripts/test-dossiers.js",
     "test:revues": "node scripts/test-revues.js",
-    "banc:guichet": "node scripts/banc-guichet.js"
+    "banc:guichet": "node scripts/banc-guichet.js",
+    "test:connecteur": "node scripts/test-connecteur.js"
   },
   "engines": {
     "node": ">=20"

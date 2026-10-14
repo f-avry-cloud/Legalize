@@ -35,6 +35,12 @@ app.get(['/', '/index.html'], (req, res) => {
 });
 app.get('/api/version', (req, res) => res.json({ version: VERSION }));
 
+// Connecteur « Guichet unique » (Claude hors de l'application) et page de
+// dépôt des pièces qu'il remet à l'avocat : chacun s'authentifie par son
+// propre jeton, pas par la session de l'application.
+app.use('/mcp', require('./src/connecteur/mcp').routeur);
+app.use('/depot', require('./src/connecteur/depot').routeur);
+
 // Tout le reste de l'API exige la session d'un membre du cabinet.
 const { exigerConnexion } = require('./src/auth');
 app.use('/api', exigerConnexion);
