@@ -29,6 +29,8 @@ sont effacées dès que le Guichet unique les a reçues.
 - **L'URL du connecteur est la clé** : `https://<hôte>/api/mcp/<CONNECTEUR_SECRET>`.
   Ne la communiquez à personne. Pour la révoquer, changez `CONNECTEUR_SECRET`
   sur Vercel et redéployez, puis remplacez l'URL dans Claude.
+- L'URL apparaît dans les journaux de requêtes de Vercel : réservez l'accès au
+  projet Vercel aux seules personnes de confiance.
 - Sans `CONNECTEUR_SECRET` (ou s'il fait moins de 32 caractères), toutes les
   routes du connecteur répondent 404 : il est fermé par défaut.
 - Les liens de dépôt des pièces sont signés (HMAC dérivé du secret), limités
