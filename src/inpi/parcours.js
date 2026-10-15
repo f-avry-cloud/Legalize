@@ -787,7 +787,7 @@ function complementsRegistre(fiche, rejets = [], ops = [], t = {}) {
   // Toute autre donnée refusée par le guichet lors d'un dépôt précédent devient
   // une donnée à compléter, réinjectée à l'endroit exact qu'il a désigné : une
   // exigence nouvelle du guichet se corrige sans attendre une mise à jour.
-  const dejaTraites = [/composition\.pouvoirs\[\d+\]\.(adresseEntreprise|individu\.adresseDomicile)/, ...REVALIDES.map((r) => r.chemin)];
+  const dejaTraites = [/composition\.pouvoirs\[\d+\]\.(adresseEntreprise|individu\.adresseDomicile|representant)/, ...REVALIDES.map((r) => r.chemin)];
   const vus = new Set();
   for (const r of rejets) {
     const ch = String(r?.champ || '');
@@ -797,6 +797,26 @@ function complementsRegistre(fiche, rejets = [], ops = [], t = {}) {
       aide: r.message || 'Valeur exigée par le guichet.', chemin_inpi: ch });
   }
   return out;
+}
+
+/**
+ * Un chemin refusé par le guichet (« content.personneMorale.composition.pouvoirs[1].representant… »)
+ * porte-t-il sur ce champ du dossier (« _registre.representant_1 ») ?
+ */
+function champVise(cleChamp, cheminRefuse) {
+  const [groupe, name] = String(cleChamp || '').split('.');
+  const ch = String(cheminRefuse || '');
+  if (groupe !== '_registre') return false;
+  const m = /^(representant|genre|forme_sociale|greffe|adresse)_(\d+)$/.exec(name || '');
+  if (m) {
+    const pouvoir = `composition\\.pouvoirs\\[${m[2]}\\]\\.`;
+    const suite = { representant: 'representant', genre: 'individu\\.descriptionPersonne\\.genre', forme_sociale: 'individu\\.descriptionPersonne\\.formeSociale',
+      greffe: 'entreprise\\.lieuRegistre', adresse: '(adresseEntreprise|individu\\.adresseDomicile)' }[m[1]];
+    return new RegExp(pouvoir + suite).test(ch);
+  }
+  const r = REVALIDES.find((x) => x.name === name);
+  if (r) return r.chemin.test(ch);
+  return name === cleRejet(ch);
 }
 
 /** Formalités de cessation déposées comme telles au guichet (sans description de la société). */
@@ -941,5 +961,5 @@ function operationsProposees() {
 
 module.exports = {
   OPERATIONS, QUESTIONS, REGLES, FONCTIONS, MOTIFS_DEPART, CHANGEMENTS, REVALIDES, infoOperation, pouvoirActuel, ficheOp, resoudre,
-  operationsProposees, nomOperation, piecesEntrant, evenementAttendu, normaliserTypologie, cleRejet,
+  operationsProposees, nomOperation, piecesEntrant, evenementAttendu, normaliserTypologie, cleRejet, champVise,
 };

@@ -35,7 +35,7 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `catalogue_operations` | Opérations disponibles (codes évènements) |
 | `exigences_formalite` | Questions, champs et pièces exigés, sans créer de dossier |
 | `ouvrir_depot_pieces` | Ouvre (ou met à jour) le dossier et rend un lien de dépôt des PDF, valable 7 jours |
-| `renseigner_formalite` | Complète le dossier (qualification, valeurs) |
+| `renseigner_formalite` | Complète le dossier (qualification, valeurs) ; lève l'exigence d'un champ sur instruction de l'avocat (`exigences_champs`) |
 | `pieces_recues` | Pièces reçues et manquantes |
 | `controler_formalite` | Bloquants, alertes, échéance, mode simulation |
 | `enregistrer_formalite` | Transmission au guichet, **uniquement avec `confirmation_avocat: true`** |
@@ -90,6 +90,30 @@ Le portail du guichet n'ouvre la signature que si la société est complète, m�
 - **caractères** : apostrophe et guillemets typographiques, points de suspension, tirets longs, puces et
   retours à la ligne sont remplacés avant l'envoi (`src/inpi/texte-guichet.js`) ; l'état antérieur et les
   pièces ne sont pas retouchés.
+
+## Lever l'exigence d'un champ (décision de l'avocat)
+
+Un champ « requis » que le guichet n'exige pas pour un dossier donné (par exemple le représentant d'un commissaire
+aux comptes personne morale inchangé) peut être levé, **sur instruction expresse de l'avocat seulement**, par le
+paramètre `exigences_champs` de `renseigner_formalite` ou `ouvrir_depot_pieces` :
+
+```json
+[{ "champ": "_registre.representant_1", "requis": false, "motif": "Représentant du CAC inchangé, non exigé par le portail, décision de l'avocat" }]
+```
+
+- Le motif est obligatoire ; `{"champ": …, "requis": true}` rétablit l'exigence.
+- Seules les « Données du registre à compléter » (groupe `_registre`) peuvent être levées. Sont refusés : le SIREN,
+  la date de décision, la donnée qui fait l'objet du changement (ex. `MAJDIR.maj_0`), les champs des opérations, une
+  donnée déjà refusée par le guichet, et les pièces (qui gardent `typologie.manuel`).
+- Une levée ne couvre que l'absence : une donnée saisie mais erronée (clé invalide, changement identique) reste bloquante.
+- Effet : le bloquant devient une alerte de `controler_formalite` (« exigence levée à la demande de l'avocat — motif :
+  … ») et figure dans `exigences_levees`, à reprendre dans le récapitulatif de validation. Chaque levée et chaque
+  rétablissement sont inscrits au journal du dossier.
+- À l'enregistrement, un champ levé vide ou incomplet n'est pas transmis : aucune valeur fictive.
+- Si le guichet refuse malgré tout la liasse sur ce champ, l'erreur le dit en clair et l'exigence est rétablie d'office.
+- `enregistrer_formalite` exige toujours `confirmation_avocat: true`.
+
+Stockage : `typologie.manuel_champs` (`{"<groupe>.<name>": {"requis": false, "motif", "date"}}`).
 
 ## Garde-fous
 

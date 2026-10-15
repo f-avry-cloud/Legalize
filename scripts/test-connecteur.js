@@ -376,6 +376,92 @@ function verifier(nom, condition, detail) {
   verifier('dossier corrigé : enregistré (guichet simulé)', enfin.json?.enregistre === true && enfin.json.simule === true, enfin.texte);
   verifier('après le dépôt réussi, les refus sont soldés', !(fM.typologie._rejets || []).length);
 
+  console.log('\nLevée d’une exigence sur instruction de l’avocat (cas LGZ-2026-00046)');
+  // COUVOIR JOSSET : BD France présidente, GORIOUX FARO ET ASSOCIES commissaire aux comptes.
+  const fiche46 = JSON.parse(JSON.stringify(ficheSansObjet));
+  fiche46.brut.formality.content.personneMorale.composition.pouvoirs.push({ typeDePersonne: 'ENTREPRISE', roleEntreprise: '71',
+    entreprise: { denomination: 'GORIOUX FARO ET ASSOCIES', siren: '338896350', formeJuridique: '5710', lieuRegistre: 'QUIMPER' },
+    adresseEntreprise: { codePostal: '29000', commune: 'Quimper', voie: '11 rue Felix le Dantec' } });
+  const ouv46 = await outil('ouvrir_depot_pieces', { siren: '552100554', operations: ['MAJDIR'] });
+  const ref46 = ouv46.json.dossier.reference;
+  const f46 = tables.formalites.find((x) => x.reference === ref46);
+  f46.fiche = fiche46;
+  const jeton46 = ouv46.json.lien_depot.split('/').pop();
+  const deposer46 = async (cle, nom) => {
+    const t = await http('POST', `/depot/${jeton46}/televersement`, { cle, nom, taille: PDF.length });
+    fichiers.set(t.corps.chemin, PDF);
+    return http('POST', `/depot/${jeton46}/confirmer`, { cle, chemin: t.corps.chemin, nom });
+  };
+  await outil('renseigner_formalite', { reference: ref46, typologie: { mises_a_jour: [{ nom: 'BD France', motif: 'denomination' }], statuts_modifies: false },
+    reponses: { commun: { date_decision: '2026-09-01' }, _registre: { objet: 'Production et vente de poussins.' } } });
+  const v46 = (await outil('renseigner_formalite', { reference: ref46 })).json;
+  const maj46 = v46.champs.find((g) => g.groupe === 'MAJDIR').champs.find((c) => c.name === 'maj_0').valeur;
+  const reg46 = v46.champs.find((g) => g.groupe === '_registre').champs;
+  const nomRep = (re) => reg46.find((c) => /^representant_\d+$/.test(c.name) && re.test(c.label))?.name;
+  const repBD = nomRep(/BD France/);
+  const repCAC = nomRep(/GORIOUX FARO/);
+  const complements = Object.fromEntries(reg46.filter((c) => c.requis && !c.rempli && c.name !== repCAC).map((c) => [c.name,
+    /^representant_/.test(c.name) ? representant : /^genre_/.test(c.name) ? '2' : /^forme_sociale_/.test(c.name) ? '0' : /^greffe_/.test(c.name) ? 'BREST' : c.valeur]));
+  await outil('renseigner_formalite', { reference: ref46, reponses: { MAJDIR: { maj_0: { ...maj46, denomination: 'DanHatch France' } }, _registre: complements } });
+  for (const l of (await outil('pieces_recues', { reference: ref46 })).json.pieces.obligatoires) await deposer46(l.cle, `${l.code}.pdf`);
+  const avant46 = await outil('controler_formalite', { reference: ref46 });
+  verifier('avant la levée : seul le représentant du CAC bloque', repBD && repCAC && !avant46.json.pret
+    && avant46.json.bloquants.length === 1 && /GORIOUX FARO/.test(avant46.json.bloquants[0]), avant46.json.bloquants);
+  const sansMotif = await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: `_registre.${repCAC}`, requis: false }] });
+  verifier('levée sans motif : refusée', sansMotif.erreur && /motif est obligatoire/.test(sansMotif.texte), sansMotif.texte);
+  const motif46 = 'Représentant du CAC personne morale inchangé, non exigé par le portail, décision de l’avocat';
+  const leve46 = await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: `_registre.${repCAC}`, requis: false, motif: motif46 }] });
+  verifier('levée acceptée : le champ porte l’exigence levée', !leve46.erreur
+    && leve46.json.champs.find((g) => g.groupe === '_registre').champs.find((c) => c.name === repCAC)?.exigence_levee?.motif === motif46, leve46.texte);
+  const ctl46 = await outil('controler_formalite', { reference: ref46 });
+  verifier('controler_formalite : pret, deux alertes (délai dépassé, exigence levée)', ctl46.json.pret === true && !ctl46.json.bloquants.length
+    && ctl46.json.alertes.some((a) => /Délai de dépôt dépassé/.test(a))
+    && ctl46.json.alertes.some((a) => /exigence levée à la demande de l’avocat — motif : Représentant du CAC/.test(a) && /non renseigné/.test(a))
+    && ctl46.json.alertes.filter((a) => !/Mode simulation/.test(a)).length === 2, ctl46.json);
+  verifier('la levée figure dans le retour du contrôle', ctl46.json.exigences_levees?.[0]?.champ === `_registre.${repCAC}` && ctl46.json.exigences_levees[0].transmis === false, ctl46.json.exigences_levees);
+  verifier('levée journalisée (champ, motif)', tables.formalite_evenements.some((e) => e.formalite_id === f46.id && /Exigence levée/.test(e.message) && e.message.includes(repCAC) && e.message.includes(motif46)));
+  const refusDate = await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: 'commun.date_decision', requis: false, motif: 'essai de levée' }] });
+  verifier('lever la date de décision : refusé, message explicite', refusDate.erreur && /date de la décision est essentielle/.test(refusDate.texte), refusDate.texte);
+  const refusMaj = await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: 'MAJDIR.maj_0', requis: false, motif: 'essai de levée' }] });
+  verifier('lever la donnée qui change (MAJDIR.maj_0) : refusé, message explicite', refusMaj.erreur && /objet même du changement/.test(refusMaj.texte), refusMaj.texte);
+  const refusInconnu = await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: '_registre.zorglub', requis: false, motif: 'essai de levée' }] });
+  verifier('champ inconnu : refusé avec la liste des champs levables', refusInconnu.erreur && /champ inconnu/.test(refusInconnu.texte) && refusInconnu.texte.includes(repCAC), refusInconnu.texte);
+  const pouvoirs46 = (() => { const c = construireParcours({ ...f46, pieces: [] }).corps; return (c.newFormality?.content || c.content).personneMorale.composition.pouvoirs; })();
+  const svcParcours = require('../src/services/parcours');
+  const etat46 = (await svcParcours.lire(f46.id)).etat;
+  verifier('aucune valeur fictive : le pouvoir du CAC part sans représentant',
+    pouvoirs46.find((p) => p.entreprise?.denomination === 'GORIOUX FARO ET ASSOCIES')?.representant === undefined
+    && pouvoirs46.find((p) => p.entreprise?.siren === '552032534')?.representant?.descriptionPersonne?.nom === 'LE GALL', pouvoirs46.map((p) => p.representant));
+  // Saisie partielle sous levée : non bloquante, mais non transmise.
+  await outil('renseigner_formalite', { reference: ref46, reponses: { _registre: { [repCAC]: { nom: 'FARO', adresse: { codePostal: '29000', commune: 'Quimper' } } } } });
+  const partiel = await outil('controler_formalite', { reference: ref46 });
+  verifier('saisie partielle d’un champ levé : pas de bloquant, signalée non transmise', partiel.json.pret && partiel.json.alertes.some((a) => /renseigné en partie \(non transmis\)/.test(a)), partiel.json);
+  const etatP = (await svcParcours.lire(f46.id)).etat;
+  verifier('saisie partielle retirée du dépôt', etatP.exigences_levees[0].transmis === false && etat46.exigences_levees.length === 1);
+  await outil('renseigner_formalite', { reference: ref46, reponses: { _registre: { [repCAC]: null } } });
+  const retabli = await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: `_registre.${repCAC}`, requis: true }] });
+  const ctlR = await outil('controler_formalite', { reference: ref46 });
+  verifier('exigence rétablie : le bloquant réapparaît', !retabli.erreur && !ctlR.json.pret && ctlR.json.bloquants.some((b) => /GORIOUX FARO/.test(b)) && !ctlR.json.exigences_levees.length, ctlR.json);
+  verifier('rétablissement journalisé', tables.formalite_evenements.some((e) => e.formalite_id === f46.id && /Exigence rétablie/.test(e.message)));
+  // Le guichet refuse malgré tout : erreur en clair, exigence rétablie d'office.
+  await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: `_registre.${repCAC}`, requis: false, motif: motif46 }] });
+  const rangCAC = repCAC.split('_')[1];
+  const original46 = guichet.deposer;
+  let corpsEnvoye = null;
+  guichet.deposer = async (requete) => { corpsEnvoye = requete.corps; throw Object.assign(new Error('Données refusées par le guichet'), { status: 400, detail: { violations: [
+    { propertyPath: `content.personneMorale.composition.pouvoirs[${rangCAC}].representant.descriptionPersonne.nom`, message: 'Ce champ est obligatoire.' },
+  ] } }); };
+  const refus46 = await outil('enregistrer_formalite', { reference: ref46, confirmation_avocat: true });
+  guichet.deposer = original46;
+  verifier('refus du guichet sur un champ levé : dit en clair', refus46.erreur && /exigence avait été levée/.test(refus46.texte) && refus46.texte.includes(repCAC), refus46.texte);
+  verifier('envoyé sans valeur fictive pour le champ levé',
+    corpsEnvoye && corpsEnvoye.newFormality.content.personneMorale.composition.pouvoirs[rangCAC].representant === undefined);
+  const apres46 = await outil('controler_formalite', { reference: ref46 });
+  verifier('après ce refus : exigence rétablie, le représentant redevient bloquant, sans doublon technique',
+    !apres46.json.pret && apres46.json.bloquants.some((b) => /Représentant de GORIOUX FARO/.test(b)) && !apres46.json.bloquants.some((b) => /refusée par le guichet/.test(b)), apres46.json.bloquants);
+  const sansConfirmation = await outil('enregistrer_formalite', { reference: ref46 });
+  verifier('enregistrer_formalite exige toujours la confirmation de l’avocat', sansConfirmation.erreur && /confirmer expressément/.test(sansConfirmation.texte));
+
   console.log('\nCouverture de tout le catalogue d’opérations');
   const moteur = require('../src/inpi/parcours');
   const { PIECES } = require('../src/inpi/referentiels');

@@ -198,7 +198,10 @@ async function vueDossier(id) {
     questions: d.questions.map(vueQuestion),
     champs: d.champs.map((g) => ({
       groupe: g.op, titre: g.titre,
-      champs: g.champs.map((c) => ({ ...vueChamp(c, c.valeur), rempli: c.rempli, ...(c.manquants?.length ? { manque: c.manquants } : {}) })),
+      champs: g.champs.map((c) => ({
+        ...vueChamp(c, c.valeur), rempli: c.rempli, ...(c.manquants?.length ? { manque: c.manquants } : {}),
+        ...(c.leve ? { exigence_levee: c.leve } : {}), ...(c.levee_inoperante ? { exigence_levee_inoperante: c.levee_inoperante } : {}),
+      })),
     })),
     pieces: {
       obligatoires: d.pieces.obligatoires.map(vuePiece),
@@ -271,7 +274,7 @@ function validerTypologie(ops, typologie, fiche = {}, existante = {}) {
   return typologie;
 }
 
-async function appliquerSaisies(id, { operations, typologie, reponses }) {
+async function appliquerSaisies(id, { operations, typologie, reponses, exigences_champs: exigencesChamps }) {
   if (Array.isArray(operations) && operations.length) await parcoursSvc.majOperations(id, operations);
   if (typologie && typeof typologie === 'object') {
     const [f0] = await q(supabase.from('formalites').select('*').eq('id', id));
@@ -279,6 +282,10 @@ async function appliquerSaisies(id, { operations, typologie, reponses }) {
     await parcoursSvc.majTypologie(id, typologie);
   }
   if (reponses && typeof reponses === 'object') await parcoursSvc.majReponses(id, reponses, { origine: 'saisie' });
+  if (exigencesChamps !== undefined && exigencesChamps !== null) {
+    if (!Array.isArray(exigencesChamps)) throw erreur('« exigences_champs » : liste [{"champ": "<groupe>.<name>", "requis": false, "motif": "…"}].', 422);
+    await parcoursSvc.majExigences(id, exigencesChamps);
+  }
   const [f] = await q(supabase.from('formalites').select('*').eq('id', id));
   await memoriserEcheance(f);
 }
@@ -340,14 +347,14 @@ async function exigencesFormalite({ operations, siren, typologie = {}, reponses 
  * Ouvre (ou met à jour) le dossier et émet un lien de dépôt des PDF, valable
  * 7 jours. Rappelé avec la même référence, il remplace le lien précédent.
  */
-async function ouvrirDepotPieces({ reference, siren, operations, typologie, reponses, dossier_id: dossierId }) {
+async function ouvrirDepotPieces({ reference, siren, operations, typologie, reponses, exigences_champs: exigencesChamps, dossier_id: dossierId }) {
   let id;
   let avertissement = null;
   if (reference) {
     const f = await chargerModifiable(reference);
     id = f.id;
     if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : les pièces ne se complètent plus ici.', 409);
-    await appliquerSaisies(id, { operations: operations ? operationsValides(operations) : null, typologie, reponses });
+    await appliquerSaisies(id, { operations: operations ? operationsValides(operations) : null, typologie, reponses, exigences_champs: exigencesChamps });
   } else {
     const ops = operationsValides(operations);
     if (typologie) {
@@ -360,7 +367,7 @@ async function ouvrirDepotPieces({ reference, siren, operations, typologie, repo
     id = cree.id;
     avertissement = cree.avertissement;
     await q(supabase.from('formalites').update({ origine: ORIGINE }).eq('id', id).select('id'));
-    await appliquerSaisies(id, { typologie, reponses });
+    await appliquerSaisies(id, { typologie, reponses, exigences_champs: exigencesChamps });
   }
   const jeton = crypto.randomBytes(24).toString('base64url');
   const expire = new Date(Date.now() + DUREE_LIEN_JOURS * JOUR_MS).toISOString();
@@ -376,10 +383,10 @@ async function ouvrirDepotPieces({ reference, siren, operations, typologie, repo
   };
 }
 
-async function renseignerFormalite({ reference, operations, typologie, reponses }) {
+async function renseignerFormalite({ reference, operations, typologie, reponses, exigences_champs: exigencesChamps }) {
   const f = await chargerModifiable(reference);
   if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : il se modifie sur le portail.', 409);
-  await appliquerSaisies(f.id, { operations: operations ? operationsValides(operations) : null, typologie, reponses });
+  await appliquerSaisies(f.id, { operations: operations ? operationsValides(operations) : null, typologie, reponses, exigences_champs: exigencesChamps });
   return vueDossier(f.id);
 }
 
@@ -444,14 +451,23 @@ async function controlerFormalite({ reference }) {
     ...v.etat.non_deposables.map((m) => `Opération à finaliser sur le portail, non transmissible par l’API : ${m}`),
     ...(v.etat.provisoires ? [`${v.etat.provisoires} pièce(s) en version provisoire`] : []),
   ];
+  const levees = v.etat.exigences_levees || [];
+  for (const l of levees.filter((x) => x.etat === 'inoperante')) {
+    bloquants.push(`Donnée erronée — ${l.groupe} : ${l.label} (${(l.manque || []).join(', ')}) : l’exigence levée ne couvre pas une donnée invalide, corrigez-la.`);
+  }
   const alertes = [];
   if (v.echeance.connue && v.echeance.etat !== 'dans_les_temps') {
     alertes.push(v.echeance.etat === 'depassee' ? `Délai de dépôt dépassé depuis le ${v.echeance.limite}.` : `Délai de dépôt imminent : ${v.echeance.limite} (${v.echeance.jours_restants} jour(s)).`);
   }
   if (v.guichet_simulation) alertes.push(`Mode simulation : rien ne sera transmis à l’INPI (${v.motif_simulation}).`);
   if (f.fiche?.radiee) alertes.push('Société radiée au registre.');
+  for (const l of levees.filter((x) => x.etat !== 'inoperante')) {
+    const etat = l.etat === 'renseigne' ? 'renseigné (transmis)' : l.etat === 'partiel' ? 'renseigné en partie (non transmis)' : 'non renseigné';
+    alertes.push(`Champ « ${l.label} » ${etat} : exigence levée à la demande de l’avocat — motif : ${l.motif}`);
+  }
   return {
     reference: v.reference, pret: v.etat.pret && !bloquants.length, bloquants, alertes,
+    exigences_levees: levees.map((l) => ({ champ: l.champ, libelle: l.label, motif: l.motif, date: l.date, etat: l.etat, transmis: l.transmis })),
     echeance: v.echeance, guichet_simulation: v.guichet_simulation, motif_simulation: v.motif_simulation,
     deja_enregistre: Boolean(f.inpi_id),
   };
@@ -684,6 +700,21 @@ const REPONSES = {
     + 'Le champ « manque » d’un dossier dit précisément ce qui reste à fournir.',
 };
 
+const EXIGENCES_CHAMPS = {
+  type: 'array',
+  description: 'UNIQUEMENT sur instruction expresse de l’avocat, jamais de votre propre initiative : lève l’exigence d’un champ requis '
+    + 'que le guichet n’exige pas pour ce dossier (ex. représentant d’un commissaire aux comptes personne morale inchangé). '
+    + '[{"champ": "<groupe>.<name>", "requis": false, "motif": "décision de l’avocat et sa raison"}] ; {"champ", "requis": true} rétablit l’exigence. '
+    + 'Seules les « Données du registre à compléter » (groupe _registre) peuvent être levées ; jamais le SIREN, la date de décision, '
+    + 'ni la donnée qui fait l’objet du changement, ni une pièce (voir typologie.manuel), ni une donnée erronée. '
+    + 'La levée devient une alerte de controler_formalite, à reprendre dans le récapitulatif de validation ; un champ levé et vide n’est pas transmis.',
+  items: {
+    type: 'object',
+    properties: { champ: { type: 'string' }, requis: { type: 'boolean' }, motif: { type: 'string' } },
+    required: ['champ'],
+  },
+};
+
 const OUTILS = [
   {
     name: 'rechercher_entreprise',
@@ -722,7 +753,7 @@ const OUTILS = [
       type: 'object',
       properties: {
         reference: REFERENCE, siren: { type: 'string', description: 'SIREN de la société (sauf création).' },
-        operations: OPERATIONS, typologie: TYPOLOGIE, reponses: REPONSES,
+        operations: OPERATIONS, typologie: TYPOLOGIE, reponses: REPONSES, exigences_champs: EXIGENCES_CHAMPS,
         dossier_id: { type: 'string', description: 'Facultatif : dossier client Legalize auquel rattacher la formalité (numéro ou référence, ex. 2026-0012).' },
       },
     },
@@ -730,8 +761,9 @@ const OUTILS = [
   },
   {
     name: 'renseigner_formalite',
-    description: 'Complète ou corrige un dossier ouvert : opérations, réponses de qualification, valeurs des champs. Renvoie le dossier à jour, avec ce qui manque encore.',
-    inputSchema: { type: 'object', properties: { reference: REFERENCE, operations: OPERATIONS, typologie: TYPOLOGIE, reponses: REPONSES }, required: ['reference'] },
+    description: 'Complète ou corrige un dossier ouvert : opérations, réponses de qualification, valeurs des champs. Renvoie le dossier à jour, avec ce qui manque encore. '
+      + '« exigences_champs » lève l’exigence d’un champ, uniquement sur instruction expresse de l’avocat.',
+    inputSchema: { type: 'object', properties: { reference: REFERENCE, operations: OPERATIONS, typologie: TYPOLOGIE, reponses: REPONSES, exigences_champs: EXIGENCES_CHAMPS }, required: ['reference'] },
     run: renseignerFormalite,
   },
   {
@@ -768,7 +800,7 @@ const OUTILS = [
   },
   {
     name: 'controler_formalite',
-    description: 'Contrôles avant transmission : bloquants, alertes, échéance de dépôt, mode simulation. Aucun enregistrement tant qu’il reste un bloquant.',
+    description: 'Contrôles avant transmission : bloquants, alertes, échéance de dépôt, mode simulation, exigences levées à la demande de l’avocat (à reprendre dans le récapitulatif de validation). Aucun enregistrement tant qu’il reste un bloquant.',
     inputSchema: { type: 'object', properties: { reference: REFERENCE }, required: ['reference'] },
     run: controlerFormalite,
   },

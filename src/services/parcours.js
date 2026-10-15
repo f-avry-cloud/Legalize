@@ -145,13 +145,24 @@ async function lire(id) {
       const saisi = rep[g.op]?.[c.name];
       const v = saisi ?? (c.defaut !== undefined ? c.defaut : (c.prerempli || null));
       const manque = rempli(v, c) ? [...creationPc.manquants(c, v), ...changementNonDeclare(c, saisi)] : [];
-      return { ...c, valeur: v, rempli: rempli(v, c) && !manque.length, manquants: manque, origine: rep._origine?.[`${g.op}.${c.name}`] || null };
+      const complet = rempli(v, c) && !manque.length;
+      return {
+        ...c, valeur: v, rempli: complet, manquants: manque, origine: rep._origine?.[`${g.op}.${c.name}`] || null,
+        ...levee(f.typologie, `${g.op}.${c.name}`, c, complet, manque),
+      };
     }),
   }));
 
   const manquantes = listes.obligatoires.filter((p) => !p.fichiers.length);
-  const champsManquants = groupes.flatMap((g) => g.champs.filter((c) => c.requis && !c.rempli)
+  const champsManquants = groupes.flatMap((g) => g.champs.filter((c) => c.requis && !c.rempli && !c.leve)
     .map((c) => `${g.titre} : ${c.label}${c.manquants?.length ? ` (${c.manquants.join(', ')})` : ''}`));
+  const exigencesLevees = groupes.flatMap((g) => g.champs.filter((c) => c.leve || c.levee_inoperante)
+    .map((c) => ({
+      champ: `${g.op}.${c.name}`, groupe: g.titre, label: c.label, motif: (c.leve || c.levee_inoperante).motif, date: (c.leve || c.levee_inoperante).date,
+      etat: c.levee_inoperante ? 'inoperante' : c.rempli ? 'renseigne' : (c.manquants?.length ? 'partiel' : 'vide'),
+      transmis: c.rempli || Boolean(c.levee_inoperante),
+      ...(c.levee_inoperante ? { manque: c.manquants } : {}),
+    })));
   const creation = res.operations.some((o) => parcours.infoOperation(o.code)?.creation);
   const nouvelle = creation ? (rep.c_societe || {}) : {};
   const nonDeposables = res.operations.filter((o) => !deposable(o.code)).map((o) => o.nom);
@@ -189,6 +200,7 @@ async function lire(id) {
       provisoires: pieces.filter((p) => p.version === 'provisoire').length,
       a_signer: pieces.filter((p) => p.a_signer).length,
       non_deposables: nonDeposables,
+      exigences_levees: exigencesLevees,
       pret: !manquantes.length && !champsManquants.length && !listes.a_preciser.length
         && !res.incompatibilites.length && !nonDeposables.length
         && !pieces.some((p) => p.version === 'provisoire'),
@@ -215,6 +227,73 @@ function changementNonDeclare(c, saisi) {
     if (cle(saisi.adresse) === cle(avant.adresse)) return ['nouvelle adresse identique à celle du registre'];
   }
   return [];
+}
+
+/**
+ * Exigence d'un champ levée à la demande de l'avocat (typologie.manuel_champs) :
+ * le champ cesse de bloquer s'il est vide ou incomplet. Une donnée saisie mais
+ * erronée (clé invalide, changement identique à l'existant) reste bloquante :
+ * on lève une exigence, on ne valide pas une donnée fausse.
+ */
+function levee(typologie, cle, c, complet, manque) {
+  const l = typologie?.manuel_champs?.[cle];
+  if (!l || l.requis !== false || !c.requis) return {};
+  const info = { motif: l.motif, date: l.date || null };
+  if (complet) return { leve: info };
+  if (manque.some((m) => /invalide|identique/.test(m))) return { levee_inoperante: info };
+  return { leve: info };
+}
+
+/** Groupes de champs dont une exigence peut être levée : compléments du registre seulement. */
+const GROUPES_LEVABLES = new Set(['_registre']);
+
+/** Pourquoi l'exigence de ce champ ne peut pas être levée (null si elle le peut). */
+function refusLevee(groupe, c) {
+  if (/(^|_)siren$/i.test(c.name)) return 'le SIREN est essentiel à la formalité.';
+  if (groupe === 'commun' && /date_decision|date_effet/.test(c.name)) return 'la date de la décision est essentielle à la formalité (date d’effet, point de départ du délai).';
+  if (c.saisie_requise || c.change) return 'cette donnée est l’objet même du changement déclaré.';
+  if (!GROUPES_LEVABLES.has(groupe)) return 'seules les « Données du registre à compléter » peuvent être levées ; les informations de l’opération elle-même sont essentielles à la formalité.';
+  if (c.chemin_inpi) return 'le guichet a déjà refusé le dépôt faute de cette donnée.';
+  if (!c.requis) return 'ce champ n’est pas exigé.';
+  return null;
+}
+
+/**
+ * Lève ou rétablit l'exigence de champs du dossier, sur instruction de
+ * l'avocat : [{ champ: "_registre.representant_1", requis: false, motif }]
+ * ou [{ champ, requis: true }] pour la rétablir. Chaque décision est journalisée.
+ */
+async function majExigences(id, demandes = []) {
+  if (!Array.isArray(demandes) || !demandes.length) return lire(id);
+  const f = await charger(id); verifierOuvert(f);
+  const d = await lire(id);
+  const actuelles = { ...(f.typologie?.manuel_champs || {}) };
+  const champs = new Map(d.champs.flatMap((g) => g.champs.map((c) => [`${g.op}.${c.name}`, { groupe: g.op, titre: g.titre, c }])));
+  const levables = [...champs.entries()].filter(([, x]) => !refusLevee(x.groupe, x.c)).map(([k]) => k);
+  const fautes = [];
+  const notes = [];
+  for (const dm of demandes) {
+    const cle = String(dm?.champ || '').trim();
+    const requis = dm?.requis === true || dm?.requis === 'true';
+    const x = champs.get(cle);
+    if (requis) {
+      if (!actuelles[cle]) { fautes.push(`« ${cle} » : aucune exigence levée à rétablir.`); continue; }
+      delete actuelles[cle];
+      notes.push(`Exigence rétablie : ${x?.c.label || cle} (${cle}).`);
+      continue;
+    }
+    if (!x) { fautes.push(`« ${cle} » : champ inconnu dans ce dossier (champs dont l’exigence peut être levée : ${levables.join(', ') || 'aucun'}).`); continue; }
+    const refus = refusLevee(x.groupe, x.c);
+    if (refus) { fautes.push(`« ${cle} » : levée refusée, ${refus}`); continue; }
+    const motif = String(dm?.motif || '').trim();
+    if (motif.length < 5) { fautes.push(`« ${cle} » : le motif est obligatoire (décision de l’avocat et sa raison).`); continue; }
+    actuelles[cle] = { requis: false, motif, date: new Date().toISOString() };
+    notes.push(`Exigence levée à la demande de l’avocat : ${x.c.label} (${cle}) — motif : ${motif}`);
+  }
+  if (fautes.length) throw erreur(`Demande sur les exigences refusée :\n- ${fautes.join('\n- ')}`, 422);
+  await db(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), manuel_champs: actuelles }, updated_at: new Date().toISOString() }).eq('id', id).select());
+  for (const n of notes) await journal(id, 'saisie', n);
+  return lire(id);
 }
 
 function resumePiece(p) {
@@ -413,9 +492,16 @@ async function apercu(id) {
   return construireParcours(dossierDe(f, pieces)).corps;
 }
 
-function dossierDe(f, pieces) {
+function dossierDe(f, pieces, levees = []) {
+  // Champ dont l'exigence est levée et qui reste incomplet : rien n'est transmis.
+  const reponses = JSON.parse(JSON.stringify(f.reponses || {}));
+  for (const l of levees) {
+    if (l.transmis) continue;
+    const [op, ...reste] = l.champ.split('.');
+    if (reponses[op]) delete reponses[op][reste.join('.')];
+  }
   return {
-    operations: f.operations, typologie: f.typologie, reponses: f.reponses, fiche: f.fiche,
+    operations: f.operations, typologie: f.typologie, reponses, fiche: f.fiche,
     siren: f.siren, reference: f.reference, libelle: f.libelle,
     pieces: pieces.map((p) => ({ code: p.code, nom: p.filename })),
   };
@@ -425,9 +511,10 @@ async function deposer(id) {
   const f = await charger(id); verifierOuvert(f);
   const etat = (await lire(id)).etat;
   if (!etat.pret) throw erreur('Le dossier n’est pas complet : voir la liste de ce qui manque.', 422, { details: etat });
+  const levees = etat.exigences_levees || [];
   const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
   const encodees = await Promise.all(pieces.map(async (p) => ({ code: p.code, nom: p.filename, base64: (await downloadFile(p.filepath)).toString('base64') })));
-  const requete = construireParcours({ ...dossierDe(f, pieces), pieces: encodees });
+  const requete = construireParcours({ ...dossierDe(f, pieces, levees), pieces: encodees });
   let r;
   try {
     r = await guichet.deposer(requete);
@@ -439,13 +526,24 @@ async function deposer(id) {
       // Les refus s'additionnent jusqu'au dépôt réussi : une donnée déjà
       // corrigée reste réinjectée si le dépôt suivant échoue sur une autre.
       const cumul = [...(f.typologie?._rejets || []).filter((r) => !violations.some((v) => v.champ === r.champ)), ...violations];
-      await db(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), _rejets: cumul } }).eq('id', id).select());
+      // Un refus qui porte sur un champ dont l'exigence avait été levée la rétablit :
+      // la donnée est à demander à l'avocat.
+      const touchees = levees.filter((l) => violations.some((v) => parcours.champVise(l.champ, v.champ)));
+      const manuelChamps = { ...(f.typologie?.manuel_champs || {}) };
+      for (const l of touchees) delete manuelChamps[l.champ];
+      await db(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), _rejets: cumul, manuel_champs: manuelChamps } }).eq('id', id).select());
       await journal(id, 'depot', `Dépôt refusé par le guichet : ${violations.length} donnée(s) à corriger.`, { violations });
+      if (touchees.length) {
+        const noms = touchees.map((l) => `${l.label} (${l.champ})`).join(' ; ');
+        await journal(id, 'depot', `Le refus porte sur un champ dont l’exigence avait été levée : ${noms}. Exigence rétablie.`);
+        e.message = `${e.message}\nCe refus porte sur un champ dont l’exigence avait été levée à la demande de l’avocat : ${noms}. L’exigence est rétablie : demandez la donnée à l’avocat.`;
+        e.exigences_levees_refusees = touchees.map((l) => l.champ);
+      }
     }
     throw e;
   }
   await db(supabase.from('formalites').update({
-    payload: construireParcours(dossierDe(f, pieces)).corps,
+    payload: construireParcours(dossierDe(f, pieces, levees)).corps,
     statut: r.statut, inpi_id: r.inpi_id, numero_liasse: r.numero_liasse, statut_inpi: r.statut_brut,
     statut_date: r.statut_date || new Date().toISOString(), action_attendue: r.action_attendue,
     montant: r.montant, simule: Boolean(r.simule), updated_at: new Date().toISOString(),
@@ -478,6 +576,6 @@ function referentiels() {
 }
 
 module.exports = {
-  TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses,
+  TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses, majExigences,
   ajouterPiece, inscrirePiece, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
 };

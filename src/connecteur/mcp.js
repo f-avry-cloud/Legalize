@@ -23,6 +23,7 @@ const CONSIGNES = [
   'Déroulé : fiche_entreprise → exigences_formalite → ouvrir_depot_pieces (lien de dépôt des PDF à donner à l’avocat) → renseigner_formalite → pieces_recues → controler_formalite → récapitulatif de validation → enregistrer_formalite → statut_formalite.',
   'Les PDF joints à la conversation ne peuvent pas être transmis par l’outil : ils passent par le lien de ouvrir_depot_pieces. Une pièce rangée sous la mauvaise ligne se corrige avec reclasser_piece (ou retirer_piece).',
   'Chaque question de qualification indique son « format » : respectez-le, une réponse mal formée est refusée. Les « Données du registre à compléter » (objet social absent du registre, donnée refusée par le guichet…) sont à demander à l’avocat.',
+  'Un champ requis que le guichet n’exige pas pour ce dossier ne se lève (exigences_champs, avec motif) que sur instruction expresse de l’avocat, jamais de votre propre initiative ; la levée figure dans le récapitulatif de validation.',
   'N’appelez enregistrer_formalite qu’après l’accord explicite de l’avocat (« je confirme ») sur un récapitulatif complet, avec confirmation_avocat: true. Aucun outil ne signe ni ne paie : la signature et le paiement se font sur le portail.',
   'Si un résultat indique guichet_simulation: true, dites-le à l’avocat : rien n’est transmis à l’INPI.',
   'Pièces déjà déposées au registre (statuts, PV, comptes annuels) : lister_pieces_deposees, puis telecharger_acte ou telecharger_comptes. Un texte issu de la reconnaissance de caractères se vérifie sur le PDF.',
