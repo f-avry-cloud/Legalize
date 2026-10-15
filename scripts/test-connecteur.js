@@ -469,6 +469,14 @@ function verifier(nom, condition, detail) {
   const sansConfirmation = await outil('enregistrer_formalite', { reference: ref46 });
   verifier('enregistrer_formalite exige toujours la confirmation de l’avocat', sansConfirmation.erreur && /confirmer expressément/.test(sansConfirmation.texte));
 
+  console.log('\nFiche du registre indisponible');
+  const sansFiche = await outil('ouvrir_depot_pieces', { siren: '732829320', operations: ['MAJDIR'] });
+  // Le registre a refusé la fiche (compte sans accès API) : le dossier n'en a pas.
+  tables.formalites.find((x) => x.reference === sansFiche.json.dossier.reference).fiche = {};
+  const ctlSF = await outil('controler_formalite', { reference: sansFiche.json.dossier.reference });
+  verifier('modification sans fiche du registre : bloquant explicite (accès API du compte INPI)',
+    !ctlSF.json.pret && /registre \(RNE\) indisponible/.test(ctlSF.json.bloquants[0] || ''), ctlSF.json.bloquants);
+
   console.log('\nCouverture de tout le catalogue d’opérations');
   const moteur = require('../src/inpi/parcours');
   const { PIECES } = require('../src/inpi/referentiels');

@@ -211,6 +211,7 @@ async function vueDossier(id) {
       autres_recues: d.autres_pieces.map((p) => ({ code: p.code, nom: p.nom })),
     },
     incompatibilites: d.incompatibilites,
+    ...(d.fiche_absente ? { fiche_absente: true } : {}),
     etat: d.etat,
     echeance: echeanceDe(f.operations || [], f.reponses || {}),
     lien_depot_expire: f.depot_expire || null,
@@ -303,12 +304,25 @@ function operationsValides(operations) {
   return ops;
 }
 
+/** Un refus d'accès du registre dit en clair ce que l'avocat doit faire. */
+async function registre403(appel) {
+  try {
+    return await appel();
+  } catch (e) {
+    if (e.status === 403 && /pour\s+API/i.test(e.message || '')) {
+      throw erreur('Le compte INPI utilisé pour lire le registre (variable INPI_RNE_USERNAME dans Vercel) n’a pas l’accès API au registre national des entreprises. '
+        + 'Remettre un compte disposant de cet accès, ou demander l’accès API pour ce compte à l’INPI. Ne préparez pas de modification sans la fiche du registre.', 403);
+    }
+    throw e;
+  }
+}
+
 async function rechercherEntreprise({ terme }) {
-  return { resultats: await rne.rechercher(terme), ...modes() };
+  return { resultats: await registre403(() => rne.rechercher(terme)), ...modes() };
 }
 
 async function ficheEntreprise({ siren }) {
-  const f = await rne.entreprise(siren);
+  const f = await registre403(() => rne.entreprise(siren));
   return {
     siren: f.siren_formate || f.siren, denomination: f.denomination, sigle: f.sigle || null,
     forme_juridique: f.forme_juridique, forme_juridique_code: f.forme_juridique_code,
@@ -446,6 +460,8 @@ async function controlerFormalite({ reference }) {
   const f = await chargerParReference(reference);
   const v = await vueDossier(f.id);
   const bloquants = [
+    // Sans la fiche du registre, les dirigeants en place, l'objet et les greffes sont inconnus : le dossier serait faux.
+    ...(v.fiche_absente ? ['Fiche de la société au registre (RNE) indisponible : dirigeants, objet et greffes inconnus. Vérifier l’accès API du compte INPI du registre, puis rouvrir le dossier.'] : []),
     ...v.etat.champs_manquants.map((m) => `Information manquante — ${m}`),
     ...v.etat.pieces_manquantes.map((m) => `Pièce obligatoire non reçue — ${m}`),
     ...(v.etat.questions_restantes ? [`${v.etat.questions_restantes} question(s) de qualification sans réponse`] : []),
