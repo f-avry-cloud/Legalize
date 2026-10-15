@@ -576,6 +576,6 @@ function referentiels() {
 }
 
 module.exports = {
-  TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses, majExigences,
+  TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses, majExigences, refusLevee,
   ajouterPiece, inscrirePiece, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
 };

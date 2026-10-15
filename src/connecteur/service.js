@@ -163,6 +163,7 @@ function vueChamp(c, valeur) {
     ...(c.aide ? { aide: c.aide } : {}),
     ...(FORMATS_CHAMPS[c.type] ? { format: FORMATS_CHAMPS[c.type] } : {}),
     ...(c.sous_requis ? { sous_champs_requis: c.sous_requis } : {}),
+    ...(c.chemin_inpi ? { chemin_inpi: c.chemin_inpi } : {}),
     ...(c.options ? { options: c.options } : {}),
     ...(c.actuel !== undefined && c.actuel !== null && c.actuel !== '' ? { valeur_au_registre: c.actuel } : {}),
     ...(valeur !== undefined ? { valeur } : {}),
@@ -467,8 +468,21 @@ async function controlerFormalite({ reference }) {
     const etat = l.etat === 'renseigne' ? 'renseigné (transmis)' : l.etat === 'partiel' ? 'renseigné en partie (non transmis)' : 'non renseigné';
     alertes.push(`Champ « ${l.label} » ${etat} : exigence levée à la demande de l’avocat — motif : ${l.motif}`);
   }
+  // Bloquants que l'avocat peut décider de lever : l'assistant doit savoir que l'option existe.
+  const levables = v.champs.flatMap((g) => g.champs.filter((c) => c.requis && !c.rempli && !c.exigence_levee && !c.exigence_levee_inoperante
+    && !parcoursSvc.refusLevee(g.groupe, c))
+    .map((c) => ({
+      champ: `${g.groupe}.${c.name}`, libelle: c.label,
+      ...(/^representant_/.test(c.name) && !/commissaire aux comptes/i.test(c.label)
+        ? { attention: 'Le portail a exigé cette identité pour signer (constaté pour une société présidente) : la lever expose à un brouillon non signable.' } : {}),
+    })));
   return {
     reference: v.reference, pret: v.etat.pret && !bloquants.length, bloquants, alertes,
+    ...(levables.length ? {
+      exigences_levables: levables,
+      levee_possible: 'Si l’avocat décide expressément qu’une de ces données n’est pas exigée pour ce dossier, levez-la avec renseigner_formalite '
+        + '(exigences_champs : [{"champ", "requis": false, "motif"}]) ; elle deviendra une alerte. Ne le faites jamais de votre propre initiative.',
+    } : {}),
     exigences_levees: levees.map((l) => ({ champ: l.champ, libelle: l.label, motif: l.motif, date: l.date, etat: l.etat, transmis: l.transmis })),
     echeance: v.echeance, guichet_simulation: v.guichet_simulation, motif_simulation: v.motif_simulation,
     deja_enregistre: Boolean(f.inpi_id),

@@ -400,6 +400,10 @@ function verifier(nom, condition, detail) {
   const nomRep = (re) => reg46.find((c) => /^representant_\d+$/.test(c.name) && re.test(c.label))?.name;
   const repBD = nomRep(/BD France/);
   const repCAC = nomRep(/GORIOUX FARO/);
+  const levablesInit = (await outil('controler_formalite', { reference: ref46 })).json.exigences_levables || [];
+  verifier('représentant de la société présidente : levable, avec mise en garde (exigé par le portail pour signer)',
+    /exigé cette identité pour signer/.test(levablesInit.find((l) => l.champ === `_registre.${repBD}`)?.attention || '')
+    && !levablesInit.find((l) => l.champ === `_registre.${repCAC}`)?.attention, levablesInit);
   const complements = Object.fromEntries(reg46.filter((c) => c.requis && !c.rempli && c.name !== repCAC).map((c) => [c.name,
     /^representant_/.test(c.name) ? representant : /^genre_/.test(c.name) ? '2' : /^forme_sociale_/.test(c.name) ? '0' : /^greffe_/.test(c.name) ? 'BREST' : c.valeur]));
   await outil('renseigner_formalite', { reference: ref46, reponses: { MAJDIR: { maj_0: { ...maj46, denomination: 'DanHatch France' } }, _registre: complements } });
@@ -407,6 +411,9 @@ function verifier(nom, condition, detail) {
   const avant46 = await outil('controler_formalite', { reference: ref46 });
   verifier('avant la levée : seul le représentant du CAC bloque', repBD && repCAC && !avant46.json.pret
     && avant46.json.bloquants.length === 1 && /GORIOUX FARO/.test(avant46.json.bloquants[0]), avant46.json.bloquants);
+  verifier('le contrôle signale que ce bloquant peut être levé par l’avocat (et seulement lui)',
+    avant46.json.exigences_levables?.length === 1 && avant46.json.exigences_levables[0].champ === `_registre.${repCAC}` && !avant46.json.exigences_levables[0].attention
+    && /jamais de votre propre initiative/.test(avant46.json.levee_possible), avant46.json);
   const sansMotif = await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: `_registre.${repCAC}`, requis: false }] });
   verifier('levée sans motif : refusée', sansMotif.erreur && /motif est obligatoire/.test(sansMotif.texte), sansMotif.texte);
   const motif46 = 'Représentant du CAC personne morale inchangé, non exigé par le portail, décision de l’avocat';
