@@ -283,6 +283,8 @@ async function appliquerSaisies(id, { operations, typologie, reponses, exigences
   }
   if (reponses && typeof reponses === 'object') await parcoursSvc.majReponses(id, reponses, { origine: 'saisie' });
   if (exigencesChamps !== undefined && exigencesChamps !== null) {
+    // Certains clients transmettent la liste sous forme de texte JSON.
+    if (typeof exigencesChamps === 'string') { try { exigencesChamps = JSON.parse(exigencesChamps); } catch (e) { /* refusée ci-dessous */ } }
     if (!Array.isArray(exigencesChamps)) throw erreur('« exigences_champs » : liste [{"champ": "<groupe>.<name>", "requis": false, "motif": "…"}].', 422);
     await parcoursSvc.majExigences(id, exigencesChamps);
   }
