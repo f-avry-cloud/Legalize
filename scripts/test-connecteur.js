@@ -308,6 +308,43 @@ function verifier(nom, condition, detail) {
   const lignesM = (await outil('pieces_recues', { reference: refM })).json.pieces.obligatoires;
   for (const l of lignesM.filter((x) => !x.recue.length)) await deposerM({ cle: l.cle }, `${l.code}.pdf`);
   await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { genre_0: '2' }, MAJDIR: { maj_0: { ...rMaj.champs.find((g) => g.op === 'MAJDIR').champs[0].prerempli, denomination: 'DanHatch France' } } } });
+
+  console.log('\nAnomalie 3 — brouillon COUVOIR JOSSET non signable (représentant, pays, autre fonction, caractères)');
+  const champsReg = (await outil('renseigner_formalite', { reference: refM })).json.champs.find((g) => g.groupe === '_registre').champs;
+  const champRep = champsReg.find((c) => /^representant_\d+$/.test(c.name) && /BD France/.test(c.label));
+  verifier('personne morale dirigeante : la personne physique qui la représente est demandée', champRep?.requis === true && champRep.type === 'personne', champsReg.map((c) => c.name));
+  const ctlRep = await outil('controler_formalite', { reference: refM });
+  verifier('représentant absent : bloquant avant l’enregistrement', !ctlRep.json.pret && ctlRep.json.bloquants.some((b) => /Représentant de BD France/.test(b)), ctlRep.json.bloquants);
+  const rangRep = Number(champRep.name.split('_')[1]);
+  const repIncomplet = await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { [champRep.name]: { nom: 'LE GALL', prenoms: 'Yann', adresse: { codePostal: '29200', commune: 'Brest' } } } } });
+  const manqueRep = repIncomplet.json.etat.champs_manquants.find((m) => /Représentant de BD France/.test(m)) || '';
+  verifier('identité incomplète : ce que le portail exige est listé (naissance, nationalité, voie)',
+    ['date de naissance', 'commune de naissance', 'pays de naissance', 'nationalité', 'voie du domicile'].every((x) => manqueRep.includes(x)), manqueRep);
+  const representant = { nom: 'LE GALL', prenoms: 'Yann', genre: '1', date_naissance: '1970-03-12', lieu_naissance: 'Brest', code_insee_naissance: '29019',
+    pays_naissance: 'FRANCE', nationalite: 'Française', adresse: { numVoie: '3', typeVoie: 'RUE', voie: 'de Siam', codePostal: '29200', commune: 'Brest' } };
+  const autresRep = Object.fromEntries(champsReg.filter((c) => /^representant_\d+$/.test(c.name) && c !== champRep).map((c) => [c.name, { ...representant, nom: 'FARO' }]));
+  const complet = await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { [champRep.name]: representant, ...autresRep } } });
+  verifier('identité complète : plus de bloquant à ce titre', !complet.json.etat.champs_manquants.some((m) => /Représentant de/.test(m)), complet.json.etat.champs_manquants);
+  const pouvoirRep = (() => { const c = construireParcours({ ...fM, pieces: [] }).corps; return (c.newFormality?.content || c.content).personneMorale.composition.pouvoirs[rangRep]; })();
+  verifier('représentant injecté au pouvoir (nom de naissance, naissance, nationalité, domicile avec voie et pays)',
+    pouvoirRep.representant?.descriptionPersonne?.nom === 'LE GALL' && pouvoirRep.representant.descriptionPersonne.dateDeNaissance === '1970-03-12'
+    && pouvoirRep.representant.descriptionPersonne.lieuDeNaissance === 'Brest' && pouvoirRep.representant.descriptionPersonne.paysNaissance === 'FRANCE'
+    && pouvoirRep.representant.descriptionPersonne.nationalite === 'Française'
+    && pouvoirRep.representant.adresseDomicile.voie === 'de Siam' && pouvoirRep.representant.adresseDomicile.pays, pouvoirRep.representant);
+  verifier('pays de la personne morale renseigné (sans lui, sa forme juridique est jugée invalide)', pouvoirRep.entreprise.pays === 'FRANCE', pouvoirRep.entreprise);
+  verifier('« Avez-vous une autre fonction ? » répondu (non) sur chaque pouvoir',
+    (() => { const c = construireParcours({ ...fM, pieces: [] }).corps; return (c.newFormality?.content || c.content).personneMorale.composition.pouvoirs.every((p) => p.indicateurSecondRoleEntreprise === false); })());
+  const { texteGuichet, nettoyerTextes } = require('../src/inpi/texte-guichet');
+  verifier('caractères refusés par les partenaires remplacés (apostrophe, points de suspension, tiret long, retours à la ligne)',
+    texteGuichet('Mettre à jour (nouvelle adresse…) — COUVOIR JOSSET') === 'Mettre à jour (nouvelle adresse...) - COUVOIR JOSSET'
+    && texteGuichet('La société a pour objet :\n- l’exploitation de couvoirs, etc…') === 'La société a pour objet : - l\'exploitation de couvoirs, etc...'
+    && texteGuichet('n° 3, Œuvre « à » 10 €') === 'n° 3, OEuvre " à " 10 EUR', texteGuichet('La société :\n- l’exploitation…'));
+  const nettoye = nettoyerTextes({ previousFormality: { o: 'l’objet' }, newFormality: { nomDossier: 'a…', content: { voie: ' Croas Prenn', n: 3, documentBase64: 'QUJD+/==' } } });
+  verifier('nettoyage du corps envoyé : textes de la nouvelle formalité seulement, pièces et état antérieur intacts',
+    nettoye.previousFormality.o === 'l’objet' && nettoye.newFormality.nomDossier === 'a...' && nettoye.newFormality.content.voie === 'Croas Prenn'
+    && nettoye.newFormality.content.n === 3 && nettoye.newFormality.content.documentBase64 === 'QUJD+/==', nettoye);
+  verifier('dépôt au guichet : le corps est nettoyé avant l’envoi', /nettoyerTextes\(requete\.corps\)/.test(require('fs').readFileSync(require.resolve('../src/inpi/guichet'), 'utf8')));
+
   const ctlPret = await outil('controler_formalite', { reference: refM });
   const echec = await outil('enregistrer_formalite', { reference: refM, confirmation_avocat: true });
   guichet.deposer = original;

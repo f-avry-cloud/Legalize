@@ -287,10 +287,19 @@ const LIBELLES_SOUS = {
   nom: 'nom', prenoms: 'prénoms', genre: 'sexe', date_naissance: 'date de naissance', lieu_naissance: 'commune de naissance',
   code_insee_naissance: 'code INSEE de la commune de naissance', nationalite: 'nationalité', forme_sociale: 'affiliation sociale',
   situation_matrimoniale: 'situation matrimoniale', numero_secu: 'numéro de sécurité sociale', 'adresse.codePostal': 'code postal du domicile',
-  'adresse.commune': 'commune du domicile', denomination: 'dénomination', siren: 'SIREN', greffe: 'greffe d’immatriculation',
+  'adresse.commune': 'commune du domicile', 'adresse.voie': 'voie du domicile (rue ou lieu-dit)', pays_naissance: 'pays de naissance', denomination: 'dénomination', siren: 'SIREN', greffe: 'greffe d’immatriculation',
   modalites: 'modalités de contrôle', representant: 'représentant permanent', forme_juridique_code: 'forme juridique',
   'volet.organisme_maladie': 'régime d’assurance maladie actuel', 'volet.activite_simultanee': 'activité exercée en parallèle',
 };
+
+/**
+ * Identité exigée par le portail du guichet pour la personne physique qui
+ * représente une personne morale dirigeante (refus de signature constatés :
+ * nom de naissance, date, commune et pays de naissance, nationalité, voie et
+ * pays du domicile).
+ */
+const SOUS_REQUIS_REPRESENTANT = ['nom', 'prenoms', 'genre', 'date_naissance', 'lieu_naissance', 'pays_naissance', 'nationalite',
+  'adresse.voie', 'adresse.codePostal', 'adresse.commune'];
 
 const lire = (o, chemin) => chemin.split('.').reduce((v, k) => (v == null ? v : v[k]), o);
 const vide = (v) => v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
@@ -332,7 +341,7 @@ function manquants(c, v) {
   if (c.type === 'personne_morale') {
     const out = c.sous_requis.filter((k) => vide(lire(v || {}, k))).map(libelle);
     if (c.representant_requis) {
-      const r = manquantsPersonne(v?.representant || {}, ['nom', 'prenoms', 'genre', 'date_naissance', 'lieu_naissance', 'adresse.codePostal', 'adresse.commune']);
+      const r = manquantsPersonne(v?.representant || {}, SOUS_REQUIS_REPRESENTANT);
       if (r.length) out.push(`représentant permanent : ${r.map(libelle).join(', ')}`);
     }
     return out;
@@ -349,4 +358,5 @@ function manquants(c, v) {
 }
 
 module.exports.manquants = manquants;
+module.exports.SOUS_REQUIS_REPRESENTANT = SOUS_REQUIS_REPRESENTANT;
 module.exports.nirValide = nirValide;

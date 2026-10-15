@@ -74,6 +74,23 @@ l'INPI est de 10 000 appels ou 10 000 Mo.
 - Les libellés des postes comptables (`src/inpi/data/postes-comptes.json`) sont tirés de la section E de la
   documentation des comptes annuels : `node scripts/build-postes-comptes.js <texte de la documentation>`.
 
+## Brouillon signable sur le portail
+
+Le portail du guichet n'ouvre la signature que si la société est complète, même pour ce qui ne change pas
+(« lors de votre première modification, des informations complémentaires »). Constaté sur COUVOIR JOSSET :
+
+- **personne morale dirigeante ou commissaire aux comptes** : le registre public ne diffuse que l'identifiant
+  de la personne physique qui la représente. Son identité est demandée (« Données du registre à compléter »,
+  champ `representant_<rang>`) : nom de naissance, prénoms, sexe, date, commune et pays de naissance,
+  nationalité, domicile avec la voie. Elle se lit sur l'extrait Kbis de la société représentée (ou, pour un
+  commissaire aux comptes, sur sa lettre de mission ou son rapport) ;
+- **pays de la personne morale** : « FRANCE » pour une société inscrite par son SIREN ; sans lui, le portail
+  juge sa forme juridique invalide ;
+- **« Avez-vous une autre fonction ? »** : non, chaque fonction étant un pouvoir distinct du registre ;
+- **caractères** : apostrophe et guillemets typographiques, points de suspension, tirets longs, puces et
+  retours à la ligne sont remplacés avant l'envoi (`src/inpi/texte-guichet.js`) ; l'état antérieur et les
+  pièces ne sont pas retouchés.
+
 ## Garde-fous
 
 - Adresse MCP protégée par `MCP_GU_JETON` (comparaison à temps constant ; jeton trop court = fermé).

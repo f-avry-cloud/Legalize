@@ -106,7 +106,7 @@ function voletSocial(v, dateEffet) {
 /** Bloc pouvoir d'une personne nommée, d'après le formulaire ciblé. */
 function pouvoirEntrant(e, r, forme, dateEffet) {
   const role = roleEntrant(e, r, forme);
-  const base = { roleEntreprise: role, statutPourLaFormalite: AJOUT, is34Or35MAdjonctionTriggered: true, dateEffet34Or35M: dateEffet };
+  const base = { roleEntreprise: role, statutPourLaFormalite: AJOUT, is34Or35MAdjonctionTriggered: true, dateEffet34Or35M: dateEffet, indicateurSecondRoleEntreprise: false };
   if (e.nature === 'PM') {
     return {
       ...base,
@@ -115,12 +115,13 @@ function pouvoirEntrant(e, r, forme, dateEffet) {
       entreprise: {
         roleEntreprise: role,
         siren: nettoyerSiren(r.siren) || undefined,
+        pays: nettoyerSiren(r.siren) ? 'FRANCE' : undefined,
         denomination: r.denomination || e.nom,
         formeJuridique: r.forme_juridique_code || undefined,
         lieuRegistre: r.greffe ? String(r.greffe).toUpperCase() : undefined,
       },
       adresseEntreprise: adresseInpi(r.adresse),
-      // Personne morale administrateur : le guichet exige son représentant permanent.
+      // Personne morale dirigeante : le guichet exige la personne physique qui la représente.
       representant: r.representant?.nom ? {
         descriptionPersonne: { ...descriptionIndividu(r.representant, role), statutVisAVisFormalite: '1' },
         adresseDomicile: adresseInpi(r.representant.adresse),
@@ -459,7 +460,30 @@ function completerRegistre(content, r, rejets = []) {
       const a = adresseInpi(r[`adresse_${i}`]);
       if (p.entreprise) p.adresseEntreprise = a; else if (p.individu) p.individu.adresseDomicile = a;
     }
+    completerPouvoir(p, r[`representant_${i}`]);
   });
+}
+
+/**
+ * Ce que le portail exige d'un pouvoir déjà inscrit pour laisser signer, et
+ * que le registre public ne livre pas (constaté en production, COUVOIR
+ * JOSSET) : pays de la personne morale (sans lui, sa forme juridique est
+ * jugée invalide), réponse à « Avez-vous une autre fonction ? », identité
+ * de la personne physique qui la représente.
+ */
+function completerPouvoir(p, representant) {
+  if (p.entreprise) {
+    // Une société inscrite par son SIREN est française.
+    if (vide(p.entreprise.pays) && (p.entreprise.siren || !p.entreprise.formeJuridiqueEtrangere)) p.entreprise.pays = 'FRANCE';
+    if (representant?.nom) {
+      p.representant = {
+        descriptionPersonne: { ...descriptionIndividu(representant, p.roleEntreprise), statutVisAVisFormalite: '1' },
+        adresseDomicile: adresseInpi(representant.adresse),
+      };
+    }
+  }
+  // Chaque fonction exercée est un pouvoir distinct du registre : pas de second rôle déclaré.
+  if (p.indicateurSecondRoleEntreprise === undefined || p.indicateurSecondRoleEntreprise === null) p.indicateurSecondRoleEntreprise = false;
 }
 
 const vide = (v) => v === undefined || v === null || String(v).trim() === '';

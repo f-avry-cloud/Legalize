@@ -149,9 +149,20 @@ function vueQuestion(qq) {
   };
 }
 
+/** Forme attendue des champs composés (personne, adresse). */
+const FORMATS_CHAMPS = {
+  personne: 'Objet : {"nom": nom de naissance, "prenoms", "genre": "1" (masculin) ou "2" (féminin), "date_naissance": "AAAA-MM-JJ", "lieu_naissance": commune, '
+    + '"code_insee_naissance" (si né en France), "pays_naissance": "FRANCE", "nationalite": "Française", '
+    + '"adresse": {"numVoie", "typeVoie", "voie": nom de la rue ou lieu-dit, "codePostal", "commune"}}',
+  adresse: 'Objet : {"numVoie", "typeVoie", "voie": nom de la rue ou lieu-dit, "codePostal", "commune"}',
+};
+
 function vueChamp(c, valeur) {
   return {
     name: c.name, label: c.label, type: c.type, requis: Boolean(c.requis),
+    ...(c.aide ? { aide: c.aide } : {}),
+    ...(FORMATS_CHAMPS[c.type] ? { format: FORMATS_CHAMPS[c.type] } : {}),
+    ...(c.sous_requis ? { sous_champs_requis: c.sous_requis } : {}),
     ...(c.options ? { options: c.options } : {}),
     ...(c.actuel !== undefined && c.actuel !== null && c.actuel !== '' ? { valeur_au_registre: c.actuel } : {}),
     ...(valeur !== undefined ? { valeur } : {}),

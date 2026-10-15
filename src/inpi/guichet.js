@@ -20,6 +20,7 @@ const { config } = require('./config');
 const { appel, telecharger, chemin, ErreurInpi } = require('./client');
 const { normaliserStatut, statut } = require('./referentiels');
 const mock = require('./mock');
+const { nettoyerTextes } = require('./texte-guichet');
 
 function simulationActive() {
   return config.modeGuichet === 'simulation' || !config.depotReelAutorise;
@@ -119,7 +120,7 @@ async function deposer(requete) {
   const rep = await appel('guichet', {
     methode: requete.methode || 'POST',
     chemin: config.guichet.paths[requete.endpoint],
-    corps: requete.corps,
+    corps: nettoyerTextes(requete.corps),
   });
   // Une modification (formality_updates) renvoie { formalities: [ … ] } et
   // non la formalité elle-même : sans ce déballage, l'identifiant INPI du
@@ -155,7 +156,7 @@ async function retrouver({ liasse, siren } = {}) {
 async function mettreAJour(id, corps, service = 'formalites') {
   if (String(id).startsWith('SIM-')) return normaliserFormalite(mock.statutSimule(id), id);
   const modele = service === 'comptes_annuels' ? config.guichet.paths.compteAnnuel : config.guichet.paths.formalite;
-  const rep = await appel('guichet', { methode: 'PUT', chemin: chemin(modele, { id }), corps });
+  const rep = await appel('guichet', { methode: 'PUT', chemin: chemin(modele, { id }), corps: nettoyerTextes(corps) });
   return normaliserFormalite(rep, id);
 }
 

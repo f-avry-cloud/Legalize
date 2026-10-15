@@ -665,7 +665,7 @@ function champs(ops, t, fiche, rep = {}) {
         sous_requis: ['denomination', 'siren', 'forme_juridique_code', 'adresse.codePostal', 'adresse.commune'] }],
     '40M': [{ name: 'date_cessation', label: 'Date de cessation totale d’activité', type: 'date', requis: true }],
   };
-  const complements = complementsRegistre(fiche, t._rejets || [], ops);
+  const complements = complementsRegistre(fiche, t._rejets || [], ops, t);
   if (modifs.length && complements.length) {
     groupes.push({
       op: '_registre', titre: 'Données du registre à compléter',
@@ -702,7 +702,7 @@ function champs(ops, t, fiche, rep = {}) {
         if (!e?.nom || (op === '22M' && e.fonction !== 'liquidateur')) continue;
         // Les mêmes exigences qu'à la création : le guichet revalide chaque pouvoir ajouté.
         liste.push(e.nature === 'PM'
-          ? { name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: 'personne_morale', requis: true, prerempli: { denomination: e.nom },
+          ? { name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: 'personne_morale', requis: true, prerempli: { denomination: e.nom }, representant_requis: true,
             sous_requis: ['denomination', 'forme_juridique_code', 'greffe', 'adresse.codePostal', 'adresse.commune'] }
           : { name: `entrant_${i}`, label: `${e.nom} — ${libelleFonction(e.fonction)}`, type: 'personne', requis: true, prerempli: separerNom(e.nom),
             sous_requis: ['nom', 'prenoms', 'genre', 'date_naissance', 'lieu_naissance', 'adresse.codePostal', 'adresse.commune', 'forme_sociale'] });
@@ -721,9 +721,12 @@ function champs(ops, t, fiche, rep = {}) {
  * Ce que le registre ne fournit pas et que le guichet exige pour toute
  * modification (constaté par dépôt de test) : sexe et affiliation sociale
  * des dirigeants personnes physiques, greffe d'immatriculation des
- * personnes morales qui exercent un mandat.
+ * personnes morales qui exercent un mandat, et identité de la personne
+ * physique qui représente chacune d'elles : le registre public n'en livre
+ * que l'identifiant, et le portail refuse la signature sans elle (constaté
+ * en production, COUVOIR JOSSET).
  */
-function complementsRegistre(fiche, rejets = [], ops = []) {
+function complementsRegistre(fiche, rejets = [], ops = [], t = {}) {
   const pouvoirs = fiche?.brut?.formality?.content?.personneMorale?.composition?.pouvoirs || [];
   const out = [];
   const refuse = (re) => rejets.some((r) => re.test(r?.champ || ''));
@@ -741,8 +744,24 @@ function complementsRegistre(fiche, rejets = [], ops = []) {
       if (!['0', '1', '3'].includes(String(d.formeSociale ?? ''))) {
         out.push({ name: `forme_sociale_${i}`, label: `Affiliation sociale de ${nom}`, type: 'choix', options: AFFILIATION, requis: true, defaut: '0' });
       }
-    } else if (p.entreprise && !p.entreprise.lieuRegistre) {
-      out.push({ name: `greffe_${i}`, label: `Greffe d’immatriculation de ${p.entreprise.denomination || `la personne morale n° ${i + 1}`}`, type: 'text', requis: true, aide: 'Ville du greffe, par exemple NANTERRE.' });
+    } else if (p.entreprise) {
+      const denomination = p.entreprise.denomination || `la personne morale n° ${i + 1}`;
+      if (!p.entreprise.lieuRegistre) {
+        out.push({ name: `greffe_${i}`, label: `Greffe d’immatriculation de ${denomination}`, type: 'text', requis: true, aide: 'Ville du greffe, par exemple NANTERRE.' });
+      }
+      // Un changement de représentant déclaré (MAJDIR) porte déjà son identité.
+      const declare = ops.includes('MAJDIR') && (t.mises_a_jour || []).some((m) => m?.motif === 'representant'
+        && String(m.nom || '').trim().toLowerCase() === String(p.entreprise.denomination || '').trim().toLowerCase());
+      if (!p.representant?.descriptionPersonne?.nom && !declare) {
+        const fonction = require('./referentiels').role(p.roleEntreprise)?.libelle;
+        out.push({
+          name: `representant_${i}`, label: `Représentant de ${denomination}${fonction ? ` (${fonction.toLowerCase()})` : ''} : personne physique qui la représente`,
+          type: 'personne', requis: true, sous_requis: creation.SOUS_REQUIS_REPRESENTANT,
+          aide: p.roleEntreprise === '71'
+            ? 'Le registre public ne diffuse pas son identité et le guichet l’exige : associé signataire du commissaire aux comptes (lettre de mission, rapport), avec son adresse personnelle.'
+            : `Le registre public ne diffuse pas son identité et le guichet l’exige : représentant légal de ${denomination} (extrait Kbis), avec son adresse personnelle.`,
+        });
+      }
     }
     if (adressesRefusees.has(i)) {
       const nom = p.entreprise?.denomination || `${(d?.prenoms || []).join(' ')} ${d?.nom || ''}`.trim();
