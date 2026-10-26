@@ -117,7 +117,7 @@ function modification(ops, fiche, extra = {}) {
         '63M': { date_rachat: '2026-09-30' },
         '67PMF': { activite: '0', description: 'Édition de logiciels applicatifs de prise de rendez-vous' },
         '84M': { mode: 'D', locataire: PM('LOCATAIRE FICTIF'), date_effet: '2026-09-30' },
-        '28M': { date_dissolution: '2026-09-30', associe_unique: PM('ASSOCIE UNIQUE FICTIF', { forme_juridique_code: '5599' }) },
+        '28M': { date_transmission: '2026-11-02', associe_unique: PM('ASSOCIE UNIQUE FICTIF', { forme_juridique_code: '5599' }) },
         '40M': { date_cessation: '2026-09-30' },
         '80PMF': { etablissement: '6', date_fermeture: '2026-09-30', destination: 'B' },
         MAJDIR: { maj_0: { denomination: 'NOUVELLE DENOMINATION FICTIVE', siren: '775726417', forme_juridique_code: '5599', greffe: 'NANTERRE',

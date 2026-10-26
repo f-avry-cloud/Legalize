@@ -104,6 +104,12 @@ function echeanceDe(operations = [], reponses = {}, maintenant = new Date()) {
     depart = Object.values(reponses).map((g) => g?.date_debut_activite).find((v) => DATE.test(String(v || '')));
     if (depart) limite = new Date(Date.parse(depart) + 15 * JOUR_MS).toISOString().slice(0, 10);
     texte = '15 jours à compter du début d’activité';
+  } else if (operations.includes('28M')) {
+    // TUP : la radiation suit la transmission du patrimoine, pas la décision.
+    depart = DATE.test(String(reponses['28M']?.date_transmission || '')) ? reponses['28M'].date_transmission : null;
+    if (depart) limite = ajouterMois(depart, 1);
+    texte = '1 mois à compter de la transmission du patrimoine (expiration du délai d’opposition)';
+    if (!depart) return { connue: false, regle: texte, message: 'Date de réalisation de la transmission du patrimoine à renseigner.' };
   } else {
     depart = DATE.test(String(reponses.commun?.date_decision || '')) ? reponses.commun.date_decision : null;
     if (depart) limite = ajouterMois(depart, 1);

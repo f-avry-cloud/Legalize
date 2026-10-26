@@ -352,10 +352,14 @@ const CESSATIONS = {
     for (const e of tousEtablissements(c)) Object.assign(chemin(e, 'descriptionEtablissement'), { statutPourFormalite: '2', destinationEtablissement: 'F', dateEffetFermeture: d });
   },
   '28M'(c, r) {
-    const d = dateInpi(r.date_dissolution);
+    // Dissolution à la date de la décision ; transmission (et cessation d'activité)
+    // à l'issue du délai d'opposition. Dossiers anciens : une seule date.
+    const d = dateInpi(r.date_dissolution || r.date_decision);
+    const t = dateInpi(r.date_transmission) || d;
     const a = r.associe_unique || {};
     c.personneMorale.detailCessationEntreprise = {
-      indicateurDissolution: true, typeDissolution: '2', dateDissolutionDisparition: d, dateTransfertPatrimoine: d, motifCessation: '11',
+      indicateurDissolution: true, typeDissolution: '2', dateDissolutionDisparition: d, dateTransfertPatrimoine: t,
+      dateCessationTotaleActivite: t, motifCessation: '11',
     };
     chemin(c, 'personneMorale', 'composition').pouvoirs = [...(c.personneMorale.composition.pouvoirs || []), {
       typeDePersonne: 'ENTREPRISE', roleEntreprise: '130', statutPourLaFormalite: '1',

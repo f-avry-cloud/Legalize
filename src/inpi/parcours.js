@@ -53,7 +53,7 @@ const OPERATIONS = {
   '80PMF': { nom: 'Fermer un établissement', type: null },
   '84M': { nom: 'Mettre le fonds en location-gérance', type: null },
   '22M': { nom: 'Dissoudre la société (liquidation amiable)', type: 'cessation', cessation: true },
-  '28M': { nom: 'Dissolution sans liquidation par l’associé unique (TUP)', type: null, cessation: true },
+  '28M': { nom: 'TUP : radier la société après transmission universelle de patrimoine à l’associé unique', type: null, cessation: true },
   '40M': { nom: 'Mettre la société en sommeil (cessation totale d’activité)', type: null, cessation: true },
   '18M': { nom: 'Qualité d’entreprise de l’économie sociale et solidaire (ESS)', type: null },
   '19M': { nom: 'Changer la nature de la gérance (SARL)', type: null },
@@ -528,7 +528,7 @@ function resoudre(operations, typologie = {}, fiche = {}, rep = {}) {
       facultatives: liste.filter((p) => p.categorie === 'facultative'),
     },
     champs: champs(ops, t, fiche, rep),
-    incompatibilites: incompatibilites(ops),
+    incompatibilites: [...incompatibilites(ops), ...controlesDates(ops, rep)],
   };
 }
 
@@ -579,6 +579,32 @@ function incompatibilites(ops) {
   // changement de clôture ou de durée est enregistré.
   if (ops.includes('16M') && ops.includes('17M')) {
     out.push('Le changement de clôture ou de durée et le passage à l’associé unique se déposent séparément : ensemble, le guichet n’enregistre que le premier.');
+  }
+  return out;
+}
+
+/**
+ * Dates incohérentes avec le droit applicable, qui feraient déposer une
+ * formalité fausse. Transmission universelle de patrimoine (28M) : le
+ * patrimoine ne passe à l'associé unique qu'à l'issue du délai d'opposition
+ * de 30 jours qui suit la publication de la dissolution (art. 1844-5, al. 3,
+ * C. civ. ; art. 8 du décret n° 78-704) : la radiation ne se demande qu'ensuite.
+ */
+function controlesDates(ops, rep = {}) {
+  const out = [];
+  if (ops.includes('28M')) {
+    const r = { ...(rep.commun || {}), ...(rep['28M'] || {}) };
+    const dissolution = r.date_dissolution || r.date_decision;
+    const transmission = r.date_transmission;
+    const jour = (d) => (/^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) ? Date.parse(d) : NaN);
+    if (!Number.isNaN(jour(transmission))) {
+      if (jour(transmission) > Date.now()) {
+        out.push(`TUP : la transmission du patrimoine (${transmission}) n’est pas encore réalisée ; la radiation se dépose une fois le délai d’opposition expiré.`);
+      }
+      if (!Number.isNaN(jour(dissolution)) && jour(transmission) < jour(dissolution) + 30 * 86400000) {
+        out.push(`TUP : la transmission du patrimoine (${transmission}) ne peut intervenir moins de 30 jours après la décision de dissolution (${dissolution}) : le délai d’opposition des créanciers court à compter de la publication de la dissolution.`);
+      }
+    }
   }
   return out;
 }
@@ -653,7 +679,10 @@ function champs(ops, t, fiche, rep = {}) {
       { name: 'locataire', label: 'Locataire-gérant ou gérant-mandataire', type: 'personne_morale', requis: true,
         sous_requis: ['denomination', 'siren', 'greffe'] },
       { name: 'date_effet', label: 'Date de début du contrat', type: 'date', requis: true }],
-    '28M': [{ name: 'date_dissolution', label: 'Date de la décision de dissolution', type: 'date', requis: true },
+    // La date de décision (groupe commun) est celle de la dissolution ; la transmission
+    // n'a lieu qu'à l'issue du délai d'opposition des créanciers (art. 1844-5 C. civ.).
+    '28M': [{ name: 'date_transmission', label: 'Date de réalisation de la transmission du patrimoine (expiration du délai d’opposition des créanciers)', type: 'date', requis: true,
+      aide: '30 jours après la publication de la dissolution, sans opposition (ou après le rejet des oppositions, le remboursement des créances ou la constitution de garanties). C’est aussi la date de cessation d’activité.' },
       { name: 'associe_unique', label: 'Associé unique qui recueille le patrimoine', type: 'personne_morale', requis: true,
         sous_requis: ['denomination', 'siren', 'forme_juridique_code', 'greffe', 'adresse.codePostal', 'adresse.commune'] }],
     '80PMF': [{ name: 'etablissement', label: 'Établissement fermé', type: 'choix', requis: true, options: optionsEtablissements(fiche) },
