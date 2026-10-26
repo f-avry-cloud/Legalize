@@ -22,6 +22,12 @@ const depot = require('../src/connecteur/depot');
 const { echeanceDe, empreinte } = require('../src/connecteur/service');
 const routes = require('../src/routes');
 
+// BODACC simulé : aucun appel réseau. Annonces au format de l'API de la DILA.
+const bodacc = require('../src/inpi/bodacc');
+const ANNONCES_BODACC = [];
+const appelsBodacc = [];
+bodacc.requete = async (params) => { appelsBodacc.push(params); return { total_count: ANNONCES_BODACC.length, results: ANNONCES_BODACC }; };
+
 const serveur = express();
 serveur.use(express.json());
 serveur.use('/mcp', mcp.routeur);
@@ -74,7 +80,7 @@ function verifier(nom, condition, detail) {
   verifier('notification : 202 sans corps', notif.statut === 202);
   const liste = await rpc('tools/list', {});
   const noms = liste.corps.result.tools.map((t) => t.name);
-  verifier('dix-huit outils, aucun ne signe ni ne paie', noms.length === 18 && !noms.some((x) => /sign|pay/i.test(x)), noms);
+  verifier('dix-neuf outils, aucun ne signe ni ne paie', noms.length === 19 && !noms.some((x) => /sign|pay/i.test(x)), noms);
   verifier('outil inconnu : erreur JSON-RPC', (await rpc('tools/call', { name: 'payer', arguments: {} })).corps.error?.code === -32602);
   verifier('méthode inconnue : erreur JSON-RPC', (await rpc('resources/read', {})).corps.error?.code === -32601);
 
@@ -181,7 +187,7 @@ function verifier(nom, condition, detail) {
   const sansCle = await rpc('tools/list', {});
   const outilSansCle = await rpc('tools/call', { name: 'lister_formalites', arguments: {} });
   verifier('sans clé de service : connexion possible, l’outil explique ce qui manque',
-    sansCle.statut === 200 && sansCle.corps.result.tools.length === 18
+    sansCle.statut === 200 && sansCle.corps.result.tools.length === 19
     && outilSansCle.corps.result.isError && /SUPABASE_SERVICE_ROLE_KEY/.test(outilSansCle.corps.result.content[0].text), outilSansCle.corps);
   faux.service = service;
 
@@ -496,6 +502,38 @@ function verifier(nom, condition, detail) {
   const ancien = construireParcours({ operations: ['28M'], fiche: await rne.entreprise('552100554'), siren: '552100554', typologie: {},
     reponses: { '28M': { date_dissolution: '2026-09-30', associe_unique: { denomination: 'X' } } }, pieces: [] }).corps.content.personneMorale.detailCessationEntreprise;
   verifier('TUP : dossier ancien (une seule date) toujours déposable', ancien.dateDissolutionDisparition === '2026-09-30' && ancien.dateTransfertPatrimoine === '2026-09-30');
+
+  console.log('\nBODACC');
+  ANNONCES_BODACC.push({
+    id: 'B202602051653', publicationavis: 'B', dateparution: '2026-09-10', numeroannonce: 1653, typeavis_lib: 'Avis initial',
+    familleavis: 'modification', familleavis_lib: 'Modifications diverses', tribunal: 'Greffe du Tribunal de Commerce de Quimper',
+    commercant: 'FILIALE TUP', ville: 'Quimper', registre: ['552100554', '552 100 554'],
+    listepersonnes: JSON.stringify({ personne: { typePersonne: 'pm', denomination: 'FILIALE TUP', formeJuridique: 'Société par actions simplifiée' } }),
+    modificationsgenerales: JSON.stringify({ descriptif: 'Dissolution sans liquidation par transmission universelle du patrimoine à l’associé unique.' }),
+    url_complete: 'https://www.bodacc.fr/pages/annonces-commerciales-detail/?q.id=id:B202602051653',
+  });
+  const bo = await outil('annonces_bodacc', { siren: '552 100 554', famille: 'modification', depuis: '2026-01-01' });
+  verifier('annonces_bodacc : annonce rendue en clair (date, bulletin, famille, contenu, lien)',
+    bo.json?.annonces?.[0]?.date_parution === '2026-09-10' && bo.json.annonces[0].bulletin === 'Bodacc B' && /transmission universelle/.test(bo.json.annonces[0].contenu)
+    && /^https:\/\/www\.bodacc\.fr\//.test(bo.json.annonces[0].url) && bo.json.annonces[0].forme_juridique === 'Société par actions simplifiée', bo.texte);
+  verifier('annonces_bodacc : requête filtrée par SIREN, famille et date, plus récentes d’abord',
+    /registre like "552100554"/.test(appelsBodacc.at(-1).where) && /familleavis = "modification"/.test(appelsBodacc.at(-1).where)
+    && /dateparution >= date'2026-01-01'/.test(appelsBodacc.at(-1).where) && appelsBodacc.at(-1).order_by === 'dateparution desc', appelsBodacc.at(-1));
+  verifier('annonces_bodacc : SIREN ou famille invalides refusés en clair',
+    /SIREN invalide/.test((await outil('annonces_bodacc', { siren: '123' })).texte) && /Famille d’annonces inconnue/.test((await outil('annonces_bodacc', { siren: '552100554', famille: 'x' })).texte));
+  const ouvT = await outil('ouvrir_depot_pieces', { siren: '552100554', operations: ['28M'],
+    reponses: { commun: { date_decision: '2026-09-01' }, '28M': { date_transmission: '2026-10-05' } } });
+  const ctlT = await outil('controler_formalite', { reference: ouvT.json.dossier.reference });
+  verifier('TUP : publication de la dissolution au BODACC retrouvée, fin du délai d’opposition calculée, transmission antérieure signalée',
+    ctlT.json.alertes.some((a) => /dissolution publiée le 2026-09-10/.test(a) && /expirant le 2026-10-10/.test(a) && /\(2026-10-05\) est antérieure/.test(a)), ctlT.json.alertes);
+  ANNONCES_BODACC.length = 0;
+  const ctlT2 = await outil('controler_formalite', { reference: ouvT.json.dossier.reference });
+  verifier('TUP : aucune publication au BODACC, signalée', ctlT2.json.alertes.some((a) => /aucune publication de la dissolution/.test(a)), ctlT2.json.alertes);
+  const requeteBodacc = bodacc.requete;
+  bodacc.requete = async () => { throw Object.assign(new Error('BODACC injoignable : délai dépassé'), { status: 503 }); };
+  const ctlT3 = await outil('controler_formalite', { reference: ouvT.json.dossier.reference });
+  bodacc.requete = requeteBodacc;
+  verifier('TUP : BODACC injoignable, le contrôle aboutit avec une alerte', ctlT3.json.alertes.some((a) => /BODACC indisponible/.test(a)), ctlT3.json);
 
   console.log('\nFiche du registre indisponible');
   const sansFiche = await outil('ouvrir_depot_pieces', { siren: '732829320', operations: ['MAJDIR'] });

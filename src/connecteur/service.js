@@ -486,6 +486,7 @@ async function controlerFormalite({ reference }) {
   }
   if (v.guichet_simulation) alertes.push(`Mode simulation : rien ne sera transmis à l’INPI (${v.motif_simulation}).`);
   if (f.fiche?.radiee) alertes.push('Société radiée au registre.');
+  await controleBodaccTup(f, alertes);
   for (const l of levees.filter((x) => x.etat !== 'inoperante')) {
     const etat = l.etat === 'renseigne' ? 'renseigné (transmis)' : l.etat === 'partiel' ? 'renseigné en partie (non transmis)' : 'non renseigné';
     alertes.push(`Champ « ${l.label} » ${etat} : exigence levée à la demande de l’avocat — motif : ${l.motif}`);
@@ -580,6 +581,37 @@ async function listerFormalites({ perimetre = 'assistant' } = {}) {
 }
 
 /* ------------------------------------------- pièces déposées au registre */
+
+const bodacc = require('../inpi/bodacc');
+
+async function annoncesBodacc({ siren, famille, depuis, limite }) {
+  return bodacc.annonces({ siren, famille, depuis, limite });
+}
+
+/**
+ * TUP : la publication de la dissolution au BODACC fait courir le délai
+ * d'opposition des créanciers ; on la cherche et on la confronte à la date
+ * de transmission déclarée. Les sources divergent sur le point de départ
+ * (annonce légale ou BODACC) : constat en alerte, décision de l'avocat.
+ */
+async function controleBodaccTup(f, alertes) {
+  if (!(f.operations || []).includes('28M') || !nettoyerSiren(f.siren || '')) return;
+  const rep = f.reponses || {};
+  const decision = rep['28M']?.date_dissolution || rep.commun?.date_decision;
+  const transmission = rep['28M']?.date_transmission;
+  try {
+    const a = await bodacc.publicationDissolution(f.siren, DATE.test(String(decision || '')) ? decision : undefined);
+    if (!a) {
+      alertes.push('BODACC : aucune publication de la dissolution trouvée pour cette société. Vérifier que la déclaration de dissolution a bien été déposée et publiée avant de demander la radiation.');
+      return;
+    }
+    const fin = new Date(Date.parse(a.date_parution) + 30 * JOUR_MS).toISOString().slice(0, 10);
+    alertes.push(`BODACC : dissolution publiée le ${a.date_parution} (${a.bulletin || 'BODACC'}, annonce n° ${a.numero_annonce}) ; délai d’opposition de 30 jours expirant le ${fin} s’il court de cette publication.`
+      + (DATE.test(String(transmission || '')) && transmission < fin ? ` La date de transmission déclarée (${transmission}) est antérieure : à vérifier.` : ''));
+  } catch (e) {
+    alertes.push(`BODACC indisponible (${e.message}) : publication de la dissolution non vérifiée.`);
+  }
+}
 
 const registre = require('../inpi/rne-documents');
 const PDF_JOINT_MAX = 1.5 * 1024 * 1024;
@@ -864,6 +896,22 @@ const OUTILS = [
       + 'et le texte du document de synthèse présenté à la signature. À utiliser quand le portail réclame des informations avant de signer. Lecture seule.',
     inputSchema: { type: 'object', properties: { reference: REFERENCE }, required: ['reference'] },
     run: consulterFormaliteGuichet,
+  },
+  {
+    name: 'annonces_bodacc',
+    description: 'Annonces publiées au BODACC pour une société (créations, modifications, dissolutions, radiations, procédures collectives, ventes, dépôts des comptes), les plus récentes d’abord, avec le lien vers chaque annonce. '
+      + 'Utile pour vérifier qu’une formalité a été publiée, dater un délai d’opposition (TUP, réduction de capital) ou repérer une procédure collective. Lecture seule, données ouvertes.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        siren: { type: 'string' },
+        famille: { type: 'string', enum: Object.keys(bodacc.FAMILLES), description: 'Facultatif : creation, immatriculation, modification, vente, radiation, collective (procédures collectives), dpc (dépôts des comptes)…' },
+        depuis: { type: 'string', description: 'Facultatif : date de parution minimale, AAAA-MM-JJ.' },
+        limite: { type: 'integer', description: 'Nombre d’annonces (20 par défaut, 100 au plus).' },
+      },
+      required: ['siren'],
+    },
+    run: annoncesBodacc,
   },
   {
     name: 'lister_pieces_deposees',

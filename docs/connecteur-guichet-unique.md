@@ -43,6 +43,7 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `reclasser_piece`, `retirer_piece`, `catalogue_pieces` | Ranger une pièce reçue sous la bonne ligne ou un autre type officiel |
 | `lister_pieces_deposees` | Actes et comptes annuels déposés au registre pour un SIREN (lecture seule) |
 | `telecharger_acte` | PDF d'un acte et son texte, par reconnaissance de caractères s'il est numérisé (lecture seule) |
+| `annonces_bodacc` | Annonces publiées au BODACC pour un SIREN (données ouvertes de la DILA, sans compte) ; pour une TUP, `controler_formalite` y cherche la publication de la dissolution et calcule la fin du délai d'opposition |
 | `telecharger_comptes` | PDF des comptes annuels, texte et données saisies par l'INPI (postes libellés, chiffres clés) ; comptes confidentiels non récupérés (lecture seule) |
 
 Aucun outil ne signe ni ne paie : la signature et le paiement restent sur le portail.

@@ -28,6 +28,7 @@ const CONSIGNES = [
   'N’appelez enregistrer_formalite qu’après l’accord explicite de l’avocat (« je confirme ») sur un récapitulatif complet, avec confirmation_avocat: true. Aucun outil ne signe ni ne paie : la signature et le paiement se font sur le portail.',
   'Si un résultat indique guichet_simulation: true, dites-le à l’avocat : rien n’est transmis à l’INPI.',
   'Pièces déjà déposées au registre (statuts, PV, comptes annuels) : lister_pieces_deposees, puis telecharger_acte ou telecharger_comptes. Un texte issu de la reconnaissance de caractères se vérifie sur le PDF.',
+  'Publications légales : annonces_bodacc (vérifier qu’une formalité est publiée, dater un délai d’opposition, repérer une procédure collective).',
   'N’inventez aucune donnée ; ne recopiez pas inutilement les données personnelles (numéro de sécurité sociale, adresse personnelle).',
 ].join('\n');
 
