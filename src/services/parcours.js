@@ -143,11 +143,19 @@ async function lire(id) {
     ...g,
     champs: g.champs.map((c) => {
       const saisi = rep[g.op]?.[c.name];
+      // Un défaut que personne n'a confirmé est proposé, pas déclaré.
+      const parDefaut = (saisi === undefined || saisi === null) && c.defaut !== undefined;
       const v = saisi ?? (c.defaut !== undefined ? c.defaut : (c.prerempli || null));
       const manque = rempli(v, c) ? [...creationPc.manquants(c, v), ...changementNonDeclare(c, saisi)] : [];
+      // La catégorie d'activité n'est remplie que par un code de la nomenclature du guichet.
+      const resolution = c.type === 'categorie' && rempli(v, c) ? creationPc.resoudreCategorie(v) : null;
+      if (resolution && resolution.statut !== 'resolue') manque.push(`catégorie non reconnue : ${resolution.motif}`);
       const complet = rempli(v, c) && !manque.length;
       return {
         ...c, valeur: v, rempli: complet, manquants: manque, origine: rep._origine?.[`${g.op}.${c.name}`] || null,
+        ...(parDefaut ? { valeur_par_defaut: true } : {}),
+        ...(resolution?.statut === 'resolue' ? { categorie_resolue: resolution.categorie } : {}),
+        ...(resolution?.candidats ? { categories_candidates: resolution.candidats, categories_candidates_total: resolution.total } : {}),
         ...levee(f.typologie, `${g.op}.${c.name}`, c, complet, manque),
       };
     }),
@@ -334,12 +342,28 @@ async function majReponses(id, valeurs, { origine = 'saisie' } = {}) {
   const f = await charger(id); verifierOuvert(f);
   const rep = { ...(f.reponses || {}) };
   rep._origine = { ...(rep._origine || {}) };
-  for (const [op, champs] of Object.entries(valeurs || {})) {
-    if (op === '_origine' || op === '_analyse') continue;
+  rep._categorie = { ...(rep._categorie || {}) };
+  const notes = [];
+  for (const [op, recus] of Object.entries(valeurs || {})) {
+    if (op === '_origine' || op === '_analyse' || op === '_categorie') continue;
+    const champs = { ...recus };
+    // Catégorie d'activité : rangée sous son code de la nomenclature, avec ses libellés.
+    if (champs.categorie !== undefined && champs.categorie !== null && champs.categorie !== '') {
+      const r = creationPc.resoudreCategorie(champs.categorie);
+      if (r.statut === 'resolue') {
+        champs.categorie = r.categorie.code;
+        rep._categorie[`${op}.categorie`] = { ...r.categorie, nomenclature: creationPc.VERSION_CATEGORIES, date: new Date().toISOString() };
+        notes.push(`Catégorie d’activité : ${r.categorie.code} — ${r.categorie.chemin} (${r.categorie.forme_exercice}).`);
+      } else {
+        delete rep._categorie[`${op}.categorie`];
+        notes.push(`Catégorie d’activité non reconnue (${r.motif}).`);
+      }
+    }
     rep[op] = { ...(rep[op] || {}), ...champs };
     for (const name of Object.keys(champs)) rep._origine[`${op}.${name}`] = origine;
   }
   await db(supabase.from('formalites').update({ reponses: rep, updated_at: new Date().toISOString() }).eq('id', id).select());
+  for (const n of notes) await journal(id, 'saisie', n);
   return lire(id);
 }
 

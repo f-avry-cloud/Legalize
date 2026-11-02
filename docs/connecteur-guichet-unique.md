@@ -34,7 +34,7 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `rechercher_entreprise`, `fiche_entreprise` | Registre national des entreprises |
 | `catalogue_operations` | Opérations disponibles (codes évènements) |
 | `exigences_formalite` | Questions, champs et pièces exigés, sans créer de dossier |
-| `ouvrir_depot_pieces` | Ouvre (ou met à jour) le dossier et rend un lien de dépôt des PDF, valable 7 jours |
+| `ouvrir_depot_pieces` | Ouvre (ou met à jour) le dossier et rend un lien de dépôt des PDF, valable 7 jours ; rappelé, il garde le lien en cours (`nouveau_lien: true` pour le remplacer) |
 | `renseigner_formalite` | Complète le dossier (qualification, valeurs) ; lève l'exigence d'un champ sur instruction de l'avocat (`exigences_champs`) |
 | `pieces_recues` | Pièces reçues et manquantes |
 | `controler_formalite` | Bloquants, alertes, échéance, mode simulation |
@@ -92,6 +92,37 @@ Le portail du guichet n'ouvre la signature que si la société est complète, m�
   retours à la ligne sont remplacés avant l'envoi (`src/inpi/texte-guichet.js`) ; l'état antérieur et les
   pièces ne sont pas retouchés.
 
+## Catégorie d'activité
+
+La catégorie (champ `categorie` de `c_activite` pour une création, de 54PMF et de 61PMF) doit être une feuille de la
+nomenclature du guichet (`src/inpi/data/categories-activite.json`, relevée sur `GET /api/data_dictionary/category_activities`,
+date dans `_source`). Formes admises :
+
+- le code de la feuille, `"07-02-03-01"`, ou ses huit chiffres `"07020301"` (« 00 » pour un niveau absent : `"01020000"`) ;
+- `{"categorisationActivite1": "07", "categorisationActivite2": "02", "categorisationActivite3": "03", "categorisationActivite4": "01"}`
+  (accompagné de `code`, les deux doivent concorder) ;
+- un mot (« restauration ») : le dossier rend `categories_candidates` (codes et libellés des niveaux) sans en retenir
+  aucune. L'avocat choisit, puis le code est renseigné.
+
+Une catégorie reconnue est rangée sous son code ; ses codes, libellés et sa forme d'exercice sont conservés
+(`reponses._categorie`, avec la version de la nomenclature), affichés (`categorie_resolue`) et journalisés. Une catégorie
+non reconnue n'est pas « remplie » : `controler_formalite` la bloque, et la liasse n'est pas construite (erreur 422)
+plutôt que transmise sans catégorie. La liasse porte `categorisationActivite1…n` (les niveaux existants) et la
+`formeExercice` déduite de la catégorie.
+
+## Valeurs par défaut
+
+Un champ laissé à sa valeur par défaut (exercice permanent, pas de salarié, IS réel simplifié, TVA réel simplifié, pas
+d'ACRE, capital fixe, affiliation « non applicable »…) est rendu `a_confirmer` et n'est pas « rempli » :
+`controler_formalite` le bloque et `enregistrer_formalite` refuse le dossier tant que l'avocat ne l'a pas confirmé par
+`renseigner_formalite`. Les sous-champs codés d'une personne (affiliation sociale, sexe, nationalité) sont contrôlés
+contre le référentiel ; les valeurs admises figurent dans `valeurs_admises`.
+
+## Lien de dépôt
+
+`ouvrir_depot_pieces` rappelé avec une référence garde le lien déjà remis (`lien_depot: null`) ; `nouveau_lien: true`
+en émet un autre, qui remplace l'ancien. Pour compléter un dossier, `renseigner_formalite` suffit.
+
 ## Lever l'exigence d'un champ (décision de l'avocat)
 
 Un champ « requis » que le guichet n'exige pas pour un dossier donné (par exemple le représentant d'un commissaire
@@ -131,4 +162,4 @@ Stockage : `typologie.manuel_champs` (`{"<groupe>.<name>": {"requis": false, "mo
 - `src/connecteur/depot.js` : page et API de dépôt, `/depot/:jeton`.
 - `src/routes-formalites-ai.js`, `public/formalites-ai.js` : onglet Suivi Formalités AI.
 - `src/inpi/rne-documents.js`, `src/inpi/texte-pdf.js` : pièces déposées au registre, texte et OCR.
-- Tests : `node scripts/test-connecteur.js`, `node scripts/test-registre.js` (API INPI simulée).
+- Tests : `node scripts/test-connecteur.js`, `node scripts/test-registre.js`, `node scripts/test-categorie-activite.js` (API INPI simulée).

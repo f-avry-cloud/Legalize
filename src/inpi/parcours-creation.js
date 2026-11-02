@@ -261,9 +261,102 @@ function feuillesCategories() {
 }
 
 let FEUILLES = null;
-function categorie(code) {
+function categorie(valeur) {
+  const r = resoudreCategorie(valeur);
+  return r.statut === 'resolue' ? r.categorie : null;
+}
+
+const sansAccent = (x) => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const CANDIDATS_MAX = 15;
+const MOTS_VIDES = new Set(['les', 'des', 'aux', 'une', 'pour', 'avec', 'sans', 'par', 'sur', 'dans', 'autres', 'autre']);
+
+/** Catégorie au format du dossier : codes, libellés des niveaux et forme d'exercice. */
+function vueCategorie(f) {
+  const codes = f.code.split('-');
+  return {
+    code: f.code, codes, libelles: f.chemin, chemin: f.chemin.join(' › '),
+    forme_exercice: formeExercice(f), forme_exercice_nomenclature: f.forme_exercice,
+    ...Object.fromEntries(codes.map((v, i) => [`categorisationActivite${i + 1}`, v])),
+  };
+}
+
+/**
+ * Lit la catégorie d'activité, sous l'une des formes admises :
+ *  - le code de la feuille, « 07-02-03-01 », ou ses huit chiffres « 07020301 »
+ *    (« 00 » pour un niveau qui n'existe pas : « 01020000 ») ;
+ *  - un objet { categorisationActivite1…4 } (ou { code }) ;
+ *  - un terme de recherche (« restauration ») : les feuilles qui y répondent
+ *    sont rendues comme candidates, aucune n'est retenue d'office.
+ * Seule une feuille de la nomenclature est une catégorie : un niveau
+ * intermédiaire (« 07-02 ») ne suffit pas au guichet.
+ *
+ * @returns {{statut: 'resolue', categorie} | {statut: 'candidats', candidats, total, motif} | {statut: 'inconnue', motif}}
+ */
+function resoudreCategorie(valeur) {
   FEUILLES = FEUILLES || feuillesCategories();
-  return FEUILLES.find((f) => f.code === code) || null;
+  if (valeur === undefined || valeur === null || valeur === '') return { statut: 'inconnue', motif: 'catégorie non renseignée' };
+  let v = valeur;
+  if (typeof v === 'string' && /^\s*\{/.test(v)) { try { v = JSON.parse(v); } catch (e) { /* lue comme un terme */ } }
+  let codes = null;
+  if (v && typeof v === 'object') {
+    const aCode = v.code !== undefined && v.code !== null && v.code !== '';
+    if (aCode && !v.categorisationActivite1) return resoudreCategorie(String(v.code));
+    if (aCode) {
+      // Code et niveaux ensemble : ils doivent désigner la même catégorie.
+      const parCode = resoudreCategorie(String(v.code));
+      const parNiveaux = resoudreCategorie({ ...v, code: null });
+      if (parCode.statut === 'resolue' && parNiveaux.statut === 'resolue' && parCode.categorie.code !== parNiveaux.categorie.code) {
+        return { statut: 'inconnue', motif: `le code « ${v.code} » et les niveaux ${parNiveaux.categorie.code} ne désignent pas la même catégorie` };
+      }
+      return parNiveaux;
+    }
+    codes = [1, 2, 3, 4].map((i) => v[`categorisationActivite${i}`]).map((x) => (x === undefined || x === null ? '' : String(x).trim()));
+    if (codes.some((x) => x && !/^\d{1,2}$/.test(x))) return { statut: 'inconnue', motif: 'codes de catégorie à deux chiffres attendus' };
+    codes = codes.map((x) => (x ? x.padStart(2, '0') : ''));
+  } else {
+    const s = String(v).trim();
+    if (/^\d{2}([\s.\-]?\d{2}){1,3}$/.test(s)) codes = s.replace(/\D/g, '').match(/\d{2}/g);
+  }
+  if (codes) {
+    // « 00 » ou vide : le niveau n'existe pas pour cette branche.
+    while (codes.length && (!codes[codes.length - 1] || codes[codes.length - 1] === '00')) codes.pop();
+    if (!codes.length || codes.some((x) => !x || x === '00')) return { statut: 'inconnue', motif: 'codes de catégorie incomplets' };
+    const code = codes.join('-');
+    const f = FEUILLES.find((x) => x.code === code);
+    if (f) return { statut: 'resolue', categorie: vueCategorie(f) };
+    const sous = FEUILLES.filter((x) => x.code.startsWith(`${code}-`));
+    if (sous.length) {
+      return { statut: 'candidats', motif: `« ${code} » est un niveau intermédiaire de la nomenclature : choisissez la catégorie précise`,
+        candidats: sous.slice(0, CANDIDATS_MAX).map(vueCategorie), total: sous.length };
+    }
+    return { statut: 'inconnue', motif: `code « ${code} » absent de la nomenclature du guichet` };
+  }
+  // Terme de recherche : tous les mots (ou leur racine) doivent figurer dans le chemin de la feuille.
+  const mots = sansAccent(v).split(/[^a-z0-9]+/).filter((m) => m.length > 2 && !MOTS_VIDES.has(m));
+  if (!mots.length) return { statut: 'inconnue', motif: 'catégorie illisible' };
+  const texte = (f) => sansAccent(f.chemin.join(' '));
+  // Racine du mot : « restaurant » trouve « restauration ».
+  const contient = (f, m) => texte(f).includes(m.slice(0, Math.max(5, m.length - 3)));
+  let trouves = FEUILLES.filter((f) => mots.every((m) => contient(f, m)));
+  // À défaut, les feuilles qui ont le plus de mots en commun (« Restauration traditionnelle »).
+  if (!trouves.length && mots.length > 1) {
+    const score = (f) => mots.filter((m) => contient(f, m)).length;
+    const max = Math.max(...FEUILLES.map(score));
+    if (max) trouves = FEUILLES.filter((f) => score(f) === max);
+  }
+  if (!trouves.length) {
+    return { statut: 'inconnue', motif: `aucune catégorie de la nomenclature ne correspond à « ${String(v).trim()} » : essayez un autre mot, ou donnez le code` };
+  }
+  return { statut: 'candidats', motif: `« ${String(v).trim()} » n’est pas un code : choisissez une des catégories candidates et renseignez son code`,
+    candidats: trouves.slice(0, CANDIDATS_MAX).map(vueCategorie), total: trouves.length };
+}
+
+/** Catégorie d'une liasse ; à défaut d'un code de la nomenclature, une erreur claire plutôt qu'un champ omis. */
+function categorieExigee(valeur, contexte) {
+  const r = resoudreCategorie(valeur);
+  if (r.statut === 'resolue') return r.categorie;
+  throw Object.assign(new Error(`Catégorie d’activité ${contexte ? `(${contexte}) ` : ''}non reconnue : ${r.motif}. La liasse n’est pas transmise sans elle.`),
+    { status: 422, details: r.candidats ? { candidats: r.candidats.map((c) => ({ code: c.code, chemin: c.chemin })) } : undefined });
 }
 
 /** Forme d'exercice d'une catégorie, au format du guichet. */
@@ -278,7 +371,8 @@ function formeExercice(cat, f) {
 module.exports = {
   FORMES, ROLES, ROLES_CAC, QUESTIONS, AJOUTS, ORIGINE_FONDS,
   forme, rolesCreation, libelleRole, categorieFonction, champsCreation,
-  feuillesCategories, categorie, formeExercice, separerNom,
+  feuillesCategories, categorie, resoudreCategorie, categorieExigee, formeExercice, separerNom,
+  VERSION_CATEGORIES: require('./data/categories-activite.json')._source,
 };
 
 /* ---------------------------------------------------------- complétude */
@@ -290,6 +384,9 @@ const LIBELLES_SOUS = {
   'adresse.commune': 'commune du domicile', 'adresse.voie': 'voie du domicile (rue ou lieu-dit)', pays_naissance: 'pays de naissance', denomination: 'dénomination', siren: 'SIREN', greffe: 'greffe d’immatriculation',
   modalites: 'modalités de contrôle', representant: 'représentant permanent', forme_juridique_code: 'forme juridique',
   'volet.organisme_maladie': 'régime d’assurance maladie actuel', 'volet.activite_simultanee': 'activité exercée en parallèle',
+  forme_sociale_code: 'affiliation sociale (code attendu : 0 non applicable, 1 sans affiliation, 3 avec affiliation)',
+  genre_code: 'sexe (code attendu : 1 masculin, 2 féminin)',
+  nationalite_code: 'nationalité (absente du référentiel du guichet)',
 };
 
 /**
@@ -314,9 +411,21 @@ function nirValide(nir) {
   return 97 - (Number(BigInt(corps) % 97n)) === Number(n.slice(13));
 }
 
+/** Nationalité connue du référentiel du guichet (libellé ou code) : un libellé inconnu partirait sans code. */
+function nationaliteConnue(valeur) {
+  const { enumeration } = require('./referentiels');
+  const table = enumeration('codeNationalite');
+  const v = String(valeur).trim();
+  return Boolean(table[v.toUpperCase()] || Object.values(table).some((l) => sansAccent(l) === sansAccent(v)));
+}
+
 /** Ce qui manque à une personne physique pour que le guichet l'accepte. */
 function manquantsPersonne(p = {}, sousRequis = []) {
   const out = sousRequis.filter((k) => vide(lire(p, k)));
+  // Valeurs codées : un texte libre (« salarié assimilé ») partirait tel quel et serait refusé.
+  if (!vide(p.forme_sociale) && !['0', '1', '3'].includes(String(p.forme_sociale))) out.push('forme_sociale_code');
+  if (!vide(p.genre) && !['1', '2'].includes(String(p.genre))) out.push('genre_code');
+  if (!vide(p.nationalite) && !nationaliteConnue(p.nationalite)) out.push('nationalite_code');
   if (neEnFrance(p) && vide(p.code_insee_naissance)) out.push('code_insee_naissance');
   // Constaté : le guichet exige le NIR d'un dirigeant affilié de nationalité française.
   if (sousRequis.includes('forme_sociale') && String(p.forme_sociale) === '3') {
