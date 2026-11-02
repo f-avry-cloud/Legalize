@@ -150,6 +150,11 @@ function verifier(nom, condition, detail) {
 
   const rens = await outil('renseigner_formalite', { reference: ref, reponses: { _registre: { genre_0: '2' } } });
   verifier('renseigner_formalite complète la donnée manquante', !rens.erreur && !rens.json.etat.champs_manquants.length, rens.json?.etat);
+  const defaut = rens.json.champs.flatMap((g) => g.champs).find((c) => c.name === 'forme_sociale_0');
+  verifier('valeur par défaut proposée : à confirmer, pas « remplie »', defaut?.a_confirmer && defaut.rempli === false, defaut);
+  ctl = await outil('controler_formalite', { reference: ref });
+  verifier('défaut non confirmé : bloquant du contrôle', ctl.json.bloquants.some((b) => /par défaut à confirmer.*Affiliation sociale/.test(b)), ctl.json.bloquants);
+  await outil('renseigner_formalite', { reference: ref, reponses: { _registre: { forme_sociale_0: '0' } } });
   for (const cle of ['PJ_02', 'PJ_08', 'PJ_51']) await deposer(cle);
   ctl = await outil('controler_formalite', { reference: ref });
   verifier('dossier complet : prêt', ctl.json.pret === true && !ctl.json.bloquants.length, ctl.json);
@@ -175,8 +180,11 @@ function verifier(nom, condition, detail) {
 
   const ouv2 = await outil('ouvrir_depot_pieces', { siren: '552100554', operations: ['11M'] });
   const jeton2 = ouv2.json.lien_depot.split('/').pop();
-  const ouv3 = await outil('ouvrir_depot_pieces', { reference: ouv2.json.dossier.reference, typologie: { siege_occupation: 'locaux', hors_ressort: false } });
-  verifier('nouveau lien pour le même dossier : l’ancien ne marche plus', (await http('GET', `/depot/${jeton2}/etat`)).statut === 404
+  const maj = await outil('ouvrir_depot_pieces', { reference: ouv2.json.dossier.reference, typologie: { siege_occupation: 'locaux', hors_ressort: false } });
+  verifier('mise à jour du dossier : le lien remis reste valable, pas de nouveau lien', maj.json.lien_depot === null
+    && (await http('GET', `/depot/${jeton2}/etat`)).statut === 200, maj.json);
+  const ouv3 = await outil('ouvrir_depot_pieces', { reference: ouv2.json.dossier.reference, nouveau_lien: true });
+  verifier('nouveau lien demandé pour le même dossier : l’ancien ne marche plus', (await http('GET', `/depot/${jeton2}/etat`)).statut === 404
     && (await http('GET', `/depot/${ouv3.json.lien_depot.split('/').pop()}/etat`)).statut === 200);
   const f3 = tables.formalites.find((x) => x.reference === ouv2.json.dossier.reference);
   f3.depot_expire = new Date(Date.now() - 1000).toISOString();
@@ -313,7 +321,7 @@ function verifier(nom, condition, detail) {
   // Le dossier complet, pour atteindre le guichet.
   const lignesM = (await outil('pieces_recues', { reference: refM })).json.pieces.obligatoires;
   for (const l of lignesM.filter((x) => !x.recue.length)) await deposerM({ cle: l.cle }, `${l.code}.pdf`);
-  await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { genre_0: '2' }, MAJDIR: { maj_0: { ...rMaj.champs.find((g) => g.op === 'MAJDIR').champs[0].prerempli, denomination: 'DanHatch France' } } } });
+  await outil('renseigner_formalite', { reference: refM, reponses: { _registre: { genre_0: '2', forme_sociale_0: '0' }, MAJDIR: { maj_0: { ...rMaj.champs.find((g) => g.op === 'MAJDIR').champs[0].prerempli, denomination: 'DanHatch France' } } } });
 
   console.log('\nAnomalie 3 — brouillon COUVOIR JOSSET non signable (représentant, pays, autre fonction, caractères)');
   const champsReg = (await outil('renseigner_formalite', { reference: refM })).json.champs.find((g) => g.groupe === '_registre').champs;

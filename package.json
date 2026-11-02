@@ -23,7 +23,8 @@
     "test:revues": "node scripts/test-revues.js",
     "banc:guichet": "node scripts/banc-guichet.js",
     "test:connecteur": "node scripts/test-connecteur.js",
-    "test:registre": "node scripts/test-registre.js"
+    "test:registre": "node scripts/test-registre.js",
+    "test:categorie": "node scripts/test-categorie-activite.js"
   },
   "engines": {
     "node": ">=20"

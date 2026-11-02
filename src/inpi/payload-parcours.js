@@ -225,14 +225,14 @@ const APPLIQUER = {
   '54PMF'(c, r, D, fiche, t) {
     const pm = chemin(c, 'personneMorale');
     const modele = (pm.etablissementPrincipal?.activites || [])[0] || {};
-    const cat = creation.categorie(r.categorie);
+    const cat = creation.categorieExigee(r.categorie, 'ouverture d’établissement');
     const date = dateInpi(r.date_ouverture) || D;
     const activite = {
       ...(modele.codeApe ? { codeApe: modele.codeApe } : {}),
       descriptionDetaillee: r.activite, dateDebut: date, indicateurPrincipal: true, rolePrincipalPourEntreprise: false,
       indicateurPremiereActivite: false, exerciceActivite: 'P', formeExercice: creation.formeExercice(cat),
       origine: { typeOrigine: creation.ORIGINE_FONDS[t.fonds_origine] || '1' }, activiteReguliere: modele.activiteReguliere,
-      ...(cat ? Object.fromEntries(cat.code.split('-').map((v, i) => [`categorisationActivite${i + 1}`, v])) : {}),
+      ...niveauxCategorie(cat),
     };
     pm.autresEtablissements = [...(pm.autresEtablissements || []), {
       descriptionEtablissement: { rolePourEntreprise: '4', statutPourFormalite: '1', indicateurEtablissementPrincipal: false, identifiantTemporaire: '1' },
@@ -251,13 +251,15 @@ const APPLIQUER = {
   '61PMF'(c, r, D) {
     const ep = chemin(c, 'personneMorale', 'etablissementPrincipal');
     const modele = (ep.activites || [])[ep.activites?.length - 1] || {};
-    const cat = creation.categorie(r.categorie);
+    const cat = creation.categorieExigee(r.categorie, 'activité ajoutée');
     const act = JSON.parse(JSON.stringify(modele));
     delete act.activiteId;
+    // Les niveaux de l'activité recopiée ne survivent pas à la nouvelle catégorie.
+    for (let i = 1; i <= 4; i += 1) delete act[`categorisationActivite${i}`];
     Object.assign(act, {
       rolePrincipalPourEntreprise: false, indicateurPrincipal: false, descriptionDetaillee: r.activite, dateDebut: dateInpi(r.date_debut) || D,
-      formeExercice: creation.formeExercice(cat) || act.formeExercice, is61PMFTriggered: true,
-      ...(cat ? Object.fromEntries(cat.code.split('-').map((v, i) => [`categorisationActivite${i + 1}`, v])) : {}),
+      formeExercice: creation.formeExercice(cat), is61PMFTriggered: true,
+      ...niveauxCategorie(cat),
     });
     ep.activites = [...(ep.activites || []), act];
   },
@@ -517,6 +519,11 @@ function poserChemin(objet, cheminTexte, valeur) {
 /** Opérations déposables automatiquement aujourd'hui. */
 function deposable(op) { return Boolean(APPLIQUER[op] || CESSATIONS[op]) || ['01M', '02M'].includes(op); }
 
+/** Les niveaux de la catégorie, au format du guichet : { categorisationActivite1: "07", … }. */
+function niveauxCategorie(cat) {
+  return Object.fromEntries(cat.codes.map((v, i) => [`categorisationActivite${i + 1}`, v]));
+}
+
 /* --------------------------------------------------------------- création */
 
 /** Les réponses du parcours, à plat, au format du générateur de création. */
@@ -583,6 +590,8 @@ function construireCreation(dossier) {
   const rep = dossier.reponses || {};
   const f = creation.forme(t);
   if (!f) throw Object.assign(new Error('Choisissez la forme de la société.'), { status: 422 });
+  // Sans catégorie reconnue, le guichet refuse la liasse (« categorisationActivite1 : Veuillez renseigner ce champ »).
+  const cat = (dossier.operations || []).includes('02M') ? null : creation.categorieExigee(rep.c_activite?.categorie, 'activité principale');
   const r = reponsesCreation(dossier);
   const { corps } = construirePayload({
     type: 'creation_societe', siren: '', fiche: {}, reference: dossier.reference, libelle: dossier.libelle,
@@ -609,11 +618,8 @@ function construireCreation(dossier) {
       .filter(Boolean),
   };
 
-  const cat = creation.categorie(rep.c_activite?.categorie);
   for (const act of pm.etablissementPrincipal?.activites || []) {
-    if (cat) {
-      cat.code.split('-').forEach((v, i) => { act[`categorisationActivite${i + 1}`] = v; });
-    }
+    if (cat) Object.assign(act, niveauxCategorie(cat), { formeExercice: cat.forme_exercice });
   }
   if (r.domiciliation) {
     pm.adresseEntreprise.entrepriseDomiciliataire = {

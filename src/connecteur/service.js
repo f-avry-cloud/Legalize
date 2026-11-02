@@ -161,6 +161,21 @@ const FORMATS_CHAMPS = {
     + '"code_insee_naissance" (si né en France), "pays_naissance": "FRANCE", "nationalite": "Française", '
     + '"adresse": {"numVoie", "typeVoie", "voie": nom de la rue ou lieu-dit, "codePostal", "commune"}}',
   adresse: 'Objet : {"numVoie", "typeVoie", "voie": nom de la rue ou lieu-dit, "codePostal", "commune"}',
+  categorie: 'Code d’une catégorie de la nomenclature du guichet : "07-02-03-01" ou "07020301" (« 00 » pour un niveau absent), '
+    + 'ou {"categorisationActivite1": "07", …, "categorisationActivite4": "01"}. Un mot (« restauration ») rend les catégories candidates '
+    + '(categories_candidates) sans en retenir aucune : faites choisir l’avocat, puis renseignez le code choisi.',
+};
+
+/** Valeurs admises des sous-champs codés : le guichet refuse le texte libre. */
+const VALEURS_SOUS_CHAMPS = {
+  personne: {
+    forme_sociale: [['0', 'Non applicable'], ['1', 'Sans affiliation sociale'], ['3', 'Avec affiliation sociale (travailleur non salarié)']],
+    genre: [['1', 'Masculin'], ['2', 'Féminin']],
+    nationalite: 'Libellé ou code du référentiel des nationalités du guichet (ex. « Française » ou « FRA »).',
+  },
+  personne_morale: {
+    greffe: 'Nom de la ville du greffe d’immatriculation (ex. « Quimper »), transmis en majuscules.',
+  },
 };
 
 function vueChamp(c, valeur) {
@@ -169,6 +184,7 @@ function vueChamp(c, valeur) {
     ...(c.aide ? { aide: c.aide } : {}),
     ...(FORMATS_CHAMPS[c.type] ? { format: FORMATS_CHAMPS[c.type] } : {}),
     ...(c.sous_requis ? { sous_champs_requis: c.sous_requis } : {}),
+    ...(VALEURS_SOUS_CHAMPS[c.type] ? { valeurs_admises: VALEURS_SOUS_CHAMPS[c.type] } : {}),
     ...(c.chemin_inpi ? { chemin_inpi: c.chemin_inpi } : {}),
     ...(c.options ? { options: c.options } : {}),
     ...(c.actuel !== undefined && c.actuel !== null && c.actuel !== '' ? { valeur_au_registre: c.actuel } : {}),
@@ -206,7 +222,17 @@ async function vueDossier(id) {
     champs: d.champs.map((g) => ({
       groupe: g.op, titre: g.titre,
       champs: g.champs.map((c) => ({
-        ...vueChamp(c, c.valeur), rempli: c.rempli, ...(c.manquants?.length ? { manque: c.manquants } : {}),
+        ...vueChamp(c, c.valeur), rempli: c.rempli && !c.valeur_par_defaut, ...(c.manquants?.length ? { manque: c.manquants } : {}),
+        ...(c.valeur_par_defaut ? { a_confirmer: 'valeur par défaut proposée, non confirmée par l’avocat' } : {}),
+        ...(c.categorie_resolue ? { categorie_resolue: {
+          code: c.categorie_resolue.code, chemin: c.categorie_resolue.chemin, forme_exercice: c.categorie_resolue.forme_exercice,
+          ...Object.fromEntries(c.categorie_resolue.codes.map((v, i) => [`categorisationActivite${i + 1}`, v])),
+        } } : {}),
+        ...(c.categories_candidates ? {
+          categories_candidates: c.categories_candidates.map((x) => ({ code: x.code, chemin: x.chemin, forme_exercice: x.forme_exercice })),
+          ...(c.categories_candidates_total > c.categories_candidates.length
+            ? { candidates_non_affichees: c.categories_candidates_total - c.categories_candidates.length } : {}),
+        } : {}),
         ...(c.leve ? { exigence_levee: c.leve } : {}), ...(c.levee_inoperante ? { exigence_levee_inoperante: c.levee_inoperante } : {}),
       })),
     })),
@@ -368,9 +394,11 @@ async function exigencesFormalite({ operations, siren, typologie = {}, reponses 
 
 /**
  * Ouvre (ou met à jour) le dossier et émet un lien de dépôt des PDF, valable
- * 7 jours. Rappelé avec la même référence, il remplace le lien précédent.
+ * 7 jours. Rappelé avec la même référence, il garde le lien en cours, déjà
+ * remis à l'avocat ; il n'en émet un nouveau (qui remplace l'ancien) que si
+ * le lien a expiré ou sur `nouveau_lien: true`.
  */
-async function ouvrirDepotPieces({ reference, siren, operations, typologie, reponses, exigences_champs: exigencesChamps, dossier_id: dossierId }) {
+async function ouvrirDepotPieces({ reference, siren, operations, typologie, reponses, exigences_champs: exigencesChamps, dossier_id: dossierId, nouveau_lien: nouveauLien }) {
   let id;
   let avertissement = null;
   if (reference) {
@@ -378,6 +406,15 @@ async function ouvrirDepotPieces({ reference, siren, operations, typologie, repo
     id = f.id;
     if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : les pièces ne se complètent plus ici.', 409);
     await appliquerSaisies(id, { operations: operations ? operationsValides(operations) : null, typologie, reponses, exigences_champs: exigencesChamps });
+    if (nouveauLien !== true && f.depot_jeton && f.depot_expire && new Date(f.depot_expire) > new Date()) {
+      return {
+        lien_depot: null,
+        lien_valable_jusqu_au: f.depot_expire,
+        consigne: 'Le lien de dépôt déjà remis à l’avocat reste valable : ne lui en donnez pas d’autre. '
+          + 'S’il l’a perdu, rappelez ouvrir_depot_pieces avec nouveau_lien: true (l’ancien cessera de fonctionner).',
+        dossier: await vueDossier(id),
+      };
+    }
   } else {
     const ops = operationsValides(operations);
     if (typologie) {
@@ -475,6 +512,7 @@ async function controlerFormalite({ reference }) {
     ...v.incompatibilites.map((m) => (typeof m === 'string' ? m : m.message || JSON.stringify(m))),
     ...v.etat.non_deposables.map((m) => `Opération à finaliser sur le portail, non transmissible par l’API : ${m}`),
     ...(v.etat.provisoires ? [`${v.etat.provisoires} pièce(s) en version provisoire`] : []),
+    ...aConfirmer(v).map((m) => `Valeur par défaut à confirmer — ${m} (renseignez-la avec renseigner_formalite après accord de l’avocat)`),
   ];
   const levees = v.etat.exigences_levees || [];
   for (const l of levees.filter((x) => x.etat === 'inoperante')) {
@@ -492,7 +530,8 @@ async function controlerFormalite({ reference }) {
     alertes.push(`Champ « ${l.label} » ${etat} : exigence levée à la demande de l’avocat — motif : ${l.motif}`);
   }
   // Bloquants que l'avocat peut décider de lever : l'assistant doit savoir que l'option existe.
-  const levables = v.champs.flatMap((g) => g.champs.filter((c) => c.requis && !c.rempli && !c.exigence_levee && !c.exigence_levee_inoperante
+  // Un défaut à confirmer se confirme : il ne se lève pas.
+  const levables = v.champs.flatMap((g) => g.champs.filter((c) => c.requis && !c.rempli && !c.a_confirmer && !c.exigence_levee && !c.exigence_levee_inoperante
     && !parcoursSvc.refusLevee(g.groupe, c))
     .map((c) => ({
       champ: `${g.groupe}.${c.name}`, libelle: c.label,
@@ -512,6 +551,11 @@ async function controlerFormalite({ reference }) {
   };
 }
 
+/** Valeurs par défaut que l'avocat n'a pas confirmées, en clair. */
+function aConfirmer(v) {
+  return v.champs.flatMap((g) => g.champs.filter((c) => c.a_confirmer).map((c) => `${g.titre} : ${c.label} = ${JSON.stringify(c.valeur)}`));
+}
+
 async function enregistrerFormalite({ reference, confirmation_avocat: confirmation }) {
   if (confirmation !== true) {
     throw erreur('Enregistrement refusé : l’avocat doit d’abord confirmer expressément (confirmation_avocat: true, après son accord explicite).', 412);
@@ -519,6 +563,12 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
   const f = await chargerModifiable(reference);
   if (f.inpi_id) {
     return { deja_enregistre: true, message: 'Dossier déjà enregistré au guichet : ne pas relancer, passer au suivi.', inpi: { identifiant: f.inpi_id, liasse: f.numero_liasse, montant: f.montant, simule: f.simule } };
+  }
+  // Un dossier incomplet est refusé par le dépôt lui-même ; un dossier complet, s'il reste des défauts à confirmer.
+  const vue = await vueDossier(f.id);
+  const defauts = aConfirmer(vue);
+  if (vue.etat.pret && defauts.length) {
+    throw erreur(`Enregistrement refusé : valeurs par défaut non confirmées par l’avocat — ${defauts.join(' ; ')}. Renseignez-les avec renseigner_formalite.`, 409);
   }
   await parcoursSvc.deposer(f.id);
   const [apres] = await q(supabase.from('formalites').select('*').eq('id', f.id));
@@ -818,12 +868,14 @@ const OUTILS = [
   {
     name: 'ouvrir_depot_pieces',
     description: 'Ouvre le dossier de la formalité (ou le met à jour si « reference » est donnée) et renvoie un lien, valable 7 jours, où l’avocat dépose les PDF. '
-      + 'Rappelé avec la même référence, il remplace le lien précédent. Renvoie la référence du dossier, à noter dans la fiche dossier.',
+      + 'Rappelé avec la même référence, il garde le lien en cours (lien_depot: null) : pour compléter le dossier, préférez renseigner_formalite. '
+      + 'Renvoie la référence du dossier, à noter dans la fiche dossier.',
     inputSchema: {
       type: 'object',
       properties: {
         reference: REFERENCE, siren: { type: 'string', description: 'SIREN de la société (sauf création).' },
         operations: OPERATIONS, typologie: TYPOLOGIE, reponses: REPONSES, exigences_champs: EXIGENCES_CHAMPS,
+        nouveau_lien: { type: 'boolean', description: 'Avec « reference » : émet un nouveau lien qui remplace l’ancien (lien perdu par l’avocat). Par défaut, le lien en cours est gardé.' },
         dossier_id: { type: 'string', description: 'Facultatif : dossier client Legalize auquel rattacher la formalité (numéro ou référence, ex. 2026-0012).' },
       },
     },
