@@ -115,7 +115,8 @@ function pouvoirEntrant(e, r, forme, dateEffet) {
       entreprise: {
         roleEntreprise: role,
         siren: nettoyerSiren(r.siren) || undefined,
-        pays: nettoyerSiren(r.siren) ? 'FRANCE' : undefined,
+        // Code pays du référentiel (« FRA ») : le libellé « FRANCE » est refusé (« Choisissez un code pays valide »).
+        pays: nettoyerSiren(r.siren) ? 'FRA' : undefined,
         denomination: r.denomination || e.nom,
         formeJuridique: r.forme_juridique_code || undefined,
         lieuRegistre: r.greffe ? String(r.greffe).toUpperCase() : undefined,
@@ -480,7 +481,7 @@ function completerRegistre(content, r, rejets = []) {
 function completerPouvoir(p, representant) {
   if (p.entreprise) {
     // Une société inscrite par son SIREN est française.
-    if (vide(p.entreprise.pays) && (p.entreprise.siren || !p.entreprise.formeJuridiqueEtrangere)) p.entreprise.pays = 'FRANCE';
+    if ((vide(p.entreprise.pays) || /^france$/i.test(String(p.entreprise.pays).trim())) && (p.entreprise.siren || !p.entreprise.formeJuridiqueEtrangere)) p.entreprise.pays = 'FRA';
     if (representant?.nom) {
       p.representant = {
         descriptionPersonne: { ...descriptionIndividu(representant, p.roleEntreprise), statutVisAVisFormalite: '1' },

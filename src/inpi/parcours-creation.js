@@ -449,6 +449,10 @@ function manquants(c, v) {
   if (c.type === 'personne') return manquantsPersonne(v || {}, c.sous_requis).map(libelle);
   if (c.type === 'personne_morale') {
     const out = c.sous_requis.filter((k) => vide(lire(v || {}, k))).map(libelle);
+    // Code du référentiel des formes juridiques du guichet, pas un libellé (« SAS »).
+    if (!vide(v?.forme_juridique_code) && !FORMES_GUICHET[String(v.forme_juridique_code).trim()]) {
+      out.push(`forme juridique : code « ${v.forme_juridique_code} » inconnu du référentiel du guichet (ex. 5710 pour une SAS)`);
+    }
     if (c.representant_requis) {
       const r = manquantsPersonne(v?.representant || {}, SOUS_REQUIS_REPRESENTANT);
       if (r.length) out.push(`représentant permanent : ${r.map(libelle).join(', ')}`);
@@ -458,13 +462,17 @@ function manquants(c, v) {
   if (c.type === 'beneficiaires') {
     const liste = Array.isArray(v) ? v : [];
     if (!liste.length) return ['au moins un bénéficiaire effectif'];
+    const { manquantsControle } = require('./controle-be');
+    const sous = c.sous_requis.filter((k) => k !== 'modalites');
     return liste.flatMap((b, i) => {
-      const m = manquantsPersonne(b, c.sous_requis);
+      const m = [...manquantsPersonne(b, sous), ...(c.sous_requis.includes('modalites') ? manquantsControle(b) : [])];
       return m.length ? [`${b.prenoms || ''} ${b.nom || `bénéficiaire n° ${i + 1}`}`.trim() + ` : ${m.map(libelle).join(', ')}`] : [];
     });
   }
   return [];
 }
+
+const FORMES_GUICHET = require('./data/formes-juridiques.json').valeurs;
 
 module.exports.manquants = manquants;
 module.exports.SOUS_REQUIS_REPRESENTANT = SOUS_REQUIS_REPRESENTANT;
