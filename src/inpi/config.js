@@ -86,7 +86,12 @@ const guichet = {
     piecesFormalite: '/api/formalities/{id}/attachments',
     piece: '/api/attachments/{id}',
     pieceFichier: '/api/attachments/{id}/file',
+    // Contrat d'interface 06/2026 §3.12 : « remove » invalide la pièce (elle reste
+    // rattachée, « plus à prendre en compte ») ; DELETE la supprime, entre dépôt et signature.
     pieceInvalider: '/api/formalities/{formaliteId}/attachments/{pieceId}/remove',
+    pieceSupprimer: '/api/formalities/{formaliteId}/attachments/{pieceId}',
+    // §6.4 : synthèse à régénérer après l'ajout d'une pièce, sans quoi la signature est impossible.
+    rafraichir: '/api/formalities/{id}/refresh',
     synthese: '/api/formalities/{id}/synthesis',
     syntheseMetadonnees: '/api/formalities/{id}/synthesis_content',
     regularisations: '/api/regularization_requests',

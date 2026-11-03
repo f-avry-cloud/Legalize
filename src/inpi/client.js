@@ -183,7 +183,7 @@ function erreurDeReponse(cible, reponse, donnees, texte) {
  * après coup (constaté le 3/11 sur LGZ-2026-00052). Table guichet_traces,
  * lisible avec la clé de service seulement, purgée au-delà de 30 jours.
  */
-const CLES_SIMPLES = /^(@id|@type|id|status|statut|state|etat|liasseNumber|numeroLiasse|numeroNational|typeDocument|typeFormalite|typePersonne|documentExtension|langueDocument|created|updated|statusDate|size|removed|deleted|valid|invalid|isRemoved|isDeleted|isValid|hydra:totalItems|totalItems)$/i;
+const CLES_SIMPLES = /^(@id|@type|id|status|statut|state|etat|liasseNumber|numeroLiasse|numeroNational|typeDocument|typeFormalite|typePersonne|documentExtension|langueDocument|created|updated|statusDate|size|removed|deleted|valid|invalid|invalidated|invalidatedDate|compliance|regularisable|isRemoved|isDeleted|isValid|hydra:totalItems|totalItems)$/i;
 const RETENTION_TRACES_JOURS = 30;
 
 /** Champs simples et sans donnée personnelle d'un objet du guichet. */

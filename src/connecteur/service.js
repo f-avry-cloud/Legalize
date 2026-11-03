@@ -114,8 +114,8 @@ function doublonAVerifier(f) {
   return derniere;
 }
 
-const NE_PAS_RAMENER_EN_BROUILLON = 'Ne pas ramener cette formalité en brouillon sur le portail : elle quitterait le compte mandataire et perdrait les pièces jointes par le connecteur. '
-  + 'La signer directement depuis « À signer » ; pour une correction, la faire sur le portail sans repasser en brouillon, ou demander à Claude (retirer_piece_guichet / transmettre_pieces).';
+const NE_PAS_RAMENER_EN_BROUILLON = 'Ne pas ramener cette formalité en brouillon sur le portail (aucune modification sur le portail) : elle quitterait le compte mandataire et perdrait toutes ses pièces jointes. '
+  + 'La signer directement depuis « À signer ». Une pièce se corrige par Claude tant qu’elle est « À signer » (retirer_piece_guichet, transmettre_pieces) ; une formalité déjà ramenée en brouillon se termine sur le portail (pièces à y rejoindre, une fois chacune).';
 
 /** Le dossier Legalize (client) auquel rattacher la formalité : numéro ou référence (2026-0012). */
 async function dossierLegalize(valeur) {
@@ -697,7 +697,7 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
     ...(pg && !pg.simule ? { pieces_au_guichet: vuePiecesGuichet(pg) } : {}),
     ...(apres.simule ? { motif_simulation: guichet.motifSimulation(), message: 'Simulation : rien n’a été transmis à l’INPI.' } : {}),
     ...(!apres.simule && !depose ? {
-      attention: 'Formalité enregistrée mais PAS déposée : toutes les pièces ne sont pas confirmées au guichet. Ne pas la présenter comme déposée ni la signer avant de les avoir complétées (transmettre_pieces, ou jointes sur le portail), puis vérifiées avec consulter_formalite_guichet.',
+      attention: 'Formalité enregistrée mais PAS déposée : toutes les pièces ne sont pas confirmées au guichet. Ne pas la présenter comme déposée ni la signer avant de les avoir complétées par transmettre_pieces (sur accord de l’avocat, la formalité restant « À signer » : ne pas les joindre sur le portail, qui la ramènerait en brouillon), puis vérifiées avec consulter_formalite_guichet.',
     } : {}),
     inpi: { identifiant: apres.inpi_id, liasse: apres.numero_liasse, montant: apres.montant },
     statut: statutInfo(apres.statut).libelle,
@@ -720,8 +720,9 @@ function vuePiecesGuichet(pg) {
       complet: Boolean(c.complet), attendues: c.attendues, confirmees: (c.confirmees || []).length,
       manquantes: c.manquantes || [],
       ...(c.en_trop?.length ? { en_trop: c.en_trop, en_trop_suite: 'Pièces au guichet sans correspondant dans le dossier (doublons) : les retirer avec retirer_piece_guichet, sur accord de l’avocat, avant de signer.' } : {}),
+      ...(c.invalidees?.length ? { invalidees: c.invalidees } : {}),
     },
-    ...(c.complet ? {} : { suite: 'Relancer transmettre_pieces, ou joindre les pièces manquantes sur le portail avant de signer.' }),
+    ...(c.complet ? {} : { suite: 'Pièces manquantes : transmettre_pieces, sur accord de l’avocat, avant de signer (pas sur le portail, qui ramènerait la formalité en brouillon).' }),
   };
 }
 
@@ -743,8 +744,9 @@ async function transmettrePiecesGuichet({ reference, confirmation_avocat: confir
     ...(r.simule ? { simule: true, message: 'Dossier simulé : rien n’est transmis à l’INPI.' } : {}),
     transmises: r.transmises, deja_presentes: r.deja_presentes, echecs: r.echecs,
     ...(r.simule ? {} : { controle_guichet: vuePiecesGuichet(r).controle_guichet, depose: Boolean(c.complet) }),
-    suite: r.simule || c.complet ? 'Toutes les pièces sont confirmées au guichet : l’avocat peut signer puis payer sur le portail.'
-      : 'Pièces non confirmées au guichet : les joindre sur le portail (ou relancer) avant de signer.',
+    ...(r.synthese ? { synthese: r.synthese.ok ? 'régénérée' : { erreur: r.synthese.erreur, consequence: 'La signature peut être refusée tant que la synthèse n’est pas régénérée.' } } : {}),
+    suite: r.simule || c.complet ? 'Toutes les pièces sont confirmées au guichet : l’avocat peut signer puis payer sur le portail, depuis « À signer ».'
+      : 'Pièces non confirmées au guichet : ne pas signer ; vérifier avec consulter_formalite_guichet avant toute relance.',
     ...(r.simule ? {} : { avertissement_portail: NE_PAS_RAMENER_EN_BROUILLON }),
   };
 }
@@ -759,9 +761,11 @@ async function retirerPieceGuichetOutil({ reference, piece_id: pieceId, confirma
   const r = await parcoursSvc.retirerPieceGuichet(r0.f.id, pieceId);
   return {
     reference: r0.f.reference, retiree: r.retiree, piece: r.piece,
+    ...(r.mode ? { mode: r.mode === 'suppression' ? 'supprimée' : 'invalidée (reste listée au guichet, plus prise en compte par le valideur)' } : {}),
+    ...(r.synthese ? { synthese: r.synthese.ok ? 'régénérée' : { erreur: r.synthese.erreur, consequence: 'La signature peut être refusée tant que la synthèse n’est pas régénérée.' } } : {}),
     controle_guichet: vuePiecesGuichet({ controle: r.controle }).controle_guichet,
     ...(r.retiree ? {} : {
-      attention: 'La pièce figure toujours sur la formalité à la relecture : ne pas relancer ; vérifier sur le portail et, au besoin, la retirer à la main avant de signer.',
+      attention: 'La pièce figure toujours sur la formalité, sans marque d’invalidation : ne pas relancer, ne pas la retirer sur le portail (la formalité repasserait en brouillon et perdrait ses pièces) ; transmettre le diagnostic au mainteneur du connecteur.',
       diagnostic: r.diagnostic,
     }),
   };
@@ -1182,7 +1186,8 @@ const OUTILS = [
   {
     name: 'retirer_piece_guichet',
     description: 'Retire une pièce rattachée à la formalité au guichet (doublon, pièce erronée), avant signature, par son identifiant au guichet (pieces_au_guichet de consulter_formalite_guichet). '
-      + 'Les documents de synthèse de l’INPI (PJ_99, PJ_119) ne se retirent pas. Écrit au guichet : uniquement après l’accord explicite de l’avocat, avec confirmation_avocat: true. '
+      + 'Suppression (DELETE) entre le dépôt et la signature ; à défaut, ou en régularisation, invalidation : la pièce reste listée mais n’est plus prise en compte (contrat d’interface §3.12). '
+      + 'La synthèse est ensuite régénérée. Les documents de synthèse de l’INPI (PJ_99, PJ_119) ne se retirent pas. Écrit au guichet : uniquement après l’accord explicite de l’avocat, avec confirmation_avocat: true. '
       + 'Pour retirer une pièce du dossier Legalize, utiliser retirer_piece.',
     inputSchema: {
       type: 'object',

@@ -166,6 +166,48 @@ const BES = [
     && traces[2].requete === null && traces[2].reponse === null, traces);
   verifier('aucun identifiant, mot de passe, jeton, nom ni contenu dans les traces', !/avocat@|mot-de-passe|jeton-secret|ESSAI|QUJD/.test(tout), tout);
 
+  console.log('\nRetrait d’une pièce : appels au guichet (contrat d’interface 06/2026 §3.12, §6.4)');
+  const guichetMod = require('../src/inpi/guichet');
+  const appels = [];
+  const reponseHttp = (corps, statut = 200) => new Response(corps === null ? '' : JSON.stringify(corps), { status: statut });
+  const cfgG = config.guichet;
+  const identifiants0 = { u: cfgG.username, p: cfgG.password };
+  cfgG.username = 'compte@test.invalid'; cfgG.password = 'x';
+  client.viderCache();
+  try {
+    global.fetch = async (url, o = {}) => {
+      const chemin = new URL(url).pathname;
+      appels.push(`${o.method || 'GET'} ${chemin}`);
+      if (chemin === cfgG.paths.login) return reponseHttp({ token: 'jeton-test' });
+      if ((o.method || 'GET') === 'DELETE') return reponseHttp({ code: 5003, message: 'Ce fichier ne peut pas être supprimé car non présent dans le content de la formalité' }, 400);
+      if ((o.method || 'GET') === 'PUT') return reponseHttp({ id: 412125056, invalidated: true, compliance: 'INVALID', invalidatedName: 'Jean ESSAI' });
+      return reponseHttp({});
+    };
+    const r1 = await guichetMod.retirerPieceGuichet('22540180', '412125056', { raison: 'Pièce en double.' });
+    verifier('suppression d’abord (DELETE), invalidation si le guichet la refuse (PUT …/remove)',
+      appels.includes('DELETE /api/formalities/22540180/attachments/412125056') && appels.includes('PUT /api/formalities/22540180/attachments/412125056/remove')
+      && r1.mode === 'invalidation' && /non présent dans le content/.test(r1.erreur_suppression || '') && r1.reponse?.invalidated === true, { appels, r1 });
+    verifier('aucun nom de personne dans la réponse rendue', !/ESSAI/.test(JSON.stringify(r1)), r1);
+    appels.length = 0;
+    global.fetch = async (url, o = {}) => {
+      const chemin = new URL(url).pathname;
+      appels.push(`${o.method || 'GET'} ${chemin}`);
+      return chemin === cfgG.paths.login ? reponseHttp({ token: 'jeton-test' }) : reponseHttp(null);
+    };
+    const r2 = await guichetMod.retirerPieceGuichet('22540180', '412125106');
+    verifier('suppression acceptée : une seule requête DELETE', r2.mode === 'suppression' && appels.filter((a) => !a.includes('login')).join() === 'DELETE /api/formalities/22540180/attachments/412125106', appels);
+    appels.length = 0;
+    await guichetMod.retirerPieceGuichet('22540180', '412125133', { invalider: true });
+    verifier('régularisation : invalidation directe, sans tentative de suppression', appels.filter((a) => !a.includes('login')).join() === 'PUT /api/formalities/22540180/attachments/412125133/remove', appels);
+    appels.length = 0;
+    await guichetMod.regenererSynthese('22540180');
+    verifier('régénération de la synthèse : GET /refresh', appels.filter((a) => !a.includes('login')).join() === 'GET /api/formalities/22540180/refresh', appels);
+  } finally {
+    global.fetch = fetch0;
+    cfgG.username = identifiants0.u; cfgG.password = identifiants0.p;
+    client.viderCache();
+  }
+
   console.log('\nNon-régression LGZ-2026-00052 (connecteur)');
   const instance = serveur.listen(0);
   const base = `http://127.0.0.1:${instance.address().port}`;
