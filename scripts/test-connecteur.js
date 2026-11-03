@@ -346,6 +346,7 @@ function verifier(nom, condition, detail) {
     && pouvoirRep.representant.descriptionPersonne.nationalite === 'Française'
     && pouvoirRep.representant.adresseDomicile.voie === 'de Siam' && pouvoirRep.representant.adresseDomicile.pays, pouvoirRep.representant);
   verifier('pays de la personne morale renseigné (sans lui, sa forme juridique est jugée invalide)', pouvoirRep.entreprise.pays === 'FRA', pouvoirRep.entreprise);
+  verifier('registre de la personne morale : code « 1 » (RCS)', pouvoirRep.entreprise.registre === '1', pouvoirRep.entreprise);
   verifier('« Avez-vous une autre fonction ? » répondu (non) sur chaque pouvoir',
     (() => { const c = construireParcours({ ...fM, pieces: [] }).corps; return (c.newFormality?.content || c.content).personneMorale.composition.pouvoirs.every((p) => p.indicateurSecondRoleEntreprise === false); })());
   const { texteGuichet, nettoyerTextes } = require('../src/inpi/texte-guichet');

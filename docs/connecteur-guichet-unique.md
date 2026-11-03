@@ -136,8 +136,9 @@ bénéficiaire porte un objet `controle`, d'où le connecteur calcule le bloc `m
   100 % et un bénéficiaire sans aucun critère (25 % tout juste ne suffit pas). L'écran Legalize (cases à cocher et
   pourcentages) reste accepté ; seuls les codes du référentiel partent.
 
-Dirigeant personne morale : `forme_juridique_code` est un code du référentiel (5710 pour une SAS, pas « SAS ») et le
-pays de la société part en code « FRA ».
+Dirigeant personne morale : `forme_juridique_code` est un code du référentiel (5710 pour une SAS, pas « SAS »), le
+pays de la société part en code « FRA » et le registre en code « 1 » (RCS, référentiel `registre` ; champ resté vide
+sur le portail pour LGZ-2026-00052, `lieuRegistre` portant la ville du greffe).
 
 ## Valeurs par défaut
 
@@ -216,6 +217,28 @@ n'est pas un critère (l'INPI le sert encore après la disparition). L'état est
 relu au guichet par `statut_formalite`, `controler_formalite`,
 `consulter_formalite_guichet`, `renseigner_formalite`, `enregistrer_formalite`
 et `retirer_piece_guichet`.
+
+Un brouillon du portail se termine **sur le portail** : y rejoindre les pièces (chacune une fois), corriger au
+besoin, puis signer et payer. Précédent : COUVOIR JOSSET, déposé par le connecteur, ramené en brouillon, complété
+et signé sur le portail, validé le 21/10 sous une nouvelle liasse (J00291641058), de nouveau visible du compte.
+
+### Retrait d'une pièce au guichet
+
+`retirer_piece_guichet` a été essayé en réel le 3/11 à 13:46 UTC (pièce 412125056, J00297506073) : demande
+acceptée par le guichet, pièce toujours listée à la relecture. Le retrait n'est donc pas établi ; la méthode et
+la réponse du guichet sont désormais rendues (`diagnostic`) et journalisées. Ne pas enchaîner de retraits tant
+que ce diagnostic n'a pas montré un retrait effectif.
+
+## Traces
+
+Chaque échange avec l'API du guichet (et chaque échec du registre) est tracé dans `guichet_traces` : méthode,
+chemin, statut HTTP, durée, forme de la requête (clés, codes et tailles des pièces) et de la réponse
+(identifiants, statuts, nombre d'éléments, refus par champ). Jamais de valeur saisie, de nom, de contenu de
+fichier, d'identifiant de connexion ni de jeton. Lecture avec la clé de service ; purge au-delà de 30 jours.
+
+```sql
+select cree_le, methode, chemin, statut, duree_ms, reponse from guichet_traces order by cree_le desc limit 50;
+```
 
 ## Document de synthèse
 

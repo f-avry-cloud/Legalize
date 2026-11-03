@@ -17,7 +17,7 @@
  */
 
 const { config } = require('./config');
-const { appel, telecharger, chemin, ErreurInpi } = require('./client');
+const { appel, telecharger, chemin, ErreurInpi, resumeReponse } = require('./client');
 const { normaliserStatut, statut } = require('./referentiels');
 const mock = require('./mock');
 const { nettoyerTextes } = require('./texte-guichet');
@@ -486,17 +486,6 @@ function etatPiece(p = {}) {
   return Object.keys(etat).length ? { etat_guichet: etat } : {};
 }
 
-/** Réponse du guichet ramenée à ses champs simples (jamais le contenu d'un fichier). */
-function resumeReponse(r) {
-  if (r === null || r === undefined || r === '') return null;
-  if (typeof r !== 'object') return String(r).slice(0, 500);
-  const out = {};
-  for (const [k, v] of Object.entries(r)) {
-    if (/base64|content|file/i.test(k)) continue;
-    out[k] = v && typeof v === 'object' ? JSON.stringify(v).slice(0, 300) : v;
-  }
-  return out;
-}
 
 module.exports = {
   deposer, mettreAJour, lire, lister, listerTout, regularisations, historique,
