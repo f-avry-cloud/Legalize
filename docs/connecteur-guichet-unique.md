@@ -39,8 +39,8 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `pieces_recues` | Pièces reçues et manquantes |
 | `controler_formalite` | Bloquants, alertes, échéance, mode simulation |
 | `enregistrer_formalite` | Transmission au guichet, **uniquement avec `confirmation_avocat: true`** |
-| `transmettre_pieces` | Dépose sur une formalité enregistrée les pièces que le guichet n'a pas encore ; sur accord de l'avocat. Idempotent : les pièces jointes à la création ne repartent pas. Rapprochement par code PJ, puis taille et nom normalisé comme le guichet (accents retirés, espaces en « _ », parenthèses supprimées, « .docx.pdf » → « _docx.pdf »). La liste du guichet est relue : `depose: true` seulement quand toutes les pièces y sont confirmées ; les doublons sont listés (`en_trop`) |
-| `retirer_piece_guichet` | Retire une pièce rattachée à la formalité au guichet (doublon, erreur), par son identifiant, avant signature et sur accord de l'avocat. Les synthèses PJ_99 / PJ_119 ne se retirent pas |
+| `transmettre_pieces` | Dépose sur une formalité enregistrée les pièces que le guichet n'a pas encore ; sur accord de l'avocat. Idempotent : les pièces jointes à la création ne repartent pas. Rapprochement par code PJ, puis taille et nom normalisé comme le guichet (accents retirés, espaces en « _ », parenthèses supprimées, « .docx.pdf » → « _docx.pdf »). La liste du guichet est relue : `depose: true` seulement quand toutes les pièces y sont confirmées ; les doublons sont listés (`en_trop`). La synthèse est régénérée après un ajout (`GET /api/formalities/{id}/refresh`, contrat §6.4) |
+| `retirer_piece_guichet` | Retire une pièce rattachée à la formalité au guichet (doublon, erreur), par son identifiant, avant signature et sur accord de l'avocat : suppression (`DELETE`), ou à défaut invalidation (`PUT …/remove`, la pièce reste listée, marquée invalidée). Synthèse régénérée ensuite. Les synthèses PJ_99 / PJ_119 ne se retirent pas |
 | `statut_formalite`, `lister_formalites` | Suivi (statut relu auprès de l'INPI, régularisations, journal) |
 | `reclasser_piece`, `retirer_piece`, `catalogue_pieces` | Ranger une pièce reçue sous la bonne ligne ou un autre type officiel |
 | `lister_pieces_deposees` | Actes et comptes annuels déposés au registre pour un SIREN (lecture seule) |
@@ -136,8 +136,9 @@ bénéficiaire porte un objet `controle`, d'où le connecteur calcule le bloc `m
   100 % et un bénéficiaire sans aucun critère (25 % tout juste ne suffit pas). L'écran Legalize (cases à cocher et
   pourcentages) reste accepté ; seuls les codes du référentiel partent.
 
-Dirigeant personne morale : `forme_juridique_code` est un code du référentiel (5710 pour une SAS, pas « SAS ») et le
-pays de la société part en code « FRA ».
+Dirigeant personne morale : `forme_juridique_code` est un code du référentiel (5710 pour une SAS, pas « SAS »), le
+pays de la société part en code « FRA » et le registre en code « 1 » (RCS, référentiel `registre` ; champ resté vide
+sur le portail pour LGZ-2026-00052, `lieuRegistre` portant la ville du greffe).
 
 ## Valeurs par défaut
 
@@ -216,6 +217,41 @@ n'est pas un critère (l'INPI le sert encore après la disparition). L'état est
 relu au guichet par `statut_formalite`, `controler_formalite`,
 `consulter_formalite_guichet`, `renseigner_formalite`, `enregistrer_formalite`
 et `retirer_piece_guichet`.
+
+Un brouillon du portail se termine **sur le portail** : y rejoindre les pièces (chacune une fois), corriger au
+besoin, puis signer et payer. Précédent : COUVOIR JOSSET, déposé par le connecteur, ramené en brouillon, complété
+et signé sur le portail, validé le 21/10 sous une nouvelle liasse (J00291641058), de nouveau visible du compte.
+
+### Pièces : ce que dit le contrat d'interface (06/2026)
+
+- **Envoi** (§3.3) : les PDF partent en base64 dans `content.piecesJointes` de la formalité ; le guichet les garde
+  (sous ses propres noms). Après l'enregistrement, le connecteur relit seulement la liste : **aucun envoi
+  automatique** (le second envoi du 3/11 a produit dix doublons). Une pièce manquante se transmet ensuite avec
+  `transmettre_pieces`, sur accord de l'avocat, la formalité restant « À signer ».
+- **Ajout** (§3.11) : `POST /api/formalities/{id}/attachments`, puis **régénération de la synthèse** (§6.4,
+  `GET /api/formalities/{id}/refresh`), sans quoi la signature est impossible.
+- **Retrait** (§3.12) : `DELETE /api/formalities/{id}/attachments/{pieceId}` supprime la pièce, entre le dépôt et
+  la signature ; `PUT …/{pieceId}/remove` ne fait que l'**invalider** (elle reste listée, « plus à prendre en
+  compte » par le valideur ; seule voie en régularisation). Le connecteur appelait `remove` : d'où le retrait
+  « accepté mais pièce toujours listée » du 3/11 (412125056, J00297506073). Il supprime désormais d'abord et
+  n'invalide que si la suppression est refusée (code 5003 : pièce absente du content). Une pièce invalidée ne
+  compte plus dans le rapprochement (`invalidees`).
+- **Mise à jour avant signature** (§3.4) : `PUT /api/formalities/{id}` avec le même JSON qu'à la création
+  (sans redonner les base64) ; refusé (400) pour une formalité de modification. Pas encore proposé par le
+  connecteur : c'est la voie pour corriger une création « À signer » sans passer par le brouillon du portail.
+- **Brouillons** : l'API ne documente que `PUT /api/formality_drafts/{id}/transfer_agent` ; un brouillon du
+  portail n'est ni listable ni supprimable par le connecteur.
+
+## Traces
+
+Chaque échange avec l'API du guichet (et chaque échec du registre) est tracé dans `guichet_traces` : méthode,
+chemin, statut HTTP, durée, forme de la requête (clés, codes et tailles des pièces) et de la réponse
+(identifiants, statuts, nombre d'éléments, refus par champ). Jamais de valeur saisie, de nom, de contenu de
+fichier, d'identifiant de connexion ni de jeton. Lecture avec la clé de service ; purge au-delà de 30 jours.
+
+```sql
+select cree_le, methode, chemin, statut, duree_ms, reponse from guichet_traces order by cree_le desc limit 50;
+```
 
 ## Document de synthèse
 

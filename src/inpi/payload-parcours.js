@@ -103,6 +103,16 @@ function voletSocial(v, dateEffet) {
   };
 }
 
+/**
+ * Registre d'immatriculation d'une personne morale dirigeante (BlocEntrepriseChapeau.registre,
+ * GU_ENT004 ; référentiel « registre » : 1 RCS, 2 RM, 3 RSEIRL, 4 RSAC, 5 RA). Le portail
+ * l'affichait vide pour une SAS présidente (LGZ-2026-00052). Sociétés commerciales (5xxx)
+ * et sociétés civiles, GIE et autres personnes morales inscrites (6xxx) : RCS.
+ */
+function registreDe(formeJuridique, siren) {
+  return nettoyerSiren(siren) && /^[56]\d{3}$/.test(String(formeJuridique || '').trim()) ? '1' : undefined;
+}
+
 /** Bloc pouvoir d'une personne nommée, d'après le formulaire ciblé. */
 function pouvoirEntrant(e, r, forme, dateEffet) {
   const role = roleEntrant(e, r, forme);
@@ -117,6 +127,7 @@ function pouvoirEntrant(e, r, forme, dateEffet) {
         siren: nettoyerSiren(r.siren) || undefined,
         // Code pays du référentiel (« FRA ») : le libellé « FRANCE » est refusé (« Choisissez un code pays valide »).
         pays: nettoyerSiren(r.siren) ? 'FRA' : undefined,
+        registre: registreDe(r.forme_juridique_code, r.siren),
         denomination: r.denomination || e.nom,
         formeJuridique: r.forme_juridique_code || undefined,
         lieuRegistre: r.greffe ? String(r.greffe).toUpperCase() : undefined,
@@ -482,6 +493,10 @@ function completerPouvoir(p, representant) {
   if (p.entreprise) {
     // Une société inscrite par son SIREN est française.
     if ((vide(p.entreprise.pays) || /^france$/i.test(String(p.entreprise.pays).trim())) && (p.entreprise.siren || !p.entreprise.formeJuridiqueEtrangere)) p.entreprise.pays = 'FRA';
+    if (vide(p.entreprise.registre)) {
+      const reg = registreDe(p.entreprise.formeJuridique, p.entreprise.siren);
+      if (reg) p.entreprise.registre = reg;
+    }
     if (representant?.nom) {
       p.representant = {
         descriptionPersonne: { ...descriptionIndividu(representant, p.roleEntreprise), statutVisAVisFormalite: '1' },

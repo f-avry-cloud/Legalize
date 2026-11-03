@@ -69,7 +69,19 @@ function expirationDuJeton(token) {
   }
 }
 
-async function requete(cible, { methode = 'GET', chemin, params, corps, token, brut = false, accept }) {
+async function requete(cible, options) {
+  const debut = Date.now();
+  try {
+    const r = await requeteBrute(cible, options);
+    await tracer(cible, options, { statut: r.reponse?.status ?? null, duree: Date.now() - debut, donnees: r.donnees });
+    return r;
+  } catch (e) {
+    await tracer(cible, options, { statut: e.httpStatus ?? e.status ?? null, duree: Date.now() - debut, erreur: e });
+    throw e;
+  }
+}
+
+async function requeteBrute(cible, { methode = 'GET', chemin, params, corps, token, brut = false, accept }) {
   const cfg = cfgDe(cible);
   const controleur = new AbortController();
   const minuteur = setTimeout(() => controleur.abort(), config.timeoutMs);
@@ -152,9 +164,95 @@ function erreurDeReponse(cible, reponse, donnees, texte) {
     message += '. Vérifier l’identifiant et le mot de passe du compte, et que les conditions particulières '
       + 'd’utilisation ont bien été acceptées lors d’une première connexion à l’interface web.';
   }
-  return new ErreurInpi(message, {
+  const erreur = new ErreurInpi(message, {
     status, api: cible, detail: donnees, code: donnees?.id || donnees?.code || null,
   });
+  // Statut HTTP d'origine, pour les traces (status est ramené à 404/422/502).
+  erreur.httpStatus = reponse.status;
+  return erreur;
+}
+
+/* --------------------------------------------------------------- traces */
+
+/*
+ * Traces des échanges avec le guichet, sans données personnelles : méthode,
+ * chemin, statut, durée, et la forme de la requête et de la réponse (clés,
+ * identifiants, statuts, codes et tailles des pièces ; jamais un nom, une
+ * adresse, un contenu de fichier ni un jeton). Vercel ne garde qu'une heure de
+ * journaux : sans elles, un comportement du guichet ne se diagnostique pas
+ * après coup (constaté le 3/11 sur LGZ-2026-00052). Table guichet_traces,
+ * lisible avec la clé de service seulement, purgée au-delà de 30 jours.
+ */
+const CLES_SIMPLES = /^(@id|@type|id|status|statut|state|etat|liasseNumber|numeroLiasse|numeroNational|typeDocument|typeFormalite|typePersonne|documentExtension|langueDocument|created|updated|statusDate|size|removed|deleted|valid|invalid|invalidated|invalidatedDate|compliance|regularisable|isRemoved|isDeleted|isValid|hydra:totalItems|totalItems)$/i;
+const RETENTION_TRACES_JOURS = 30;
+
+/** Champs simples et sans donnée personnelle d'un objet du guichet. */
+function champsSimples(o) {
+  const out = {};
+  if (!o || typeof o !== 'object') return out;
+  for (const [k, v] of Object.entries(o)) {
+    if (CLES_SIMPLES.test(k) && (v === null || ['string', 'number', 'boolean'].includes(typeof v))) out[k] = typeof v === 'string' ? v.slice(0, 80) : v;
+  }
+  return out;
+}
+
+const koBase64 = (b) => (typeof b === 'string' ? Math.round((b.length * 3) / 4 / 1024) : null);
+
+/** Forme d'un corps de requête : clés et pièces (type, taille), sans aucune valeur saisie. */
+function resumeCorps(corps) {
+  if (!corps || typeof corps !== 'object') return null;
+  const contenu = corps.content || corps.newFormality?.content || null;
+  const pieces = Array.isArray(contenu?.piecesJointes) ? contenu.piecesJointes : null;
+  return {
+    cles: Object.keys(corps).slice(0, 30),
+    ...champsSimples(corps),
+    ...(pieces ? { pieces: pieces.map((p) => ({ type: p.typeDocument || null, ko: koBase64(p.documentBase64) })) } : {}),
+    ...(corps.documentBase64 ? { piece: { type: corps.typeDocument || null, ko: koBase64(corps.documentBase64) } } : {}),
+  };
+}
+
+/** Forme d'une réponse du guichet : identifiants, statuts, nombre d'éléments, refus par champ. */
+function resumeReponse(donnees) {
+  if (donnees === null || donnees === undefined) return null;
+  if (Buffer.isBuffer(donnees)) return { octets: donnees.length };
+  if (typeof donnees !== 'object') return { type: typeof donnees };
+  const elements = Array.isArray(donnees) ? donnees
+    : (donnees['hydra:member'] || donnees.member || donnees.formalities || null);
+  return {
+    ...(Array.isArray(donnees) ? {} : { cles: Object.keys(donnees).slice(0, 30), ...champsSimples(donnees) }),
+    ...(Array.isArray(elements) ? { nombre: elements.length, elements: elements.slice(0, 40).map(champsSimples) } : {}),
+    ...(Array.isArray(donnees.violations)
+      ? { violations: donnees.violations.slice(0, 40).map((v) => ({ champ: v.propertyPath, message: String(v.message || '').slice(0, 160) })) } : {}),
+  };
+}
+
+/** Enregistre l'échange ; une trace ne fait jamais échouer ni ralentir sensiblement un appel. */
+async function tracer(cible, { methode = 'GET', chemin, params, corps }, { statut, duree, donnees, erreur }) {
+  // Guichet : tout ; registre : les échecs seulement (appels nombreux).
+  if (cible !== 'guichet' && !erreur) return;
+  let service;
+  try { service = require('../supa').clientService(); } catch (e) { return; }
+  if (!service) return;
+  const connexion = chemin === cfgDe(cible).paths.login;
+  const ligne = {
+    api: cible, methode, chemin: String(chemin || '').slice(0, 300), params: params ? Object.keys(params) : null,
+    statut, duree_ms: duree,
+    erreur: erreur ? `${erreur.httpStatus || erreur.status || ''} ${erreur.code && typeof erreur.code === 'string' ? erreur.code : ''}`.trim() || 'échec' : null,
+    // Connexion : ni identifiants ni jeton.
+    requete: connexion ? null : resumeCorps(corps),
+    reponse: connexion ? null : resumeReponse(erreur ? erreur.detail : donnees),
+  };
+  try {
+    await Promise.race([
+      (async () => {
+        await service.from('guichet_traces').insert(ligne);
+        if (Math.random() < 0.02) {
+          await service.from('guichet_traces').delete().lt('cree_le', new Date(Date.now() - RETENTION_TRACES_JOURS * 86400000).toISOString());
+        }
+      })(),
+      new Promise((ok) => setTimeout(ok, 1500)),
+    ]);
+  } catch (e) { /* trace perdue : sans conséquence */ }
 }
 
 /**
@@ -231,4 +329,4 @@ async function verifierConnexion(cible) {
 
 function viderCache() { jetons.clear(); }
 
-module.exports = { appel, telecharger, requete, chemin, jeton, verifierConnexion, ErreurInpi, viderCache };
+module.exports = { appel, telecharger, requete, chemin, jeton, verifierConnexion, ErreurInpi, viderCache, resumeCorps, resumeReponse };

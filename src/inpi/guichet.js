@@ -17,7 +17,7 @@
  */
 
 const { config } = require('./config');
-const { appel, telecharger, chemin, ErreurInpi } = require('./client');
+const { appel, telecharger, chemin, ErreurInpi, resumeReponse } = require('./client');
 const { normaliserStatut, statut } = require('./referentiels');
 const mock = require('./mock');
 const { nettoyerTextes } = require('./texte-guichet');
@@ -385,25 +385,47 @@ function rapprocherPieces(duDossier, auGuichet) {
 }
 
 /**
- * Retire une pièce d'une formalité avant signature (route « remove » du
- * contrat d'interface). La méthode n'y est pas précisée : PUT d'abord, POST
- * si le guichet répond 405 (méthode refusée, donc rien n'a été fait).
+ * Retire une pièce d'une formalité (contrat d'interface 06/2026, §3.12).
+ *  - Suppression : DELETE, possible entre le dépôt et la signature.
+ *  - Invalidation : PUT …/remove ; la pièce reste rattachée, marquée « plus à prendre en
+ *    compte » par le valideur (seule possibilité en régularisation, où une pièce du dépôt
+ *    ne se supprime plus). C'est ce que faisait le connecteur jusqu'ici : d'où une pièce
+ *    « toujours listée » après un retrait accepté (J00297506073, 3/11).
+ * Suppression d'abord, sauf demande d'invalidation ; si le guichet refuse la suppression
+ * (pièce absente du content de la formalité, code 5003…), invalidation.
  */
-async function retirerPieceGuichet(id, pieceId) {
-  if (String(id).startsWith('SIM-')) return { ok: true, simule: true };
-  const ch = chemin(config.guichet.paths.pieceInvalider, { formaliteId: id, pieceId });
-  let methode = 'PUT';
-  let reponse;
-  try {
-    reponse = await appel('guichet', { methode, chemin: ch, corps: {} });
-  } catch (e) {
-    if (e.status !== 405) throw e;
-    methode = 'POST';
-    reponse = await appel('guichet', { methode, chemin: ch, corps: {} });
+async function retirerPieceGuichet(id, pieceId, { invalider = false, raison = null } = {}) {
+  if (String(id).startsWith('SIM-')) return { ok: true, simule: true, mode: 'suppression' };
+  let erreurSuppression = null;
+  if (!invalider) {
+    try {
+      const reponse = await appel('guichet', { methode: 'DELETE', chemin: chemin(config.guichet.paths.pieceSupprimer, { formaliteId: id, pieceId }) });
+      return { ok: true, mode: 'suppression', reponse: resumeReponse(reponse) };
+    } catch (e) {
+      // Panne ou session : rien n'est tenté de plus. Refus du guichet : invalidation.
+      if (!e.status || e.status === 401 || e.status >= 500) throw e;
+      erreurSuppression = String(e.message || e).slice(0, 300);
+    }
   }
-  // La réponse du guichet est rendue telle quelle (sans contenu de fichier) : constaté
-  // en production, un retrait accepté laissait la pièce dans la liste.
-  return { ok: true, methode, reponse: resumeReponse(reponse) };
+  const reponse = await appel('guichet', {
+    methode: 'PUT',
+    chemin: chemin(config.guichet.paths.pieceInvalider, { formaliteId: id, pieceId }),
+    corps: { invalidatedReason: raison || 'Le document a été invalidé par le déclarant.' },
+  });
+  return { ok: true, mode: 'invalidation', reponse: resumeReponse(reponse), ...(erreurSuppression ? { erreur_suppression: erreurSuppression } : {}) };
+}
+
+/** Régénère le document de synthèse après un ajout ou un retrait de pièce (§6.4). */
+async function regenererSynthese(id) {
+  if (String(id).startsWith('SIM-')) return { ok: true, simule: true };
+  const reponse = await appel('guichet', { chemin: chemin(config.guichet.paths.rafraichir, { id }) });
+  return { ok: true, reponse: resumeReponse(reponse) };
+}
+
+/** Pièce invalidée au guichet (§3.12) : rattachée, mais plus à prendre en compte. */
+function estInvalidee(p) {
+  const e = p?.etat_guichet || {};
+  return e.invalidated === true || e.compliance === 'INVALID';
 }
 
 /** Ajoute une pièce à un dépôt existant (PDF en base64, 10 Mo maximum). */
@@ -477,30 +499,25 @@ async function listerPieces(id) {
   }));
 }
 
-/** Champs d'état d'une pièce du guichet, quel que soit leur nom exact. */
+/**
+ * Champs d'état d'une pièce du guichet (contrat d'interface §3.9 à §3.14). Ni le nom de
+ * la personne qui l'a invalidée, ni le motif saisi (texte libre).
+ */
+const CHAMPS_ETAT_PIECE = ['status', 'compliance', 'invalidated', 'invalidatedDate', 'regularisable', 'replacedBy', 'replacing', 'depositor'];
 function etatPiece(p = {}) {
   const etat = {};
-  for (const [k, v] of Object.entries(p)) {
-    if (/remov|delet|invalid|valid|statu|state|actif|active|archiv/i.test(k) && (typeof v !== 'object' || v === null)) etat[k] = v;
+  for (const k of CHAMPS_ETAT_PIECE) {
+    const v = p[k];
+    if (v !== undefined && v !== null && typeof v !== 'object') etat[k] = v;
+    else if (v && typeof v === 'object' && (v['@id'] || v.id)) etat[k] = String(v['@id'] || v.id);
   }
   return Object.keys(etat).length ? { etat_guichet: etat } : {};
 }
 
-/** Réponse du guichet ramenée à ses champs simples (jamais le contenu d'un fichier). */
-function resumeReponse(r) {
-  if (r === null || r === undefined || r === '') return null;
-  if (typeof r !== 'object') return String(r).slice(0, 500);
-  const out = {};
-  for (const [k, v] of Object.entries(r)) {
-    if (/base64|content|file/i.test(k)) continue;
-    out[k] = v && typeof v === 'object' ? JSON.stringify(v).slice(0, 300) : v;
-  }
-  return out;
-}
 
 module.exports = {
   deposer, mettreAJour, lire, lister, listerTout, regularisations, historique,
   signer, synthese, fichierPiece, pdfDepuis, payer, ajouterPiece, listerPieces, supprimer, brut, retrouver,
-  nomGuichet, rapprocherPieces, retirerPieceGuichet, CODES_SYNTHESE,
+  nomGuichet, rapprocherPieces, retirerPieceGuichet, regenererSynthese, estInvalidee, CODES_SYNTHESE,
   normaliserFormalite, simulationActive, motifSimulation,
 };

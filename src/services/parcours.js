@@ -583,21 +583,37 @@ async function deposer(id) {
   // Réel : « enregistré » seulement. Le mot « déposé » attend que toutes les
   // pièces soient relues au guichet (contrôle ci-dessous).
   await journal(id, 'depot', r.simule ? `Dépôt simulé (${r.motif_simulation}).` : `Enregistré au guichet unique — liasse ${r.numero_liasse} ; pièces en cours de contrôle.`, { inpi_id: r.inpi_id, montant: r.montant });
-  // Constaté en production (LGZ-2026-00052) : les PDF joints au corps de la
-  // formalité ne sont pas conservés par le guichet ; ils se déposent ensuite,
-  // un par un, sur la formalité créée, puis la liste du guichet est relue.
+  // Contrat d'interface (§3.3) : les PDF partent en base64 dans content.piecesJointes,
+  // et le guichet les garde (sous ses propres noms). Rien n'est renvoyé automatiquement
+  // après l'enregistrement : le second envoi du 3/11 a produit dix doublons. La liste du
+  // guichet est seulement relue ; une pièce manquante se transmet ensuite sur accord de
+  // l'avocat (transmettre_pieces), la formalité restant « À signer ».
   let piecesGuichet = null;
   if (!r.simule) {
-    try { piecesGuichet = await transmettrePieces(id); } catch (e) {
-      piecesGuichet = { erreur: e.message, controle: { complet: false, erreur: e.message } };
-      await memoriserControle(id, piecesGuichet.controle);
-      await journal(id, 'depot', `Pièces non transmises au guichet : ${e.message}. À relancer (transmettre_pieces) ou à joindre sur le portail.`);
+    let controle = await controlerPiecesGuichet(id);
+    if (!controle.complet && !controle.erreur && DELAI_RELECTURE_MS() > 0) {
+      await new Promise((ok) => setTimeout(ok, DELAI_RELECTURE_MS()));
+      controle = await controlerPiecesGuichet(id);
     }
-    if (piecesGuichet?.controle?.complet) {
-      await journal(id, 'depot', `Déposé au guichet unique — liasse ${r.numero_liasse} : ${piecesGuichet.controle.confirmees.length} pièce(s) confirmée(s) au guichet.`);
+    piecesGuichet = { transmises: [], deja_presentes: (controle.confirmees || []).map(({ code, nom }) => ({ code, nom })), echecs: [], controle };
+    await journal(id, 'piece', `Pièces au guichet après l’enregistrement : aucune renvoyée (jointes à la liasse). ${resumeControle(controle)}`,
+      { confirmees: (controle.confirmees || []).map((x) => x.code), manquantes: (controle.manquantes || []).map((x) => x.code), en_trop: (controle.en_trop || []).map((x) => ({ code: x.code, id_guichet: x.id_guichet })) });
+    if (controle.complet) {
+      await journal(id, 'depot', `Déposé au guichet unique — liasse ${r.numero_liasse} : ${controle.confirmees.length} pièce(s) confirmée(s) au guichet.`);
     }
   }
   return { ...(await lire(id)), pieces_guichet: piecesGuichet };
+}
+
+/** Délai avant une seconde relecture des pièces, si la première est incomplète (réglable pour les tests). */
+const DELAI_RELECTURE_MS = () => Number(process.env.GUICHET_DELAI_RELECTURE_MS ?? 3000);
+
+/** Relecture des pièces, en une phrase pour le journal (codes, jamais de nom de fichier). */
+function resumeControle(c) {
+  if (c.erreur) return `${c.erreur}.`;
+  return `Relecture : ${c.confirmees.length}/${c.attendues} pièce(s) confirmée(s)${c.complet ? '' : ` — manquantes : ${c.manquantes.map((x) => x.code).join(', ')}`}`
+    + `${c.en_trop.length ? ` ; ${c.en_trop.length} pièce(s) en trop au guichet (${c.en_trop.map((x) => `${x.code} n° ${x.id_guichet}`).join(', ')})` : ''}`
+    + `${c.invalidees?.length ? ` ; ${c.invalidees.length} pièce(s) invalidée(s) (${c.invalidees.map((x) => `${x.code} n° ${x.id_guichet}`).join(', ')})` : ''}.`;
 }
 
 /** Une pièce du dossier, sous la forme comparée au guichet. */
@@ -609,7 +625,10 @@ const pieceComparee = (p) => ({ code: p.code, nom: p.filename, taille: p.taille 
  * fichiers (accents, espaces, parenthèses) : même code PJ, puis taille et/ou
  * nom normalisé (voir guichet.rapprocherPieces).
  */
-function confronterPieces(pieces, presentes) {
+function confronterPieces(pieces, presentesBrutes) {
+  // Une pièce invalidée reste listée au guichet, mais ne compte plus (contrat d'interface §3.12).
+  const invalidees = presentesBrutes.filter((x) => guichet.estInvalidee(x));
+  const presentes = presentesBrutes.filter((x) => !guichet.estInvalidee(x));
   const r = guichet.rapprocherPieces(pieces.map(pieceComparee), presentes);
   const enTrop = r.en_trop.filter((g) => !guichet.CODES_SYNTHESE.includes(g.code));
   return {
@@ -621,6 +640,7 @@ function confronterPieces(pieces, presentes) {
     en_trop: enTrop.map((g) => ({ id_guichet: g.id ?? null, code: g.code, nom: g.nom, taille: g.taille ?? null })),
     syntheses: r.en_trop.filter((g) => guichet.CODES_SYNTHESE.includes(g.code)).map((g) => ({ id_guichet: g.id ?? null, code: g.code })),
     au_guichet: presentes.map((x) => ({ code: x.code, nom: x.nom })),
+    invalidees: invalidees.map((g) => ({ id_guichet: g.id ?? null, code: g.code })),
     complet: r.manquantes.length === 0,
   };
 }
@@ -689,6 +709,8 @@ async function transmettrePieces(id) {
         out.echecs.push({ code: p.code, nom: p.filename, motif: e.message });
       }
     }
+    // §6.4 : la synthèse doit être régénérée après un ajout, sans quoi la signature est impossible.
+    if (out.transmises.length) out.synthese = await regenerer(f.inpi_id);
     // Relecture : ce que le guichet a réellement rattaché à la formalité.
     out.controle = await controlerPiecesGuichet(id);
     if (!out.controle.erreur) {
@@ -711,7 +733,8 @@ async function transmettrePieces(id) {
   }
   const c = out.controle;
   const resume = `Pièces au guichet : ${out.transmises.length} transmise(s), ${out.deja_presentes.length} déjà présente(s)${out.echecs.length ? `, ${out.echecs.length} en échec (${out.echecs.map((x) => x.code).join(', ')})` : ''}. `
-    + (c.erreur ? `${c.erreur}.` : `Relecture : ${c.confirmees.length}/${c.attendues} pièce(s) confirmée(s)${c.complet ? '' : ` — manquantes : ${c.manquantes.map((x) => x.code).join(', ')}`}${c.en_trop.length ? ` ; ${c.en_trop.length} pièce(s) en trop au guichet (${c.en_trop.map((x) => `${x.code} n° ${x.id_guichet}`).join(', ')})` : ''}.`);
+    + resumeControle(c)
+    + (out.synthese ? (out.synthese.ok ? ' Synthèse régénérée.' : ` Synthèse non régénérée (${out.synthese.erreur}) : la signature peut être refusée.`) : '');
   await journal(id, 'piece', resume, { transmises: out.transmises.map((x) => x.code), echecs: out.echecs.map((x) => ({ code: x.code, motif: x.motif })), confirmees: (c.confirmees || []).map((x) => x.code), manquantes: (c.manquantes || []).map((x) => x.code), en_trop: (c.en_trop || []).map((x) => ({ code: x.code, id_guichet: x.id_guichet })) });
   return out;
 }
@@ -724,29 +747,42 @@ async function retirerPieceGuichet(id, pieceId) {
   const f = await charger(id);
   if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet : retirer la pièce du dossier (retirer_piece).', 409);
   if (f.simule || String(f.inpi_id).startsWith('SIM-')) throw erreur('Dossier simulé : il n’existe pas au guichet.', 409);
-  if (!['RECEIVED', 'ERROR', 'SIGNATURE_PENDING'].includes(f.statut)) {
+  // Contrat d'interface §3.12 : suppression entre le dépôt et la signature ; en régularisation,
+  // invalidation seulement (une pièce du dépôt ne s'y supprime plus).
+  const enRegularisation = ['AMENDMENT_PENDING', 'AMENDMENT_SIGNATURE_PENDING'].includes(f.statut);
+  if (!['RECEIVED', 'ERROR', 'SIGNATURE_PENDING'].includes(f.statut) && !enRegularisation) {
     throw erreur(`Formalité au statut « ${f.statut} » : une pièce ne se retire plus après la signature. Passer par le portail.`, 409);
   }
   const presentes = await guichet.listerPieces(f.inpi_id);
   const cible = presentes.find((x) => String(x.id) === String(pieceId));
   if (!cible) throw erreur(`La pièce n° ${pieceId} n’est pas rattachée à la formalité n° ${f.inpi_id}. Pièces au guichet : ${presentes.map((x) => `${x.id} (${x.code})`).join(', ') || 'aucune'}.`, 404);
   if (guichet.CODES_SYNTHESE.includes(cible.code)) throw erreur(`La pièce n° ${pieceId} (${cible.code}) est un document de synthèse produit par l’INPI : elle ne se retire pas.`, 409);
-  const envoi = await guichet.retirerPieceGuichet(f.inpi_id, cible.id);
-  // Relecture : la pièce ne compte comme retirée que si elle a quitté la liste du guichet.
+  if (guichet.estInvalidee(cible)) throw erreur(`La pièce n° ${pieceId} (${cible.code}) est déjà invalidée au guichet : elle n’est plus prise en compte par le valideur.`, 409);
+  const envoi = await guichet.retirerPieceGuichet(f.inpi_id, cible.id, { invalider: enRegularisation, raison: 'Pièce en double ou jointe par erreur.' });
+  // Relecture : retirée si elle a quitté la liste (suppression) ou y est marquée invalidée (invalidation).
   const apres = await guichet.listerPieces(f.inpi_id);
   const restante = apres.find((x) => String(x.id) === String(pieceId));
-  const retiree = !restante;
+  const mode = !restante ? 'suppression' : (guichet.estInvalidee(restante) ? 'invalidation' : null);
+  const retiree = Boolean(mode);
+  // §6.4 : synthèse à régénérer après un changement de pièces.
+  const synthese = retiree ? await regenerer(f.inpi_id) : null;
   const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
   const controle = confronterPieces(pieces, apres);
   await memoriserControle(id, controle);
+  const libelleMode = mode === 'suppression' ? 'supprimée de la formalité' : 'invalidée (rattachée, plus prise en compte par le valideur)';
   await journal(id, 'piece', retiree
-    ? `Pièce n° ${pieceId} (${cible.code}) retirée de la formalité au guichet.`
-    : `Retrait de la pièce n° ${pieceId} (${cible.code}) demandé au guichet, mais elle figure toujours sur la formalité.`,
-  { id_guichet: String(pieceId), code: cible.code, methode: envoi?.methode, reponse: envoi?.reponse ?? null, etat_avant: cible.etat_guichet || null, etat_apres: restante?.etat_guichet || null });
+    ? `Pièce n° ${pieceId} (${cible.code}) ${libelleMode} au guichet.${synthese?.ok ? ' Synthèse régénérée.' : (synthese ? ` Synthèse non régénérée (${synthese.erreur}).` : '')}`
+    : `Retrait de la pièce n° ${pieceId} (${cible.code}) demandé au guichet, mais elle figure toujours sur la formalité, sans marque d’invalidation.`,
+  { id_guichet: String(pieceId), code: cible.code, mode_demande: envoi?.mode || null, erreur_suppression: envoi?.erreur_suppression || null, reponse: envoi?.reponse ?? null, etat_avant: cible.etat_guichet || null, etat_apres: restante?.etat_guichet || null });
   return {
-    retiree, piece: { id_guichet: String(pieceId), code: cible.code }, controle,
-    diagnostic: { methode: envoi?.methode || null, reponse_guichet: envoi?.reponse ?? null, etat_avant: cible.etat_guichet || null, etat_apres: restante?.etat_guichet || null },
+    retiree, mode, piece: { id_guichet: String(pieceId), code: cible.code }, controle, synthese,
+    diagnostic: { mode_demande: envoi?.mode || null, erreur_suppression: envoi?.erreur_suppression || null, reponse_guichet: envoi?.reponse ?? null, etat_avant: cible.etat_guichet || null, etat_apres: restante?.etat_guichet || null },
   };
+}
+
+/** Régénération de la synthèse, sans faire échouer l'opération qui la demande. */
+async function regenerer(inpiId) {
+  try { await guichet.regenererSynthese(inpiId); return { ok: true }; } catch (e) { return { ok: false, erreur: String(e.message || e).slice(0, 200) }; }
 }
 
 /** Listes de référence du guichet pour les écrans : journaux, nationalités, catégories d'activité. */

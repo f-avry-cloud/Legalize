@@ -118,3 +118,22 @@ create index if not exists formalite_pieces_cle_idx on formalite_pieces (formali
 alter table formalites add column if not exists depot_jeton text unique;
 alter table formalites add column if not exists depot_expire timestamptz;
 create index if not exists formalites_origine_idx on formalites (origine);
+
+-- Traces des échanges avec le guichet (sans données personnelles : méthode,
+-- chemin, statut, durée, forme de la requête et de la réponse). Écrites et lues
+-- avec la clé de service seulement (RLS sans politique) ; purgées au-delà de 30 jours.
+create table if not exists guichet_traces (
+  id bigserial primary key,
+  cree_le timestamptz not null default now(),
+  api text not null,
+  methode text not null,
+  chemin text not null,
+  params text[],
+  statut integer,
+  duree_ms integer,
+  erreur text,
+  requete jsonb,
+  reponse jsonb
+);
+create index if not exists guichet_traces_cree_le_idx on guichet_traces (cree_le desc);
+alter table guichet_traces enable row level security;

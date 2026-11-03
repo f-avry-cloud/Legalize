@@ -17,7 +17,7 @@
 process.env.MCP_GU_JETON = 'jeton-de-test-suffisamment-long-0123456789';
 delete process.env.INPI_DEPOT_REEL;
 
-require('./fake-supa');
+const { faux, tables } = require('./fake-supa');
 const express = require('express');
 const mcp = require('../src/connecteur/mcp');
 const { construireParcours } = require('../src/inpi/payload-parcours');
@@ -86,6 +86,7 @@ const BES = [
   const president = pm.composition.pouvoirs.find((p) => p.typeDePersonne === 'ENTREPRISE');
   verifier('pouvoir PM : rôle 73 (président de SAS), typeDePersonne ENTREPRISE', president?.roleEntreprise === '73' && president.entreprise.roleEntreprise === '73', president);
   verifier('pays : code du référentiel « FRA », pas le libellé « FRANCE »', president.entreprise.pays === 'FRA', president.entreprise);
+  verifier('registre : code « 1 » (RCS) du référentiel, champ resté vide sur le portail', president.entreprise.registre === '1', president.entreprise);
   verifier('forme juridique : code 5710, SIREN, greffe en majuscules', president.entreprise.formeJuridique === '5710'
     && president.entreprise.siren === '552100554' && president.entreprise.lieuRegistre === 'QUIMPER', president.entreprise);
   verifier('adresse de la personne morale transmise (adresseEntreprise)', president.adresseEntreprise?.codePostal === '29000' && president.adresseEntreprise.codePays === 'FRA', president.adresseEntreprise);
@@ -126,6 +127,86 @@ const BES = [
   verifier('détention inconnue refusée', err({ capital: { via_holding: { pleine_propriete: 30 } } }).some((e) => /détention inconnue/.test(e)));
   verifier('25 % tout juste, sans autre critère : pas bénéficiaire effectif', err({ capital: { direct: { pleine_propriete: 25 } } }).some((e) => /aucun critère/.test(e)));
   verifier('représentant légal à défaut : accepté', !err({ autres: { representant_legal: true } }).length);
+
+  console.log('\nTraces des échanges avec le guichet');
+  const { resumeCorps, resumeReponse } = require('../src/inpi/client');
+  const piece = { '@id': '/api/attachments/412125056', id: 412125056, nomDocument: 'CNI Paul ESSAI.pdf', typeDocument: 'PJ_11', size: 2557598, status: 'VALID', documentBase64: 'QUJD' };
+  const rep = resumeReponse({ 'hydra:member': [piece], 'hydra:totalItems': 1 });
+  const corps = resumeCorps({ companyName: 'CREPERIE ESSAI', content: { personneMorale: { identite: {} }, piecesJointes: [{ typeDocument: 'PJ_01', nomDocument: 'Statuts ESSAI.pdf', documentBase64: 'A'.repeat(4096) }] } });
+  const texteTrace = JSON.stringify([rep, corps]);
+  verifier('trace : identifiants, statuts, codes et tailles des pièces conservés', rep.nombre === 1 && rep.elements[0].id === 412125056 && rep.elements[0].status === 'VALID'
+    && rep.elements[0].typeDocument === 'PJ_11' && corps.pieces[0].type === 'PJ_01' && corps.pieces[0].ko === 3, [rep, corps]);
+  verifier('trace : ni nom, ni dénomination, ni contenu de fichier', !/ESSAI|QUJD|AAAA/.test(texteTrace), texteTrace);
+  const refusTrace = resumeReponse({ violations: [{ propertyPath: 'content.personneMorale.composition.pouvoirs[0].entreprise.pays', message: 'Choisissez un code pays valide.' }] });
+  verifier('trace : refus du guichet par champ', refusTrace.violations[0].champ.endsWith('entreprise.pays') && /code pays/.test(refusTrace.violations[0].message), refusTrace);
+
+  // Bout en bout : un échange réel (fetch simulé) laisse une trace, sans identifiants ni jeton.
+  const client = require('../src/inpi/client');
+  const { config } = require('../src/inpi/config');
+  tables.guichet_traces = [];
+  const service0 = faux.service;
+  const fetch0 = global.fetch;
+  faux.service = faux.supabase;
+  try {
+    global.fetch = async () => new Response(JSON.stringify({ 'hydra:member': [piece], 'hydra:totalItems': 1 }), { status: 200 });
+    await client.requete('guichet', { chemin: '/api/formalities/22540180/attachments', token: 'x' });
+    global.fetch = async () => new Response(JSON.stringify({ violations: [{ propertyPath: 'content.personneMorale.composition.pouvoirs[0].entreprise.pays', message: 'Choisissez un code pays valide.' }] }), { status: 400, statusText: 'Bad Request' });
+    await client.requete('guichet', { methode: 'POST', chemin: '/api/formalities', corps: { companyName: 'CREPERIE ESSAI', content: { piecesJointes: [{ typeDocument: 'PJ_01', documentBase64: 'QUJD' }] } }, token: 'x' }).catch(() => null);
+    global.fetch = async () => new Response(JSON.stringify({ token: 'jeton-secret-0123' }), { status: 200 });
+    await client.requete('guichet', { methode: 'POST', chemin: config.guichet.paths.login, corps: { username: 'avocat@cabinet.test', password: 'mot-de-passe' } });
+  } finally {
+    global.fetch = fetch0;
+    faux.service = service0;
+  }
+  const traces = tables.guichet_traces;
+  const tout = JSON.stringify(traces);
+  verifier('échanges tracés : lecture des pièces, refus 400 (champ en cause), connexion', traces.length === 3
+    && traces[0].statut === 200 && traces[0].reponse.elements[0].id === 412125056
+    && traces[1].statut === 400 && traces[1].reponse.violations[0].champ.endsWith('entreprise.pays') && traces[1].requete.pieces[0].type === 'PJ_01'
+    && traces[2].requete === null && traces[2].reponse === null, traces);
+  verifier('aucun identifiant, mot de passe, jeton, nom ni contenu dans les traces', !/avocat@|mot-de-passe|jeton-secret|ESSAI|QUJD/.test(tout), tout);
+
+  console.log('\nRetrait d’une pièce : appels au guichet (contrat d’interface 06/2026 §3.12, §6.4)');
+  const guichetMod = require('../src/inpi/guichet');
+  const appels = [];
+  const reponseHttp = (corps, statut = 200) => new Response(corps === null ? '' : JSON.stringify(corps), { status: statut });
+  const cfgG = config.guichet;
+  const identifiants0 = { u: cfgG.username, p: cfgG.password };
+  cfgG.username = 'compte@test.invalid'; cfgG.password = 'x';
+  client.viderCache();
+  try {
+    global.fetch = async (url, o = {}) => {
+      const chemin = new URL(url).pathname;
+      appels.push(`${o.method || 'GET'} ${chemin}`);
+      if (chemin === cfgG.paths.login) return reponseHttp({ token: 'jeton-test' });
+      if ((o.method || 'GET') === 'DELETE') return reponseHttp({ code: 5003, message: 'Ce fichier ne peut pas être supprimé car non présent dans le content de la formalité' }, 400);
+      if ((o.method || 'GET') === 'PUT') return reponseHttp({ id: 412125056, invalidated: true, compliance: 'INVALID', invalidatedName: 'Jean ESSAI' });
+      return reponseHttp({});
+    };
+    const r1 = await guichetMod.retirerPieceGuichet('22540180', '412125056', { raison: 'Pièce en double.' });
+    verifier('suppression d’abord (DELETE), invalidation si le guichet la refuse (PUT …/remove)',
+      appels.includes('DELETE /api/formalities/22540180/attachments/412125056') && appels.includes('PUT /api/formalities/22540180/attachments/412125056/remove')
+      && r1.mode === 'invalidation' && /non présent dans le content/.test(r1.erreur_suppression || '') && r1.reponse?.invalidated === true, { appels, r1 });
+    verifier('aucun nom de personne dans la réponse rendue', !/ESSAI/.test(JSON.stringify(r1)), r1);
+    appels.length = 0;
+    global.fetch = async (url, o = {}) => {
+      const chemin = new URL(url).pathname;
+      appels.push(`${o.method || 'GET'} ${chemin}`);
+      return chemin === cfgG.paths.login ? reponseHttp({ token: 'jeton-test' }) : reponseHttp(null);
+    };
+    const r2 = await guichetMod.retirerPieceGuichet('22540180', '412125106');
+    verifier('suppression acceptée : une seule requête DELETE', r2.mode === 'suppression' && appels.filter((a) => !a.includes('login')).join() === 'DELETE /api/formalities/22540180/attachments/412125106', appels);
+    appels.length = 0;
+    await guichetMod.retirerPieceGuichet('22540180', '412125133', { invalider: true });
+    verifier('régularisation : invalidation directe, sans tentative de suppression', appels.filter((a) => !a.includes('login')).join() === 'PUT /api/formalities/22540180/attachments/412125133/remove', appels);
+    appels.length = 0;
+    await guichetMod.regenererSynthese('22540180');
+    verifier('régénération de la synthèse : GET /refresh', appels.filter((a) => !a.includes('login')).join() === 'GET /api/formalities/22540180/refresh', appels);
+  } finally {
+    global.fetch = fetch0;
+    cfgG.username = identifiants0.u; cfgG.password = identifiants0.p;
+    client.viderCache();
+  }
 
   console.log('\nNon-régression LGZ-2026-00052 (connecteur)');
   const instance = serveur.listen(0);
