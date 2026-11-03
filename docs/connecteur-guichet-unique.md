@@ -39,7 +39,8 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `pieces_recues` | Pièces reçues et manquantes |
 | `controler_formalite` | Bloquants, alertes, échéance, mode simulation |
 | `enregistrer_formalite` | Transmission au guichet, **uniquement avec `confirmation_avocat: true`** |
-| `transmettre_pieces` | Dépose sur une formalité enregistrée les pièces que le guichet n'a pas (sans doublon) ; sur accord de l'avocat. L'enregistrement le fait de lui-même : le guichet ne conserve pas les PDF joints au corps de la formalité (constaté sur LGZ-2026-00052). Après chaque envoi, la liste des pièces du guichet est relue : seule cette relecture fait foi (un envoi accepté en 2xx mais absent de la formalité compte en échec), et le dossier n'est dit « déposé » (`depose: true`) que lorsque toutes ses pièces y sont confirmées |
+| `transmettre_pieces` | Dépose sur une formalité enregistrée les pièces que le guichet n'a pas encore ; sur accord de l'avocat. Idempotent : les pièces jointes à la création ne repartent pas. Rapprochement par code PJ, puis taille et nom normalisé comme le guichet (accents retirés, espaces en « _ », parenthèses supprimées, « .docx.pdf » → « _docx.pdf »). La liste du guichet est relue : `depose: true` seulement quand toutes les pièces y sont confirmées ; les doublons sont listés (`en_trop`) |
+| `retirer_piece_guichet` | Retire une pièce rattachée à la formalité au guichet (doublon, erreur), par son identifiant, avant signature et sur accord de l'avocat. Les synthèses PJ_99 / PJ_119 ne se retirent pas |
 | `statut_formalite`, `lister_formalites` | Suivi (statut relu auprès de l'INPI, régularisations, journal) |
 | `reclasser_piece`, `retirer_piece`, `catalogue_pieces` | Ranger une pièce reçue sous la bonne ligne ou un autre type officiel |
 | `lister_pieces_deposees` | Actes et comptes annuels déposés au registre pour un SIREN (lecture seule) |
@@ -192,21 +193,32 @@ Stockage : `typologie.manuel_champs` (`{"<groupe>.<name>": {"requis": false, "mo
 - `src/inpi/rne-documents.js`, `src/inpi/texte-pdf.js` : pièces déposées au registre, texte et OCR.
 - Tests : `node scripts/test-connecteur.js`, `node scripts/test-registre.js`, `node scripts/test-categorie-activite.js` (API INPI simulée).
 
-## Formalité supprimée sur le portail
+## Formalité sortie du compte mandataire
 
-Quand la fiche de la formalité répond 404 et que sa liasse est introuvable sur
-tout le compte mandataire (toutes les pages, pas seulement les plus récentes),
-ou que le guichet renvoie un statut « supprimé », et qu'elle n'était pas payée,
-le dossier repasse « non enregistré » (Brouillon, étape Validation) :
-identifiant, liasse et montant sont effacés, les données et les pièces sont
-conservées pour un nouvel enregistrement sans redépôt. L'ancienne formalité est
-inscrite au journal (et dans `typologie._liasses_supprimees`).
+Deux constats, distingués dans le journal et les réponses :
 
-L'historique des statuts n'est pas un critère : l'INPI le sert encore après la
-suppression (constaté sur LGZ-2026-00052). Un identifiant de lecture erroné est
-corrigé par la liasse avant toute conclusion. Si le compte ne peut pas être lu,
-le dossier reste verrouillé et `enregistrer_formalite` / `renseigner_formalite`
-disent pourquoi (`verification_guichet`).
+- **supprimée** : le guichet renvoie un statut de suppression ;
+- **introuvable** : la fiche répond 404 et la liasse est absente de tout le
+  compte mandataire. C'est aussi ce que produit une formalité « À signer »
+  **ramenée en brouillon sur le portail** (constaté trois fois le 3/11 sur
+  LGZ-2026-00052) : le brouillon du portail perd les pièces jointes par l'API.
 
-La vérification a lieu à `statut_formalite`, `consulter_formalite_guichet`,
-`renseigner_formalite` et `enregistrer_formalite`.
+Dans les deux cas le connecteur ne supprime rien au guichet : il constate une
+absence. Le dossier repasse « non enregistré » (Brouillon, étape Validation),
+données et pièces conservées ; l'ancienne formalité est au journal et dans
+`typologie._formalites_disparues`. Si elle est « introuvable »,
+`enregistrer_formalite` exige `brouillon_portail_verifie: true` : l'avocat a
+vérifié qu'aucun brouillon ne subsiste sur procedures.inpi.fr (doublon).
+
+`enregistrer_formalite` et `transmettre_pieces` rappellent de signer depuis
+« À signer » sans ramener la formalité en brouillon. L'historique des statuts
+n'est pas un critère (l'INPI le sert encore après la disparition). L'état est
+relu au guichet par `statut_formalite`, `controler_formalite`,
+`consulter_formalite_guichet`, `renseigner_formalite`, `enregistrer_formalite`
+et `retirer_piece_guichet`.
+
+## Document de synthèse
+
+`/api/formalities/{id}/synthesis` refuse `Accept: application/pdf` (406). La
+synthèse est lue comme pièce jointe de la formalité (PJ_99, puis PJ_119, via
+`/api/attachments/{id}/file`), puis à défaut sur `/synthesis` en JSON.

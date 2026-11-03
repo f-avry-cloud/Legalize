@@ -243,10 +243,66 @@ async function signer(id, { documentSigneId = null, service = 'formalites' } = {
   return { signature_id: rep?.id ?? null, date: rep?.created || null, brut: rep };
 }
 
-/** Document de synthèse (PJ_99) à signer, au format PDF. */
-async function synthese(id) {
-  if (String(id).startsWith('SIM-')) return mock.syntheseSimulee(id);
-  return telecharger('guichet', { chemin: chemin(config.guichet.paths.synthese, { id }), accept: 'application/pdf' });
+/** Un PDF, qu'il arrive brut ou encodé en base64 dans une réponse JSON. */
+function pdfDepuis(donnees) {
+  if (!donnees) return null;
+  const buf = Buffer.isBuffer(donnees) ? donnees : Buffer.from(String(donnees));
+  if (buf.subarray(0, 5).toString('latin1') === '%PDF-') return buf;
+  let json = null;
+  try { json = JSON.parse(buf.toString('utf8')); } catch (e) { return null; }
+  const pile = [json];
+  while (pile.length) {
+    const v = pile.pop();
+    if (typeof v === 'string' && v.length > 100) {
+      const b = Buffer.from(v.replace(/^data:application\/pdf;base64,/, ''), 'base64');
+      if (b.subarray(0, 5).toString('latin1') === '%PDF-') return b;
+    } else if (v && typeof v === 'object') pile.push(...Object.values(v));
+  }
+  return null;
+}
+
+/** Fichier d'une pièce jointe au guichet, par son identifiant. */
+async function fichierPiece(pieceId) {
+  const brut = await telecharger('guichet', { chemin: chemin(config.guichet.paths.pieceFichier, { id: pieceId }) });
+  const pdf = pdfDepuis(brut);
+  if (!pdf) throw new ErreurInpi(`La pièce n° ${pieceId} du guichet n’a pas rendu de PDF lisible.`, { status: 502, api: 'guichet' });
+  return pdf;
+}
+
+/** Codes des documents de synthèse que le guichet joint lui-même à la formalité. */
+const CODES_SYNTHESE = ['PJ_99', 'PJ_119'];
+
+/**
+ * Document de synthèse (PJ_99) à signer, en PDF.
+ * Constaté en production : /synthesis refuse « Accept: application/pdf » (406 ;
+ * formats acceptés : JSON, HTML). La synthèse est donc lue d'abord comme pièce
+ * jointe de la formalité (PJ_99, puis PJ_119), puis, à défaut, sur /synthesis
+ * en JSON (PDF encodé).
+ */
+async function synthese(id, { avecSource = false } = {}) {
+  if (String(id).startsWith('SIM-')) {
+    const pdf = mock.syntheseSimulee(id);
+    return avecSource ? { pdf, source: 'simulation' } : pdf;
+  }
+  const echecs = [];
+  try {
+    const pieces = await listerPieces(id);
+    for (const code of CODES_SYNTHESE) {
+      for (const p of pieces.filter((x) => x.code === code)) {
+        try {
+          const pdf = await fichierPiece(p.id);
+          return avecSource ? { pdf, source: `pièce ${code} n° ${p.id}` } : pdf;
+        } catch (e) { echecs.push(`${code} n° ${p.id} : ${e.message}`); }
+      }
+    }
+  } catch (e) { echecs.push(`liste des pièces : ${e.message}`); }
+  try {
+    const brut = await telecharger('guichet', { chemin: chemin(config.guichet.paths.synthese, { id }), accept: 'application/json' });
+    const pdf = pdfDepuis(brut);
+    if (pdf) return avecSource ? { pdf, source: 'synthesis (JSON)' } : pdf;
+    echecs.push('synthesis : réponse sans PDF');
+  } catch (e) { echecs.push(`synthesis : ${e.message}`); }
+  throw new ErreurInpi(`Document de synthèse introuvable — ${echecs.join(' ; ')}`, { status: 502, api: 'guichet' });
 }
 
 /* --------------------------------------------------------------- paiement */
@@ -279,6 +335,71 @@ async function payer(id, { service = 'formalites' } = {}) {
 }
 
 /* ----------------------------------------------------------- pièces jointes */
+
+/**
+ * Nom d'un fichier tel que le guichet le range (constaté en production) :
+ * accents retirés, espaces en « _ », parenthèses supprimées, points
+ * intermédiaires en « _ » (« acte.docx.pdf » → « acte_docx.pdf »).
+ * « attestation-parution (14).pdf » → « attestation-parution_14.pdf ».
+ */
+function nomGuichet(nom) {
+  const n = String(nom || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const m = /^(.*?)(\.[A-Za-z0-9]{1,5})?$/.exec(n);
+  const base = (m[1] || '').replace(/[()[\]{}]/g, '').replace(/[\s.]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  return `${base}${(m[2] || '').toLowerCase()}`;
+}
+
+/** Clé de rapprochement tolérante : lettres et chiffres seulement, en minuscules. */
+function nomCompact(nom) {
+  return nomGuichet(nom).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Rapproche les pièces du dossier de celles du guichet, une à une (un même
+ * code peut figurer deux fois). Même code PJ, puis, par ordre de confiance :
+ * taille et nom, taille seule, nom normalisé seul.
+ * @returns {{paires: Array<{dossier, guichet}>, manquantes: Array, en_trop: Array}}
+ */
+function rapprocherPieces(duDossier, auGuichet) {
+  const libres = auGuichet.map((g, i) => ({ g, i }));
+  const prises = new Set();
+  const paires = [];
+  const reste = [];
+  const taille = (x) => (x.taille === null || x.taille === undefined || x.taille === '' ? null : Number(x.taille));
+  const criteres = [
+    (d, g) => taille(d) !== null && taille(d) === taille(g) && nomCompact(d.nom) === nomCompact(g.nom),
+    (d, g) => taille(d) !== null && taille(d) === taille(g),
+    (d, g) => nomCompact(d.nom) === nomCompact(g.nom),
+  ];
+  let aTraiter = duDossier.slice();
+  for (const critere of criteres) {
+    const suivants = [];
+    for (const d of aTraiter) {
+      const t = libres.find(({ g, i }) => !prises.has(i) && g.code === d.code && critere(d, g));
+      if (t) { prises.add(t.i); paires.push({ dossier: d, guichet: t.g }); } else suivants.push(d);
+    }
+    aTraiter = suivants;
+  }
+  reste.push(...aTraiter);
+  return { paires, manquantes: reste, en_trop: libres.filter(({ i }) => !prises.has(i)).map(({ g }) => g) };
+}
+
+/**
+ * Retire une pièce d'une formalité avant signature (route « remove » du
+ * contrat d'interface). La méthode n'y est pas précisée : PUT d'abord, POST
+ * si le guichet répond 405 (méthode refusée, donc rien n'a été fait).
+ */
+async function retirerPieceGuichet(id, pieceId) {
+  if (String(id).startsWith('SIM-')) return { ok: true, simule: true };
+  const ch = chemin(config.guichet.paths.pieceInvalider, { formaliteId: id, pieceId });
+  try {
+    await appel('guichet', { methode: 'PUT', chemin: ch, corps: {} });
+  } catch (e) {
+    if (e.status !== 405) throw e;
+    await appel('guichet', { methode: 'POST', chemin: ch, corps: {} });
+  }
+  return { ok: true };
+}
 
 /** Ajoute une pièce à un dépôt existant (PDF en base64, 10 Mo maximum). */
 async function ajouterPiece(id, { code, nom, base64, path = null }) {
@@ -351,6 +472,7 @@ async function listerPieces(id) {
 
 module.exports = {
   deposer, mettreAJour, lire, lister, listerTout, regularisations, historique,
-  signer, synthese, payer, ajouterPiece, listerPieces, supprimer, brut, retrouver,
+  signer, synthese, fichierPiece, pdfDepuis, payer, ajouterPiece, listerPieces, supprimer, brut, retrouver,
+  nomGuichet, rapprocherPieces, retirerPieceGuichet, CODES_SYNTHESE,
   normaliserFormalite, simulationActive, motifSimulation,
 };

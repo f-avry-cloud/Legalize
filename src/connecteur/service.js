@@ -84,14 +84,38 @@ async function rafraichirEnregistrement(f) {
   if (!f.inpi_id || f.simule || String(f.inpi_id).startsWith('SIM-')) return { f };
   let synchro = null;
   try { synchro = await formalites.synchroniser(f.id); } catch (e) { return { f, erreur: e.message }; }
-  if (!synchro?.supprimee_au_guichet) return { f, statut_guichet: synchro?.statut_inpi || synchro?.statut || null };
+  // Relu après la synchronisation : statut, identifiant corrigé ou dossier détaché.
   const [a] = await q(supabase.from('formalites').select('*').eq('id', f.id));
-  return { f: a, supprimee: synchro.supprimee_au_guichet };
+  if (!synchro?.disparue) return { f: a || f, statut_guichet: synchro?.statut_inpi || synchro?.statut || null };
+  return { f: a, supprimee: synchro.disparue };
 }
 
-function messageSuppression(s) {
-  return `La formalité n° ${s.inpi_id} (liasse ${s.liasse || '—'}) n’existe plus au guichet (supprimée sur le portail) : le dossier est repassé « non enregistré », à l’étape Validation, avec ses données et ses pièces. Il peut être corrigé puis enregistré de nouveau, sans redéposer les pièces.`;
+/** Ce que le connecteur a constaté : il ne supprime jamais rien lui-même au guichet. */
+function messageSuppression(d) {
+  const constat = d.certitude === 'supprimee'
+    ? `La formalité n° ${d.inpi_id} (liasse ${d.liasse || '—'}) est supprimée au guichet (statut renvoyé par l’INPI).`
+    : `La formalité n° ${d.inpi_id} (liasse ${d.liasse || '—'}) est introuvable sur le compte mandataire : elle a été ramenée en brouillon sur le portail, ou supprimée. Le connecteur ne peut pas distinguer les deux.`;
+  return `${constat} Constat d’absence : le connecteur n’a rien supprimé. Le dossier est repassé « non enregistré » (étape Validation), avec ses données et ses pièces.`
+    + (d.certitude === 'supprimee' ? '' : ' Avant un nouvel enregistrement, vérifier sur procedures.inpi.fr qu’aucun brouillon de cette formalité n’y subsiste (sinon : doublon).');
 }
+
+/**
+ * Dernière formalité disparue dont l'avocat n'a pas encore écarté le risque
+ * de doublon (brouillon resté sur le portail). Les dossiers détachés avant
+ * cette distinction (_liasses_supprimees, sans certitude) y sont soumis.
+ */
+function doublonAVerifier(f) {
+  const t = f.typologie || {};
+  if (t._doublon_a_verifier === false) return null;
+  const liste = t._formalites_disparues || t._liasses_supprimees || [];
+  const derniere = liste[liste.length - 1];
+  if (!derniere) return null;
+  if (derniere.certitude === 'supprimee' && t._doublon_a_verifier !== true) return null;
+  return derniere;
+}
+
+const NE_PAS_RAMENER_EN_BROUILLON = 'Ne pas ramener cette formalité en brouillon sur le portail : elle quitterait le compte mandataire et perdrait les pièces jointes par le connecteur. '
+  + 'La signer directement depuis « À signer » ; pour une correction, la faire sur le portail sans repasser en brouillon, ou demander à Claude (retirer_piece_guichet / transmettre_pieces).';
 
 /** Le dossier Legalize (client) auquel rattacher la formalité : numéro ou référence (2026-0012). */
 async function dossierLegalize(valeur) {
@@ -487,7 +511,7 @@ async function renseignerFormalite({ reference, operations, typologie, reponses,
   if (f.inpi_id) throw erreur(`Dossier déjà enregistré au guichet : il se modifie sur le portail. ${verificationGuichet(r).motif}`, 409);
   await appliquerSaisies(f.id, { operations: operations ? operationsValides(operations) : null, typologie, reponses, exigences_champs: exigencesChamps });
   const vue = await vueDossier(f.id);
-  return supprimee ? { formalite_supprimee_au_guichet: messageSuppression(supprimee), ...vue } : vue;
+  return supprimee ? { formalite_disparue_du_guichet: messageSuppression(supprimee), ...vue } : vue;
 }
 
 async function piecesRecues({ reference }) {
@@ -540,7 +564,8 @@ function cataloguePieces() {
 }
 
 async function controlerFormalite({ reference }) {
-  const f = await chargerParReference(reference);
+  const r0 = await rafraichirEnregistrement(await chargerParReference(reference));
+  const f = r0.f;
   const v = await vueDossier(f.id);
   const bloquants = [
     // Sans la fiche du registre, les dirigeants en place, l'objet et les greffes sont inconnus : le dossier serait faux.
@@ -564,6 +589,14 @@ async function controlerFormalite({ reference }) {
   }
   if (v.guichet_simulation) alertes.push(`Mode simulation : rien ne sera transmis à l’INPI (${v.motif_simulation}).`);
   if (f.fiche?.radiee) alertes.push('Société radiée au registre.');
+  if (r0.supprimee) alertes.push(messageSuppression(r0.supprimee));
+  if (r0.erreur && f.inpi_id) alertes.push(`Lecture du guichet impossible : état du dépôt non vérifié (${r0.erreur}).`);
+  const doublon = !f.inpi_id ? doublonAVerifier(f) : null;
+  if (doublon) {
+    alertes.push(`Risque de doublon : la formalité n° ${doublon.inpi_id} (liasse ${doublon.liasse || '—'}) a quitté le compte mandataire, peut-être ramenée en brouillon sur le portail. `
+      + 'Vérifier sur procedures.inpi.fr qu’aucun brouillon n’y subsiste (le supprimer le cas échéant) ; enregistrer_formalite exigera brouillon_portail_verifie: true.');
+  }
+  for (const a of alerteJournal(f)) alertes.push(a);
   const cp = f.inpi_id && !f.simule ? f.typologie?._pieces_guichet : null;
   if (f.inpi_id && !f.simule && !cp?.complet) {
     alertes.push(cp ? `Pièces non confirmées au guichet (${cp.confirmees}/${cp.attendues}${cp.manquantes?.length ? ` ; manquantes : ${cp.manquantes.join(', ')}` : ''}) : la formalité n’est pas déposée tant qu’elles ne le sont pas.`
@@ -593,7 +626,25 @@ async function controlerFormalite({ reference }) {
     exigences_levees: levees.map((l) => ({ champ: l.champ, libelle: l.label, motif: l.motif, date: l.date, etat: l.etat, transmis: l.transmis })),
     echeance: v.echeance, guichet_simulation: v.guichet_simulation, motif_simulation: v.motif_simulation,
     deja_enregistre: Boolean(f.inpi_id),
+    ...(doublon ? { doublon_a_verifier: { identifiant: doublon.inpi_id, liasse: doublon.liasse } } : {}),
   };
+}
+
+/**
+ * Journal d'annonces légales d'une création : hors de la liste du guichet,
+ * il part en « Autre » + libellé libre. On propose les entrées proches de la
+ * liste, que l'avocat choisit.
+ */
+function alerteJournal(f) {
+  const nom = f.reponses?.c_publication?.journal_publication;
+  if (!nom || !(f.operations || []).some((c) => moteur.infoOperation(c)?.creation)) return [];
+  const liste = Object.keys(require('../inpi/referentiels').enumeration('journalPublication'));
+  const simple = (x) => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (liste.some((j) => simple(j) === simple(nom).trim())) return [];
+  const mots = simple(nom).split(/[^a-z0-9.]+/).filter((m) => m.length >= 4);
+  const proches = liste.filter((j) => j !== 'Autre' && mots.some((m) => simple(j).includes(m))).slice(0, 8);
+  return [`Journal d’annonces légales « ${nom} » absent de la liste du guichet : transmis en « Autre » (journalPublicationAutre).`
+    + (proches.length ? ` Entrées proches de la liste : ${proches.join(' ; ')}. Faire choisir l’entrée exacte par l’avocat (renseigner_formalite, c_publication.journal_publication).` : '')];
 }
 
 /** Valeurs par défaut que l'avocat n'a pas confirmées, en clair. */
@@ -601,7 +652,7 @@ function aConfirmer(v) {
   return v.champs.flatMap((g) => g.champs.filter((c) => c.a_confirmer).map((c) => `${g.titre} : ${c.label} = ${JSON.stringify(c.valeur)}`));
 }
 
-async function enregistrerFormalite({ reference, confirmation_avocat: confirmation }) {
+async function enregistrerFormalite({ reference, confirmation_avocat: confirmation, brouillon_portail_verifie: brouillonVerifie }) {
   if (confirmation !== true) {
     throw erreur('Enregistrement refusé : l’avocat doit d’abord confirmer expressément (confirmation_avocat: true, après son accord explicite).', 412);
   }
@@ -609,6 +660,17 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
   const { f, supprimee } = r;
   if (f.inpi_id) {
     return { deja_enregistre: true, message: 'Dossier déjà enregistré au guichet : ne pas relancer, passer au suivi.', verification_guichet: verificationGuichet(r), inpi: { identifiant: f.inpi_id, liasse: f.numero_liasse, montant: f.montant, simule: f.simule } };
+  }
+  // Formalité précédente sortie du compte : peut-être ramenée en brouillon sur le portail.
+  const doublon = doublonAVerifier(f);
+  if (doublon && brouillonVerifie !== true) {
+    throw erreur(`Enregistrement suspendu : risque de doublon. La formalité précédente n° ${doublon.inpi_id} (liasse ${doublon.liasse || '—'}) a quitté le compte mandataire, `
+      + 'ce que produit aussi une formalité ramenée en brouillon sur le portail. Demander à l’avocat de vérifier sur procedures.inpi.fr qu’aucun brouillon de cette société n’y subsiste '
+      + '(et de le supprimer le cas échéant), puis rappeler enregistrer_formalite avec brouillon_portail_verifie: true.', 409, { doublon_a_verifier: doublon });
+  }
+  if (doublon) {
+    await q(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), _doublon_a_verifier: false } }).eq('id', f.id).select());
+    await q(supabase.from('formalite_evenements').insert({ formalite_id: f.id, type: 'depot', message: `Absence de brouillon sur le portail confirmée par l’avocat (formalité précédente n° ${doublon.inpi_id}).`, donnees: null }).select());
   }
   // Un dossier incomplet est refusé par le dépôt lui-même ; un dossier complet, s'il reste des défauts à confirmer.
   const vue = await vueDossier(f.id);
@@ -626,7 +688,12 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
     enregistre: true,
     depose,
     simule: Boolean(apres.simule),
-    ...(supprimee ? { ancienne_formalite_supprimee: { identifiant: supprimee.inpi_id, liasse: supprimee.liasse } } : {}),
+    ...(supprimee || doublon ? {
+      ancienne_formalite_disparue: {
+        identifiant: (supprimee || doublon).inpi_id, liasse: (supprimee || doublon).liasse,
+        constat: 'Absence constatée sur le compte mandataire : le connecteur n’a rien supprimé au guichet.',
+      },
+    } : {}),
     ...(pg && !pg.simule ? { pieces_au_guichet: vuePiecesGuichet(pg) } : {}),
     ...(apres.simule ? { motif_simulation: guichet.motifSimulation(), message: 'Simulation : rien n’a été transmis à l’INPI.' } : {}),
     ...(!apres.simule && !depose ? {
@@ -634,6 +701,7 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
     } : {}),
     inpi: { identifiant: apres.inpi_id, liasse: apres.numero_liasse, montant: apres.montant },
     statut: statutInfo(apres.statut).libelle,
+    ...(apres.simule ? {} : { avertissement_portail: NE_PAS_RAMENER_EN_BROUILLON }),
     suite: depose || apres.simule
       ? 'L’avocat signe puis paie sur le portail du guichet unique ; la formalité y reste modifiable ou supprimable tant qu’elle n’est pas payée.'
       : 'Compléter les pièces manquantes avant toute signature ; la formalité reste modifiable ou supprimable sur le portail tant qu’elle n’est pas payée.',
@@ -651,6 +719,7 @@ function vuePiecesGuichet(pg) {
     controle_guichet: c.erreur ? { erreur: c.erreur, complet: false } : {
       complet: Boolean(c.complet), attendues: c.attendues, confirmees: (c.confirmees || []).length,
       manquantes: c.manquantes || [],
+      ...(c.en_trop?.length ? { en_trop: c.en_trop, en_trop_suite: 'Pièces au guichet sans correspondant dans le dossier (doublons) : les retirer avec retirer_piece_guichet, sur accord de l’avocat, avant de signer.' } : {}),
     },
     ...(c.complet ? {} : { suite: 'Relancer transmettre_pieces, ou joindre les pièces manquantes sur le portail avant de signer.' }),
   };
@@ -676,6 +745,22 @@ async function transmettrePiecesGuichet({ reference, confirmation_avocat: confir
     ...(r.simule ? {} : { controle_guichet: vuePiecesGuichet(r).controle_guichet, depose: Boolean(c.complet) }),
     suite: r.simule || c.complet ? 'Toutes les pièces sont confirmées au guichet : l’avocat peut signer puis payer sur le portail.'
       : 'Pièces non confirmées au guichet : les joindre sur le portail (ou relancer) avant de signer.',
+    ...(r.simule ? {} : { avertissement_portail: NE_PAS_RAMENER_EN_BROUILLON }),
+  };
+}
+
+async function retirerPieceGuichetOutil({ reference, piece_id: pieceId, confirmation_avocat: confirmation }) {
+  if (confirmation !== true) {
+    throw erreur('Retrait refusé : l’avocat doit d’abord l’accepter expressément (confirmation_avocat: true).', 412);
+  }
+  if (pieceId === undefined || pieceId === null || pieceId === '') throw erreur('Indiquez piece_id : l’identifiant de la pièce au guichet (voir pieces_au_guichet de consulter_formalite_guichet).', 422);
+  const r0 = await rafraichirEnregistrement(await chargerModifiable(reference));
+  if (r0.supprimee) throw erreur(messageSuppression(r0.supprimee), 409);
+  const r = await parcoursSvc.retirerPieceGuichet(r0.f.id, pieceId);
+  return {
+    reference: r0.f.reference, retiree: r.retiree, piece: r.piece,
+    controle_guichet: vuePiecesGuichet({ controle: r.controle }).controle_guichet,
+    ...(r.retiree ? {} : { attention: 'La pièce figure toujours sur la formalité à la relecture : vérifier sur le portail.' }),
   };
 }
 
@@ -710,7 +795,7 @@ async function statutFormalite({ reference }) {
     echeance: echeanceDe(a.operations || [], a.reponses || {}),
     ...(synchro?.erreur ? { avertissement: `Lecture du guichet impossible : ${synchro.erreur}` } : {}),
     ...(synchro?.changement ? { changement: true } : {}),
-    ...(synchro?.supprimee_au_guichet ? { formalite_supprimee_au_guichet: messageSuppression(synchro.supprimee_au_guichet) } : {}),
+    ...(synchro?.disparue ? { formalite_disparue_du_guichet: messageSuppression(synchro.disparue) } : {}),
     ...(a.inpi_id && !a.simule ? {
       pieces_au_guichet: controlePieces
         ? { complet: controlePieces.complet, confirmees: controlePieces.confirmees, attendues: controlePieces.attendues, manquantes: controlePieces.manquantes, controle_du: controlePieces.date, ...(controlePieces.erreur ? { erreur: controlePieces.erreur } : {}) }
@@ -852,11 +937,13 @@ async function comparaisonPieces(id, auGuichet) {
   if (!Array.isArray(auGuichet)) {
     return { pieces_du_dossier: pieces, ecart_pieces: { verifiable: false, motif: 'Liste des pièces du guichet illisible.' } };
   }
-  const c = parcoursSvc.confronterPieces(pieces.map((p) => ({ code: p.code, filename: p.nom })), auGuichet);
+  const c = parcoursSvc.confronterPieces(pieces.map((p) => ({ code: p.code, filename: p.nom, taille: p.taille })), auGuichet);
   return {
     pieces_du_dossier: pieces,
     ecart_pieces: {
       complet: c.complet, attendues: c.attendues, confirmees: c.confirmees.length, manquantes_au_guichet: c.manquantes,
+      rapprochement: 'même code PJ, puis taille et nom normalisé comme le guichet (accents, espaces, parenthèses)',
+      ...(c.en_trop.length ? { en_trop_au_guichet: c.en_trop, suite: 'Doublons ou pièces sans correspondant : retirer_piece_guichet, sur accord de l’avocat, avant de signer.' } : {}),
       note: 'pieces_du_dossier = pièces chargées dans Legalize ; seules celles de pieces_au_guichet sont rattachées à la formalité.',
     },
   };
@@ -874,8 +961,8 @@ async function consulterFormaliteGuichet({ reference }) {
   // La synchronisation retrouve et corrige au besoin l'identifiant de la formalité.
   let synchro = null;
   try { synchro = await formalites.synchroniser(f.id); } catch (e) { /* lecture directe ci-dessous */ }
-  if (synchro?.supprimee_au_guichet) {
-    return { reference: f.reference, formalite_supprimee_au_guichet: messageSuppression(synchro.supprimee_au_guichet), pieces_du_dossier: await piecesDuDossier(f.id) };
+  if (synchro?.disparue) {
+    return { reference: f.reference, formalite_disparue_du_guichet: messageSuppression(synchro.disparue), pieces_du_dossier: await piecesDuDossier(f.id) };
   }
   const [a] = await q(supabase.from('formalites').select('inpi_id').eq('id', f.id));
   f.inpi_id = a?.inpi_id || f.inpi_id;
@@ -917,9 +1004,9 @@ async function consulterFormaliteGuichet({ reference }) {
   try { pieces = await guichet.listerPieces(f.inpi_id); } catch (e) { pieces = [{ erreur: e.message }]; }
   let synthese = null;
   try {
-    const pdf = await guichet.synthese(f.inpi_id);
+    const { pdf, source } = await guichet.synthese(f.inpi_id, { avecSource: true });
     const t = await require('../inpi/texte-pdf').textePdf(pdf, { budgetMs: 20000, maxCaracteres: 40000 });
-    synthese = { pages: t.pages_total, texte: t.texte, ...(t.pages_restantes.length ? { pages_non_lues: t.pages_restantes.join(',') } : {}) };
+    synthese = { source, pages: t.pages_total, texte: t.texte, ...(t.pages_restantes.length ? { pages_non_lues: t.pages_restantes.join(',') } : {}) };
   } catch (e) { synthese = { indisponible: e.message }; }
   const contenu = brut?.content || {};
   return {
@@ -1048,7 +1135,7 @@ const OUTILS = [
   },
   {
     name: 'retirer_piece',
-    description: 'Retire du dossier une pièce reçue par erreur (désignée par son numéro ou son nom de fichier).',
+    description: 'Retire du dossier Legalize une pièce reçue par erreur (désignée par son numéro ou son nom de fichier). N’agit pas au guichet : pour une pièce déjà rattachée à la formalité, retirer_piece_guichet.',
     inputSchema: { type: 'object', properties: { reference: REFERENCE, fichier: { type: 'string' } }, required: ['reference', 'fichier'] },
     run: retirerPiece,
   },
@@ -1069,14 +1156,18 @@ const OUTILS = [
     description: 'Transmet la formalité au guichet unique (sans la signer ni la payer). À n’appeler qu’après l’accord explicite de l’avocat sur le récapitulatif de validation, avec confirmation_avocat: true.',
     inputSchema: {
       type: 'object',
-      properties: { reference: REFERENCE, confirmation_avocat: { type: 'boolean', description: 'true uniquement après l’accord explicite de l’avocat (« je confirme »).' } },
+      properties: {
+        reference: REFERENCE,
+        confirmation_avocat: { type: 'boolean', description: 'true uniquement après l’accord explicite de l’avocat (« je confirme »).' },
+        brouillon_portail_verifie: { type: 'boolean', description: 'Exigé quand une formalité précédente du dossier a quitté le compte mandataire : true seulement si l’avocat a vérifié sur procedures.inpi.fr qu’aucun brouillon n’y subsiste (risque de doublon).' },
+      },
       required: ['reference', 'confirmation_avocat'],
     },
     run: enregistrerFormalite,
   },
   {
     name: 'transmettre_pieces',
-    description: 'Dépose sur une formalité déjà enregistrée au guichet les pièces du dossier qu’il n’a pas encore (sans doublon : comparaison par type et nom de fichier). '
+    description: 'Dépose sur une formalité déjà enregistrée au guichet les pièces du dossier qu’il n’a pas encore. Idempotent : les pièces déjà présentes (jointes à la création comprises) ne repartent pas — rapprochement par code PJ, taille et nom normalisé comme le guichet. '
       + 'Écrit au guichet : uniquement après l’accord explicite de l’avocat, avec confirmation_avocat: true. Ne signe ni ne paie.',
     inputSchema: {
       type: 'object',
@@ -1084,6 +1175,22 @@ const OUTILS = [
       required: ['reference', 'confirmation_avocat'],
     },
     run: transmettrePiecesGuichet,
+  },
+  {
+    name: 'retirer_piece_guichet',
+    description: 'Retire une pièce rattachée à la formalité au guichet (doublon, pièce erronée), avant signature, par son identifiant au guichet (pieces_au_guichet de consulter_formalite_guichet). '
+      + 'Les documents de synthèse de l’INPI (PJ_99, PJ_119) ne se retirent pas. Écrit au guichet : uniquement après l’accord explicite de l’avocat, avec confirmation_avocat: true. '
+      + 'Pour retirer une pièce du dossier Legalize, utiliser retirer_piece.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        reference: REFERENCE,
+        piece_id: { type: 'string', description: 'Identifiant de la pièce au guichet (ex. « 412102263 »).' },
+        confirmation_avocat: { type: 'boolean', description: 'true uniquement après l’accord explicite de l’avocat.' },
+      },
+      required: ['reference', 'piece_id', 'confirmation_avocat'],
+    },
+    run: retirerPieceGuichetOutil,
   },
   {
     name: 'statut_formalite',
@@ -1151,4 +1258,4 @@ const OUTILS = [
   },
 ];
 
-module.exports = { OUTILS, ORIGINE, empreinte, echeanceDe, vueDossier, chargerParReference, journalDe, modes, validerTypologie, cataloguePieces };
+module.exports = { OUTILS, ORIGINE, empreinte, echeanceDe, vueDossier, chargerParReference, journalDe, modes, validerTypologie, cataloguePieces, alerteJournal };

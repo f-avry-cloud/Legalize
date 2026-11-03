@@ -600,94 +600,148 @@ async function deposer(id) {
   return { ...(await lire(id)), pieces_guichet: piecesGuichet };
 }
 
-const clePiece = (code, nom) => `${code}|${String(nom || '').trim()}`;
+/** Une pièce du dossier, sous la forme comparée au guichet. */
+const pieceComparee = (p) => ({ code: p.code, nom: p.filename, taille: p.taille ?? null });
 
 /**
  * Confronte les pièces du dossier à la liste relue au guichet. Seule la
- * relecture fait foi : une réponse 2xx à l'envoi ne prouve pas que la pièce
- * est rattachée à la formalité.
+ * relecture fait foi. Le rapprochement suit le guichet, qui renomme les
+ * fichiers (accents, espaces, parenthèses) : même code PJ, puis taille et/ou
+ * nom normalisé (voir guichet.rapprocherPieces).
  */
 function confronterPieces(pieces, presentes) {
-  const auGuichet = new Set(presentes.map((x) => clePiece(x.code, x.nom)));
-  const confirmees = [];
-  const manquantes = [];
-  for (const p of pieces) (auGuichet.has(clePiece(p.code, p.filename)) ? confirmees : manquantes).push({ code: p.code, nom: p.filename });
+  const r = guichet.rapprocherPieces(pieces.map(pieceComparee), presentes);
+  const enTrop = r.en_trop.filter((g) => !guichet.CODES_SYNTHESE.includes(g.code));
   return {
     date: new Date().toISOString(),
     attendues: pieces.length,
-    confirmees,
-    manquantes,
+    confirmees: r.paires.map(({ dossier: d, guichet: g }) => ({ code: d.code, nom: d.nom, id_guichet: g.id ?? null })),
+    manquantes: r.manquantes.map((d) => ({ code: d.code, nom: d.nom })),
+    // Pièces du guichet sans correspondant dans le dossier (doublons d'un envoi répété, pièces ajoutées sur le portail).
+    en_trop: enTrop.map((g) => ({ id_guichet: g.id ?? null, code: g.code, nom: g.nom, taille: g.taille ?? null })),
+    syntheses: r.en_trop.filter((g) => guichet.CODES_SYNTHESE.includes(g.code)).map((g) => ({ id_guichet: g.id ?? null, code: g.code })),
     au_guichet: presentes.map((x) => ({ code: x.code, nom: x.nom })),
-    complet: manquantes.length === 0,
+    complet: r.manquantes.length === 0,
   };
 }
 
-/** Garde le dernier contrôle des pièces sur le dossier (sans le contenu des PDF). */
-async function memoriserControle(id, controle) {
+/** Garde le dernier contrôle des pièces sur le dossier (sans le contenu des PDF ni les noms de fichiers). */
+async function memoriserControle(id, controle, extra = {}) {
   const f = await charger(id);
   const resume = controle ? {
     date: controle.date || new Date().toISOString(), complet: Boolean(controle.complet),
     attendues: controle.attendues ?? null, confirmees: (controle.confirmees || []).length,
-    manquantes: (controle.manquantes || []).map((x) => x.code), ...(controle.erreur ? { erreur: controle.erreur } : {}),
+    manquantes: (controle.manquantes || []).map((x) => x.code), en_trop: (controle.en_trop || []).length,
+    ...(controle.erreur ? { erreur: controle.erreur } : {}),
   } : null;
-  await db(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), _pieces_guichet: resume } }).eq('id', id).select());
+  const typologie = { ...(f.typologie || {}), _pieces_guichet: resume, ...extra };
+  await db(supabase.from('formalites').update({ typologie }).eq('id', id).select());
 }
 
 /** Relit les pièces au guichet et les confronte au dossier, sans rien envoyer. */
 async function controlerPiecesGuichet(id) {
   const f = await charger(id);
   if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet.', 409);
-  if (f.simule || String(f.inpi_id).startsWith('SIM-')) return { simule: true, complet: true, confirmees: [], manquantes: [], attendues: 0 };
+  if (f.simule || String(f.inpi_id).startsWith('SIM-')) return { simule: true, complet: true, confirmees: [], manquantes: [], en_trop: [], attendues: 0 };
   const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
   let controle;
   try {
     controle = confronterPieces(pieces, await guichet.listerPieces(f.inpi_id));
   } catch (e) {
-    controle = { date: new Date().toISOString(), attendues: pieces.length, confirmees: [], manquantes: pieces.map((p) => ({ code: p.code, nom: p.filename })), complet: false, erreur: `Relecture des pièces au guichet impossible : ${e.message}` };
+    controle = { date: new Date().toISOString(), attendues: pieces.length, confirmees: [], manquantes: pieces.map((p) => ({ code: p.code, nom: p.filename })), en_trop: [], complet: false, erreur: `Relecture des pièces au guichet impossible : ${e.message}` };
   }
   await memoriserControle(id, controle);
   return controle;
 }
 
+const VERROU_TRANSMISSION_MS = 3 * 60 * 1000;
+
 /**
  * Dépose sur la formalité enregistrée les pièces du dossier que le guichet
- * n'a pas encore (comparées par type et nom de fichier) : sans doublon, et
- * relançable sans risque. La liste du guichet est ensuite relue : une pièce
- * « acceptée » à l'envoi mais absente de la relecture compte en échec.
+ * n'a pas encore : celles jointes à la création ne repartent pas. Idempotent :
+ * un appel répété n'envoie rien de plus, et deux transmissions simultanées
+ * sont refusées. La liste du guichet est relue ensuite : une pièce « acceptée »
+ * à l'envoi mais absente de la relecture compte en échec.
  */
 async function transmettrePieces(id) {
   const f = await charger(id);
   if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet.', 409);
   if (f.simule || String(f.inpi_id).startsWith('SIM-')) return { simule: true, transmises: [], deja_presentes: [], echecs: [], controle: { simule: true, complet: true } };
-  const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
-  const presentes = await guichet.listerPieces(f.inpi_id);
-  const deja = new Set(presentes.map((x) => clePiece(x.code, x.nom)));
-  const out = { transmises: [], deja_presentes: [], echecs: [] };
-  for (const p of pieces) {
-    if (deja.has(clePiece(p.code, p.filename))) { out.deja_presentes.push({ code: p.code, nom: p.filename }); continue; }
-    try {
-      const base64 = (await downloadFile(p.filepath)).toString('base64');
-      const rep = await guichet.ajouterPiece(f.inpi_id, { code: p.code, nom: p.filename, base64 });
-      out.transmises.push({ code: p.code, nom: p.filename, id_guichet: rep?.id ?? null });
-    } catch (e) {
-      out.echecs.push({ code: p.code, nom: p.filename, motif: e.message });
-    }
+  const enCours = f.typologie?._transmission;
+  if (enCours && enCours.inpi_id === String(f.inpi_id) && Date.now() - Date.parse(enCours.debut) < VERROU_TRANSMISSION_MS) {
+    throw erreur('Une transmission des pièces est déjà en cours pour ce dossier : attendre quelques minutes, puis vérifier avec consulter_formalite_guichet avant de relancer.', 409);
   }
-  // Relecture : ce que le guichet a réellement rattaché à la formalité.
-  out.controle = await controlerPiecesGuichet(id);
-  if (!out.controle.erreur) {
-    const absentes = new Set(out.controle.manquantes.map((x) => clePiece(x.code, x.nom)));
-    const nonRattachees = out.transmises.filter((x) => absentes.has(clePiece(x.code, x.nom)));
-    out.transmises = out.transmises.filter((x) => !absentes.has(clePiece(x.code, x.nom)));
-    for (const x of nonRattachees) {
-      out.echecs.push({ code: x.code, nom: x.nom, motif: `Envoi accepté par le guichet${x.id_guichet ? ` (pièce n° ${x.id_guichet})` : ' sans identifiant de pièce'}, mais absente de la formalité à la relecture.` });
+  await db(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), _transmission: { inpi_id: String(f.inpi_id), debut: new Date().toISOString() } } }).eq('id', id).select());
+  const out = { transmises: [], deja_presentes: [], echecs: [] };
+  try {
+    const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
+    const avant = confronterPieces(pieces, await guichet.listerPieces(f.inpi_id));
+    out.deja_presentes = avant.confirmees.map(({ code, nom }) => ({ code, nom }));
+    const aEnvoyer = pieces.filter((p) => avant.manquantes.some((m) => m.code === p.code && m.nom === p.filename))
+      // Une même pièce (code et nom) en double dans le dossier : chaque exemplaire manquant part une fois.
+      .slice(0, avant.manquantes.length);
+    for (const p of aEnvoyer) {
+      try {
+        const base64 = (await downloadFile(p.filepath)).toString('base64');
+        const rep = await guichet.ajouterPiece(f.inpi_id, { code: p.code, nom: p.filename, base64 });
+        out.transmises.push({ code: p.code, nom: p.filename, id_guichet: rep?.id ?? null });
+      } catch (e) {
+        out.echecs.push({ code: p.code, nom: p.filename, motif: e.message });
+      }
     }
+    // Relecture : ce que le guichet a réellement rattaché à la formalité.
+    out.controle = await controlerPiecesGuichet(id);
+    if (!out.controle.erreur) {
+      const restantes = out.controle.manquantes.slice();
+      const nonRattachees = [];
+      out.transmises = out.transmises.filter((x) => {
+        const i = restantes.findIndex((m) => m.code === x.code && m.nom === x.nom);
+        if (i < 0) return true;
+        restantes.splice(i, 1); nonRattachees.push(x); return false;
+      });
+      for (const x of nonRattachees) {
+        out.echecs.push({ code: x.code, nom: x.nom, motif: `Envoi accepté par le guichet${x.id_guichet ? ` (pièce n° ${x.id_guichet})` : ' sans identifiant de pièce'}, mais absente de la formalité à la relecture.` });
+      }
+    }
+  } finally {
+    const g = await charger(id);
+    const typologie = { ...(g.typologie || {}) };
+    delete typologie._transmission;
+    await db(supabase.from('formalites').update({ typologie }).eq('id', id).select());
   }
   const c = out.controle;
   const resume = `Pièces au guichet : ${out.transmises.length} transmise(s), ${out.deja_presentes.length} déjà présente(s)${out.echecs.length ? `, ${out.echecs.length} en échec (${out.echecs.map((x) => x.code).join(', ')})` : ''}. `
-    + (c.erreur ? `${c.erreur}.` : `Relecture : ${c.confirmees.length}/${c.attendues} pièce(s) confirmée(s)${c.complet ? '.' : ` — manquantes : ${c.manquantes.map((x) => x.code).join(', ')}.`}`);
-  await journal(id, 'piece', resume, { transmises: out.transmises.map((x) => x.code), echecs: out.echecs.map((x) => ({ code: x.code, motif: x.motif })), confirmees: (c.confirmees || []).map((x) => x.code), manquantes: (c.manquantes || []).map((x) => x.code) });
+    + (c.erreur ? `${c.erreur}.` : `Relecture : ${c.confirmees.length}/${c.attendues} pièce(s) confirmée(s)${c.complet ? '' : ` — manquantes : ${c.manquantes.map((x) => x.code).join(', ')}`}${c.en_trop.length ? ` ; ${c.en_trop.length} pièce(s) en trop au guichet (${c.en_trop.map((x) => `${x.code} n° ${x.id_guichet}`).join(', ')})` : ''}.`);
+  await journal(id, 'piece', resume, { transmises: out.transmises.map((x) => x.code), echecs: out.echecs.map((x) => ({ code: x.code, motif: x.motif })), confirmees: (c.confirmees || []).map((x) => x.code), manquantes: (c.manquantes || []).map((x) => x.code), en_trop: (c.en_trop || []).map((x) => ({ code: x.code, id_guichet: x.id_guichet })) });
   return out;
+}
+
+/**
+ * Retire une pièce rattachée à la formalité au guichet, avant signature.
+ * Les documents de synthèse produits par l'INPI ne se retirent pas.
+ */
+async function retirerPieceGuichet(id, pieceId) {
+  const f = await charger(id);
+  if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet : retirer la pièce du dossier (retirer_piece).', 409);
+  if (f.simule || String(f.inpi_id).startsWith('SIM-')) throw erreur('Dossier simulé : il n’existe pas au guichet.', 409);
+  if (!['RECEIVED', 'ERROR', 'SIGNATURE_PENDING'].includes(f.statut)) {
+    throw erreur(`Formalité au statut « ${f.statut} » : une pièce ne se retire plus après la signature. Passer par le portail.`, 409);
+  }
+  const presentes = await guichet.listerPieces(f.inpi_id);
+  const cible = presentes.find((x) => String(x.id) === String(pieceId));
+  if (!cible) throw erreur(`La pièce n° ${pieceId} n’est pas rattachée à la formalité n° ${f.inpi_id}. Pièces au guichet : ${presentes.map((x) => `${x.id} (${x.code})`).join(', ') || 'aucune'}.`, 404);
+  if (guichet.CODES_SYNTHESE.includes(cible.code)) throw erreur(`La pièce n° ${pieceId} (${cible.code}) est un document de synthèse produit par l’INPI : elle ne se retire pas.`, 409);
+  await guichet.retirerPieceGuichet(f.inpi_id, cible.id);
+  // Relecture : la pièce ne compte comme retirée que si elle a quitté la liste du guichet.
+  const apres = await guichet.listerPieces(f.inpi_id);
+  const retiree = !apres.some((x) => String(x.id) === String(pieceId));
+  const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
+  const controle = confronterPieces(pieces, apres);
+  await memoriserControle(id, controle);
+  await journal(id, 'piece', retiree
+    ? `Pièce n° ${pieceId} (${cible.code}) retirée de la formalité au guichet.`
+    : `Retrait de la pièce n° ${pieceId} (${cible.code}) demandé au guichet, mais elle figure toujours sur la formalité.`, { id_guichet: String(pieceId), code: cible.code });
+  return { retiree, piece: { id_guichet: String(pieceId), code: cible.code }, controle };
 }
 
 /** Listes de référence du guichet pour les écrans : journaux, nationalités, catégories d'activité. */
@@ -707,5 +761,5 @@ function referentiels() {
 
 module.exports = {
   TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses, majExigences, refusLevee,
-  ajouterPiece, inscrirePiece, transmettrePieces, controlerPiecesGuichet, confronterPieces, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
+  ajouterPiece, inscrirePiece, transmettrePieces, controlerPiecesGuichet, confronterPieces, retirerPieceGuichet, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
 };
