@@ -581,7 +581,46 @@ async function deposer(id) {
     await journal(id, 'depot', `Attention : le guichet n’a pas reconnu ${nonReconnus.join(', ')}. Vérifier le dossier avant de le signer.`, { reconnus: r.evenements });
   }
   await journal(id, 'depot', r.simule ? `Dépôt simulé (${r.motif_simulation}).` : `Déposé au guichet unique — liasse ${r.numero_liasse}.`, { inpi_id: r.inpi_id, montant: r.montant });
-  return lire(id);
+  // Constaté en production (LGZ-2026-00052) : les PDF joints au corps de la
+  // formalité ne sont pas conservés par le guichet ; ils se déposent ensuite,
+  // un par un, sur la formalité créée.
+  let piecesGuichet = null;
+  if (!r.simule) {
+    try { piecesGuichet = await transmettrePieces(id); } catch (e) {
+      piecesGuichet = { erreur: e.message };
+      await journal(id, 'depot', `Pièces non transmises au guichet : ${e.message}. À relancer (transmettre_pieces) ou à joindre sur le portail.`);
+    }
+  }
+  return { ...(await lire(id)), pieces_guichet: piecesGuichet };
+}
+
+/**
+ * Dépose sur la formalité enregistrée les pièces du dossier que le guichet
+ * n'a pas encore (comparées par type et nom de fichier) : sans doublon, et
+ * relançable sans risque.
+ */
+async function transmettrePieces(id) {
+  const f = await charger(id);
+  if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet.', 409);
+  if (f.simule || String(f.inpi_id).startsWith('SIM-')) return { simule: true, transmises: [], deja_presentes: [], echecs: [] };
+  const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
+  const presentes = await guichet.listerPieces(f.inpi_id);
+  const cle = (code, nom) => `${code}|${String(nom || '').trim()}`;
+  const deja = new Set(presentes.map((x) => cle(x.code, x.nom)));
+  const out = { transmises: [], deja_presentes: [], echecs: [] };
+  for (const p of pieces) {
+    if (deja.has(cle(p.code, p.filename))) { out.deja_presentes.push({ code: p.code, nom: p.filename }); continue; }
+    try {
+      const base64 = (await downloadFile(p.filepath)).toString('base64');
+      const rep = await guichet.ajouterPiece(f.inpi_id, { code: p.code, nom: p.filename, base64 });
+      out.transmises.push({ code: p.code, nom: p.filename, id_guichet: rep?.id ?? null });
+    } catch (e) {
+      out.echecs.push({ code: p.code, nom: p.filename, motif: e.message });
+    }
+  }
+  const resume = `Pièces au guichet : ${out.transmises.length} transmise(s), ${out.deja_presentes.length} déjà présente(s)${out.echecs.length ? `, ${out.echecs.length} en échec (${out.echecs.map((x) => x.code).join(', ')})` : ''}.`;
+  await journal(id, 'piece', resume, { transmises: out.transmises.map((x) => x.code), echecs: out.echecs });
+  return out;
 }
 
 /** Listes de référence du guichet pour les écrans : journaux, nationalités, catégories d'activité. */
@@ -601,5 +640,5 @@ function referentiels() {
 
 module.exports = {
   TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses, majExigences, refusLevee,
-  ajouterPiece, inscrirePiece, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
+  ajouterPiece, inscrirePiece, transmettrePieces, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
 };

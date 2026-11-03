@@ -80,7 +80,7 @@ function verifier(nom, condition, detail) {
   verifier('notification : 202 sans corps', notif.statut === 202);
   const liste = await rpc('tools/list', {});
   const noms = liste.corps.result.tools.map((t) => t.name);
-  verifier('dix-neuf outils, aucun ne signe ni ne paie', noms.length === 19 && !noms.some((x) => /sign|pay/i.test(x)), noms);
+  verifier('vingt outils, aucun ne signe ni ne paie', noms.length === 20 && !noms.some((x) => /sign|pay/i.test(x)), noms);
   verifier('outil inconnu : erreur JSON-RPC', (await rpc('tools/call', { name: 'payer', arguments: {} })).corps.error?.code === -32602);
   verifier('méthode inconnue : erreur JSON-RPC', (await rpc('resources/read', {})).corps.error?.code === -32601);
 
@@ -195,7 +195,7 @@ function verifier(nom, condition, detail) {
   const sansCle = await rpc('tools/list', {});
   const outilSansCle = await rpc('tools/call', { name: 'lister_formalites', arguments: {} });
   verifier('sans clé de service : connexion possible, l’outil explique ce qui manque',
-    sansCle.statut === 200 && sansCle.corps.result.tools.length === 19
+    sansCle.statut === 200 && sansCle.corps.result.tools.length === 20
     && outilSansCle.corps.result.isError && /SUPABASE_SERVICE_ROLE_KEY/.test(outilSansCle.corps.result.content[0].text), outilSansCle.corps);
   faux.service = service;
 
@@ -482,6 +482,37 @@ function verifier(nom, condition, detail) {
     !apres46.json.pret && apres46.json.bloquants.some((b) => /Représentant de GORIOUX FARO/.test(b)) && !apres46.json.bloquants.some((b) => /refusée par le guichet/.test(b)), apres46.json.bloquants);
   const sansConfirmation = await outil('enregistrer_formalite', { reference: ref46 });
   verifier('enregistrer_formalite exige toujours la confirmation de l’avocat', sansConfirmation.erreur && /confirmer expressément/.test(sansConfirmation.texte));
+
+  console.log('\nPièces déposées sur la formalité après l’enregistrement (constat LGZ-2026-00052)');
+  // Le guichet ne garde pas les PDF joints au corps de la formalité : ils se déposent ensuite, un par un.
+  await outil('renseigner_formalite', { reference: ref46, exigences_champs: [{ champ: `_registre.${repCAC}`, requis: false, motif: motif46 }] });
+  const sauve = { deposer: guichet.deposer, listerPieces: guichet.listerPieces, ajouterPiece: guichet.ajouterPiece };
+  const auGuichet = [{ id: 1, code: 'PJ_99', nom: 'Document_de_Synthese.pdf' }];
+  const envois = [];
+  guichet.deposer = async () => ({ simule: false, inpi_id: '22531174', numero_liasse: 'J00000000001', statut: 'SIGNATURE_PENDING', statut_brut: 'SIGNATURE_PENDING', montant: 53.16, evenements: [] });
+  guichet.listerPieces = async () => auGuichet.slice();
+  guichet.ajouterPiece = async (id, { code, nom, base64 }) => {
+    envois.push({ id, code, nom, taille: Buffer.from(base64, 'base64').length });
+    if (code === 'PJ_51') throw Object.assign(new Error('Fichier refusé par le guichet'), { status: 400 });
+    auGuichet.push({ id: 100 + envois.length, code, nom });
+    return { id: 100 + envois.length };
+  };
+  const nbPieces46 = tables.formalite_pieces.filter((p) => p.formalite_id === f46.id).length;
+  const enr46 = await outil('enregistrer_formalite', { reference: ref46, confirmation_avocat: true });
+  verifier('enregistrement réel : chaque pièce est ensuite déposée sur la formalité, PDF complet',
+    !enr46.erreur && envois.length === nbPieces46 && envois.every((e) => e.id === '22531174' && e.taille === PDF.length)
+    && enr46.json.pieces_au_guichet?.transmises === nbPieces46 - 1 && enr46.json.pieces_au_guichet.echecs.length === 1, enr46.texte);
+  verifier('pièce refusée : signalée, et le dépôt n’est pas défait', enr46.json.pieces_au_guichet.echecs[0].code === 'PJ_51' && f46.inpi_id === '22531174', enr46.json);
+  verifier('transmission journalisée', tables.formalite_evenements.some((e) => e.formalite_id === f46.id && /Pièces au guichet : \d+ transmise\(s\), 0 déjà présente\(s\), 1 en échec \(PJ_51\)/.test(e.message)));
+  const sansAccord = await outil('transmettre_pieces', { reference: ref46, confirmation_avocat: false });
+  verifier('transmettre_pieces : refusé sans l’accord de l’avocat', sansAccord.erreur && /accepter expressément/.test(sansAccord.texte) && envois.length === nbPieces46);
+  guichet.ajouterPiece = async (id, { code, nom }) => { envois.push({ id, code, nom }); auGuichet.push({ code, nom }); return { id: 999 }; };
+  const relance = await outil('transmettre_pieces', { reference: ref46, confirmation_avocat: true });
+  verifier('relance : seule la pièce manquante part, sans doublon', !relance.erreur && relance.json.transmises.length === 1 && relance.json.transmises[0].code === 'PJ_51'
+    && relance.json.deja_presentes.length === nbPieces46 - 1 && envois.length === nbPieces46 + 1, relance.texte);
+  const encore = await outil('transmettre_pieces', { reference: ref46, confirmation_avocat: true });
+  verifier('troisième appel : rien à transmettre', encore.json.transmises.length === 0 && encore.json.deja_presentes.length === nbPieces46);
+  Object.assign(guichet, sauve);
 
   console.log('\nTUP : radiation après transmission universelle de patrimoine (28M)');
   const exTup = await outil('exigences_formalite', { operations: ['28M'], siren: '552100554' });

@@ -39,6 +39,7 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `pieces_recues` | Pièces reçues et manquantes |
 | `controler_formalite` | Bloquants, alertes, échéance, mode simulation |
 | `enregistrer_formalite` | Transmission au guichet, **uniquement avec `confirmation_avocat: true`** |
+| `transmettre_pieces` | Dépose sur une formalité enregistrée les pièces que le guichet n'a pas (sans doublon) ; sur accord de l'avocat. L'enregistrement le fait de lui-même : le guichet ne conserve pas les PDF joints au corps de la formalité (constaté sur LGZ-2026-00052) |
 | `statut_formalite`, `lister_formalites` | Suivi (statut relu auprès de l'INPI, régularisations, journal) |
 | `reclasser_piece`, `retirer_piece`, `catalogue_pieces` | Ranger une pièce reçue sous la bonne ligne ou un autre type officiel |
 | `lister_pieces_deposees` | Actes et comptes annuels déposés au registre pour un SIREN (lecture seule) |

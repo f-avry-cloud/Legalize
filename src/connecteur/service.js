@@ -583,15 +583,40 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
   if (vue.etat.pret && defauts.length) {
     throw erreur(`Enregistrement refusé : valeurs par défaut non confirmées par l’avocat — ${defauts.join(' ; ')}. Renseignez-les avec renseigner_formalite.`, 409);
   }
-  await parcoursSvc.deposer(f.id);
+  const depot = await parcoursSvc.deposer(f.id);
   const [apres] = await q(supabase.from('formalites').select('*').eq('id', f.id));
+  const pg = depot?.pieces_guichet;
   return {
     enregistre: true,
     simule: Boolean(apres.simule),
+    ...(pg && !pg.simule ? {
+      pieces_au_guichet: pg.erreur ? { erreur: pg.erreur, suite: 'Relancer transmettre_pieces, ou joindre les pièces sur le portail avant de signer.' }
+        : { transmises: pg.transmises.length, deja_presentes: pg.deja_presentes.length, echecs: pg.echecs },
+    } : {}),
     ...(apres.simule ? { motif_simulation: guichet.motifSimulation(), message: 'Simulation : rien n’a été transmis à l’INPI.' } : {}),
     inpi: { identifiant: apres.inpi_id, liasse: apres.numero_liasse, montant: apres.montant },
     statut: statutInfo(apres.statut).libelle,
     suite: 'L’avocat signe puis paie sur le portail du guichet unique ; la formalité y reste modifiable ou supprimable tant qu’elle n’est pas payée.',
+  };
+}
+
+/**
+ * Dépose sur la formalité déjà enregistrée les pièces que le guichet n'a pas
+ * reçues. Écrit au guichet : sur accord de l'avocat seulement.
+ */
+async function transmettrePiecesGuichet({ reference, confirmation_avocat: confirmation }) {
+  if (confirmation !== true) {
+    throw erreur('Transmission refusée : l’avocat doit d’abord l’accepter expressément (confirmation_avocat: true).', 412);
+  }
+  const f = await chargerParReference(reference);
+  if (f.origine !== ORIGINE) throw erreur('Dossier ouvert dans Legalize : ses pièces se gèrent dans Legalize.', 403);
+  if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet : les pièces partiront avec enregistrer_formalite.', 409);
+  const r = await parcoursSvc.transmettrePieces(f.id);
+  return {
+    reference: f.reference,
+    ...(r.simule ? { simule: true, message: 'Dossier simulé : rien n’est transmis à l’INPI.' } : {}),
+    transmises: r.transmises, deja_presentes: r.deja_presentes, echecs: r.echecs,
+    suite: r.echecs.length ? 'Joindre les pièces en échec sur le portail avant de signer.' : 'Vérifier la liste des pièces sur le portail, puis signer et payer.',
   };
 }
 
@@ -956,6 +981,17 @@ const OUTILS = [
       required: ['reference', 'confirmation_avocat'],
     },
     run: enregistrerFormalite,
+  },
+  {
+    name: 'transmettre_pieces',
+    description: 'Dépose sur une formalité déjà enregistrée au guichet les pièces du dossier qu’il n’a pas encore (sans doublon : comparaison par type et nom de fichier). '
+      + 'Écrit au guichet : uniquement après l’accord explicite de l’avocat, avec confirmation_avocat: true. Ne signe ni ne paie.',
+    inputSchema: {
+      type: 'object',
+      properties: { reference: REFERENCE, confirmation_avocat: { type: 'boolean', description: 'true uniquement après l’accord explicite de l’avocat.' } },
+      required: ['reference', 'confirmation_avocat'],
+    },
+    run: transmettrePiecesGuichet,
   },
   {
     name: 'statut_formalite',
