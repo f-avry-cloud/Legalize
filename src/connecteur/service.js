@@ -773,9 +773,17 @@ async function consulterFormaliteGuichet({ reference }) {
       visibles = await guichet.lister({ siren: f.siren });
       if (!visibles.length) visibles = await guichet.lister({ itemsPerPage: 10 });
     } catch (e2) { visibles = [{ erreur: e2.message }]; }
+    // Lectures annexes : les pièces et l'historique répondent parfois quand la fiche ne répond pas.
+    const essai = async (fn) => { try { return await fn(); } catch (e2) { return { erreur: `${e2.status || ''} ${e2.message}`.trim() }; } };
+    const piecesAuGuichet = await essai(() => guichet.listerPieces(f.inpi_id));
+    const historiqueGuichet = await essai(() => guichet.historique(f.inpi_id));
     return {
       reference: f.reference,
       introuvable: `Le guichet ne trouve pas la formalité n° ${f.inpi_id} (liasse ${f.numero_liasse || '—'}) sur le compte du connecteur.`,
+      pieces_au_guichet: piecesAuGuichet,
+      historique_au_guichet: historiqueGuichet,
+      pieces_envoyees: (await q(supabase.from('formalite_pieces').select('code, filename, taille').eq('formalite_id', f.id).order('id')))
+        .map((p) => ({ code: p.code, nom: p.filename, taille: p.taille })),
       formalites_visibles_du_compte: visibles.map((x) => (x.erreur ? x : {
         identifiant: x.inpi_id, liasse: x.numero_liasse, societe: x.denomination || x.brut?.companyName || null, siren: x.siren || x.brut?.siren || null,
         statut: statutInfo(x.statut).libelle, statut_brut: x.statut_brut, date: x.statut_date, montant: x.montant,
