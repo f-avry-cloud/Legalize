@@ -543,9 +543,19 @@ async function reclasserPiece({ reference, fichier, cle, code_pj: codePj }) {
   return { reference: v.reference, reclassee: x.nom, pieces: v.pieces, manquantes: v.etat.pieces_manquantes };
 }
 
-async function retirerPiece({ reference, fichier }) {
+async function retirerPiece({ reference, fichier, confirmation_avocat: confirmation }) {
   const f = await chargerModifiable(reference);
-  if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : les pièces se gèrent sur le portail.', 409);
+  if (f.inpi_id) {
+    // Dossier enregistré : la pièce visée est celle de la formalité au guichet (son identifiant).
+    // Une conversation ouverte avant l'arrivée de retirer_piece_guichet ne voit que cet outil-ci.
+    if (/^\d+$/.test(String(fichier || '').trim()) && confirmation === true) {
+      return retirerPieceGuichetOutil({ reference, piece_id: String(fichier).trim(), confirmation_avocat: true });
+    }
+    throw erreur('Dossier déjà enregistré au guichet : retirer_piece n’agit sur le dossier Legalize qu’avant l’enregistrement. '
+      + 'Pour retirer une pièce rattachée à la formalité au guichet (doublon…), utilisez retirer_piece_guichet (piece_id, confirmation_avocat: true), '
+      + 'ou rappelez retirer_piece avec fichier = identifiant de la pièce au guichet (ex. « 412125056 ») et confirmation_avocat: true, après l’accord de l’avocat. '
+      + 'Si retirer_piece_guichet n’apparaît pas dans vos outils, la conversation a été ouverte avant sa mise en ligne : en ouvrir une nouvelle.', 409);
+  }
   const x = trouverFichier(await vueDossier(f.id), fichier);
   await parcoursSvc.retirerPiece(x.id);
   const v = await vueDossier(f.id);
@@ -1135,8 +1145,16 @@ const OUTILS = [
   },
   {
     name: 'retirer_piece',
-    description: 'Retire du dossier Legalize une pièce reçue par erreur (désignée par son numéro ou son nom de fichier). N’agit pas au guichet : pour une pièce déjà rattachée à la formalité, retirer_piece_guichet.',
-    inputSchema: { type: 'object', properties: { reference: REFERENCE, fichier: { type: 'string' } }, required: ['reference', 'fichier'] },
+    description: 'Retire une pièce reçue par erreur. Avant l’enregistrement : du dossier Legalize (numéro ou nom de fichier). Après : de la formalité au guichet, par son identifiant au guichet et avec confirmation_avocat: true (même effet que retirer_piece_guichet).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        reference: REFERENCE,
+        fichier: { type: 'string', description: 'Numéro ou nom du fichier dans le dossier ; dossier déjà enregistré : identifiant de la pièce au guichet.' },
+        confirmation_avocat: { type: 'boolean', description: 'Dossier déjà enregistré : true après l’accord explicite de l’avocat pour retirer la pièce au guichet.' },
+      },
+      required: ['reference', 'fichier'],
+    },
     run: retirerPiece,
   },
   {

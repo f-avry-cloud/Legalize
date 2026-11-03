@@ -703,6 +703,18 @@ function verifier(nom, condition, detail) {
     && tables.formalite_evenements.some((e) => e.formalite_id === f46.id && e.message.includes(`Pièce n° ${cible}`) && /retirée/.test(e.message)), retG.json);
   for (const d of doublons.slice(1)) await outil('retirer_piece_guichet', { reference: ref46, piece_id: String(d.id), confirmation_avocat: true });
   verifier('tous les doublons retirés : 10 pièces + 2 synthèses', auGuichet3.length === nb46 + 2 && retraits.length === nb46);
+  // Conversation ouverte avant retirer_piece_guichet : retirer_piece suffit, avec l'identifiant au guichet (constat du 3/11, pièce 412125056).
+  f46.statut = 'SIGNATURE_PENDING';
+  guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'SIGNATURE_PENDING', liasseNumber: 'J00297491839' }, id);
+  const doublon2 = { id: 412125056, code: auGuichet3[2].code, nom: auGuichet3[2].nom, taille: auGuichet3[2].taille };
+  auGuichet3.push(doublon2);
+  const nbRetraits = retraits.length;
+  const sansAccordRP = await outil('retirer_piece', { reference: ref46, fichier: '412125056' });
+  verifier('retirer_piece sur un dossier enregistré, sans accord : refus qui indique la marche à suivre',
+    sansAccordRP.erreur && /retirer_piece_guichet/.test(sansAccordRP.texte) && /confirmation_avocat: true/.test(sansAccordRP.texte) && retraits.length === nbRetraits, sansAccordRP.texte);
+  const rp = await outil('retirer_piece', { reference: ref46, fichier: '412125056', confirmation_avocat: true });
+  verifier('retirer_piece avec l’identifiant au guichet et l’accord : doublon retiré au guichet',
+    !rp.erreur && rp.json.retiree && retraits.at(-1).pieceId === '412125056' && !auGuichet3.some((g) => g.id === 412125056), rp.texte);
   f46.statut = 'PAYMENT_PENDING';
   guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'PAYMENT_PENDING', liasseNumber: 'J00297491839' }, id);
   verifier('retirer_piece_guichet : refusé après signature', /après la signature/.test((await outil('retirer_piece_guichet', { reference: ref46, piece_id: String(auGuichet3[3].id), confirmation_avocat: true })).texte));
