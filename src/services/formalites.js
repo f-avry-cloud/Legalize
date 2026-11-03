@@ -433,7 +433,8 @@ async function synchroniser(id) {
     const vraie = formalite.numero_liasse ? await guichet.retrouver({ liasse: formalite.numero_liasse, siren: formalite.siren }) : null;
     if (!vraie?.inpi_id || vraie.inpi_id === String(formalite.inpi_id)) {
       // Introuvable par son identifiant comme par sa liasse : supprimée sur le portail ?
-      if (await supprimeeAuGuichet(formalite)) return detacher(formalite, 'introuvable au guichet (404)');
+      if (supprimeeAuGuichet(formalite)) return detacher(formalite, 'fiche en 404 et liasse absente du compte mandataire');
+      e.message = `${e.message} — formalité introuvable, mais non détachée : ${STATUTS_NON_PAYES.includes(formalite.statut) ? 'dossier importé ou simulé' : `statut « ${statutInfo(formalite.statut).libelle} » (une formalité payée ne se supprime pas)`}.`;
       throw e;
     }
     await db(supabase.from('formalites').update({ inpi_id: vraie.inpi_id }).eq('id', id).select());
@@ -478,21 +479,15 @@ async function synchroniser(id) {
 const STATUT_SUPPRIME = /DELET|SUPPRIM|CANCEL|REMOVED/i;
 
 /**
- * Une lecture en 404 ne suffit pas à conclure à la suppression : constaté en
- * production, la fiche d'une formalité existante peut répondre 404 sous un
- * identifiant erroné alors que son historique répond. La formalité n'est
- * tenue pour supprimée que si l'historique répond lui aussi 404, et seulement
- * si elle n'était pas payée (une formalité payée ne se supprime pas).
+ * Appelée quand la fiche répond 404 et que la liasse est introuvable sur tout
+ * le compte mandataire (un identifiant de lecture erroné est corrigé avant,
+ * par la liasse). L'historique n'est pas un critère : constaté sur
+ * LGZ-2026-00052, l'INPI le sert encore après la suppression sur le portail.
+ * Une formalité payée ne se supprime pas : jamais détachée.
  */
-async function supprimeeAuGuichet(formalite) {
+function supprimeeAuGuichet(formalite) {
   if (formalite.origine === 'inpi' || formalite.simule || String(formalite.inpi_id).startsWith('SIM-')) return false;
-  if (!STATUTS_NON_PAYES.includes(formalite.statut)) return false;
-  try {
-    await guichet.historique(formalite.inpi_id);
-    return false;
-  } catch (e) {
-    return e.status === 404;
-  }
+  return STATUTS_NON_PAYES.includes(formalite.statut);
 }
 
 /**

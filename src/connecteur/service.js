@@ -84,7 +84,7 @@ async function rafraichirEnregistrement(f) {
   if (!f.inpi_id || f.simule || String(f.inpi_id).startsWith('SIM-')) return { f };
   let synchro = null;
   try { synchro = await formalites.synchroniser(f.id); } catch (e) { return { f, erreur: e.message }; }
-  if (!synchro?.supprimee_au_guichet) return { f };
+  if (!synchro?.supprimee_au_guichet) return { f, statut_guichet: synchro?.statut_inpi || synchro?.statut || null };
   const [a] = await q(supabase.from('formalites').select('*').eq('id', f.id));
   return { f: a, supprimee: synchro.supprimee_au_guichet };
 }
@@ -474,9 +474,17 @@ async function ouvrirDepotPieces({ reference, siren, operations, typologie, repo
   };
 }
 
+/** Pourquoi un dossier marqué enregistré reste verrouillé : ce que le guichet a répondu. */
+function verificationGuichet(r) {
+  return r.erreur
+    ? { formalite_relue: false, motif: `Lecture du guichet impossible, verrou maintenu par prudence : ${r.erreur}` }
+    : { formalite_relue: true, statut_au_guichet: r.statut_guichet, motif: 'La formalité existe toujours au guichet.' };
+}
+
 async function renseignerFormalite({ reference, operations, typologie, reponses, exigences_champs: exigencesChamps }) {
-  const { f, supprimee } = await rafraichirEnregistrement(await chargerModifiable(reference));
-  if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : il se modifie sur le portail.', 409);
+  const r = await rafraichirEnregistrement(await chargerModifiable(reference));
+  const { f, supprimee } = r;
+  if (f.inpi_id) throw erreur(`Dossier déjà enregistré au guichet : il se modifie sur le portail. ${verificationGuichet(r).motif}`, 409);
   await appliquerSaisies(f.id, { operations: operations ? operationsValides(operations) : null, typologie, reponses, exigences_champs: exigencesChamps });
   const vue = await vueDossier(f.id);
   return supprimee ? { formalite_supprimee_au_guichet: messageSuppression(supprimee), ...vue } : vue;
@@ -597,9 +605,10 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
   if (confirmation !== true) {
     throw erreur('Enregistrement refusé : l’avocat doit d’abord confirmer expressément (confirmation_avocat: true, après son accord explicite).', 412);
   }
-  const { f, supprimee } = await rafraichirEnregistrement(await chargerModifiable(reference));
+  const r = await rafraichirEnregistrement(await chargerModifiable(reference));
+  const { f, supprimee } = r;
   if (f.inpi_id) {
-    return { deja_enregistre: true, message: 'Dossier déjà enregistré au guichet : ne pas relancer, passer au suivi.', inpi: { identifiant: f.inpi_id, liasse: f.numero_liasse, montant: f.montant, simule: f.simule } };
+    return { deja_enregistre: true, message: 'Dossier déjà enregistré au guichet : ne pas relancer, passer au suivi.', verification_guichet: verificationGuichet(r), inpi: { identifiant: f.inpi_id, liasse: f.numero_liasse, montant: f.montant, simule: f.simule } };
   }
   // Un dossier incomplet est refusé par le dépôt lui-même ; un dossier complet, s'il reste des défauts à confirmer.
   const vue = await vueDossier(f.id);

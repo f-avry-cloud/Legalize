@@ -532,22 +532,26 @@ function verifier(nom, condition, detail) {
   const ancienneLiasse = f46.numero_liasse;
   guichet.retrouver = async () => null;
 
-  // 404 sur la fiche, mais l'historique répond : la formalité existe (identifiant de lecture erroné) — on ne détache pas.
+  // Lecture du compte impossible : on ne conclut pas à la suppression, et on dit pourquoi.
   guichet.lire = async () => { throw err404(); };
   guichet.historique = async () => [{ statut: 'SIGNATURE_PENDING', date: '2026-11-03T11:00:11Z' }];
-  const st404 = await outil('statut_formalite', { reference: ref46 });
-  verifier('404 sur la fiche mais historique présent : dossier laissé enregistré, avertissement',
-    !st404.erreur && f46.inpi_id === ancienId && /Lecture du guichet impossible/.test(st404.json.avertissement || '') && !st404.json.formalite_supprimee_au_guichet, st404.json);
+  guichet.retrouver = async () => { throw Object.assign(new Error('API INPI (guichet) injoignable'), { status: 504 }); };
+  const bloque = await outil('enregistrer_formalite', { reference: ref46, confirmation_avocat: true });
+  verifier('compte illisible : dossier laissé enregistré, motif rendu à Claude',
+    !bloque.erreur && bloque.json.deja_enregistre && f46.inpi_id === ancienId && bloque.json.verification_guichet?.formalite_relue === false
+    && /injoignable/.test(bloque.json.verification_guichet.motif), bloque.json);
+  const renBloque = await outil('renseigner_formalite', { reference: ref46, reponses: {} });
+  verifier('renseigner_formalite refusé avec le motif', renBloque.erreur && /Lecture du guichet impossible/.test(renBloque.texte), renBloque.texte);
+  guichet.retrouver = async () => null;
 
-  // 404 partout, dossier payé : une formalité payée ne se supprime pas — on ne détache pas.
-  guichet.historique = async () => { throw err404(); };
+  // 404, liasse absente du compte, dossier payé : une formalité payée ne se supprime pas — on ne détache pas.
   const statutAvant = f46.statut;
   f46.statut = 'PAID';
-  await outil('statut_formalite', { reference: ref46 });
-  verifier('404 sur un dossier payé : non détaché', f46.inpi_id === ancienId);
+  const stPaye = await outil('statut_formalite', { reference: ref46 });
+  verifier('404 sur un dossier payé : non détaché, motif dit', f46.inpi_id === ancienId && /payée ne se supprime pas/.test(stPaye.json.avertissement || ''), stPaye.json);
   f46.statut = statutAvant;
 
-  // 404 partout, dossier « À signer » : supprimé sur le portail ; renseigner_formalite le détecte de lui-même.
+  // Cas réel LGZ-2026-00052 : fiche en 404, liasse absente du compte, mais l'historique est encore servi.
   const ren = await outil('renseigner_formalite', { reference: ref46, reponses: {} });
   verifier('formalité supprimée au guichet : renseigner_formalite redevient possible et le dit',
     !ren.erreur && /n’existe plus au guichet/.test(ren.json.formalite_supprimee_au_guichet || '') && ren.json.inpi === null, ren.texte);
@@ -615,6 +619,32 @@ function verifier(nom, condition, detail) {
     && f46.typologie._liasses_supprimees.length === 2 && piecesF46().length === nb46, st3.json);
 
   Object.assign(guichet, sauve2);
+
+  // Recherche par liasse sur tout le compte (création : pas de SIREN), sur un hôte fictif — jamais l'INPI.
+  const { config: cfgInpi } = require('../src/inpi/config');
+  const cfgAvant = { ...cfgInpi.guichet };
+  Object.assign(cfgInpi.guichet, { baseUrl: 'https://guichet.test.invalid', username: 'test', password: 'test' });
+  require('../src/inpi/client').viderCache();
+  const pagesLues = [];
+  const fetchGuard = global.fetch;
+  global.fetch = async (u, o) => {
+    const url = new URL(String(u));
+    if (url.hostname !== 'guichet.test.invalid') return fetchGuard(u, o);
+    const json = (d) => new Response(JSON.stringify(d), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    if (o?.method === 'POST') return json({ token: 'jeton.de.test' });
+    const page = Number(url.searchParams.get('page') || 1);
+    pagesLues.push(page);
+    const n = Number(url.searchParams.get('itemsPerPage') || 50);
+    return json(Array.from({ length: page < 3 ? n : 3 }, (_, i) => ({ id: page * 1000 + i, status: 'SIGNATURE_PENDING', liasseNumber: page === 3 && i === 1 ? 'J00297390882' : `J${page}-${i}` })));
+  };
+  const trouvee = await guichet.retrouver({ liasse: 'J00297390882' });
+  verifier('liasse d’une création retrouvée au-delà de la première page du compte', trouvee?.inpi_id === '3001' && pagesLues.join(',') === '1,2,3', { trouvee, pagesLues });
+  const absente = await guichet.retrouver({ liasse: 'J99999999999' });
+  verifier('liasse absente de tout le compte : null', absente === null);
+  global.fetch = fetchGuard;
+  Object.assign(cfgInpi.guichet, { baseUrl: cfgAvant.baseUrl, username: cfgAvant.username, password: cfgAvant.password });
+  require('../src/inpi/client').viderCache();
+
   global.fetch = fetchOrigine;
   verifier('aucun appel réel à l’INPI', appelsInpi.length === 0, appelsInpi);
 

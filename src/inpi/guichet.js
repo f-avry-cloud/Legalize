@@ -146,10 +146,14 @@ async function deposer(requete) {
 /** Une formalité du compte mandataire, retrouvée par son numéro de liasse. */
 async function retrouver({ liasse, siren } = {}) {
   if (!liasse || config.modeGuichet === 'simulation') return null;
-  const lots = [];
-  if (siren) lots.push(await lister({ siren }));
-  if (!lots.flat().some((f) => f.numero_liasse === liasse)) lots.push(await lister({}));
-  return lots.flat().find((f) => f.numero_liasse === liasse) || null;
+  const trouve = (lot) => lot.find((f) => f.numero_liasse === liasse) || null;
+  if (siren) {
+    const parSiren = trouve(await lister({ siren }));
+    if (parSiren) return parSiren;
+  }
+  // Une création n'a pas de SIREN : tout le compte est parcouru, pas seulement
+  // la première page, avant de conclure qu'une liasse n'y est plus.
+  return trouve(await listerTout({ maxPages: 20 }));
 }
 
 /** Mise à jour d'un dépôt avant signature, ou réponse à une régularisation. */
