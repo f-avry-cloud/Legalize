@@ -429,15 +429,22 @@ async function synchroniser(id) {
   } catch (e) {
     // Identifiant erroné (lecture en 404) : la formalité est retrouvée par sa
     // liasse sur le compte mandataire, et l'identifiant corrigé.
-    if (e.status !== 404 || !formalite.numero_liasse || formalite.service === 'comptes_annuels') throw e;
-    const vraie = await guichet.retrouver({ liasse: formalite.numero_liasse, siren: formalite.siren });
-    if (!vraie?.inpi_id || vraie.inpi_id === String(formalite.inpi_id)) throw e;
+    if (e.status !== 404 || formalite.service === 'comptes_annuels') throw e;
+    const vraie = formalite.numero_liasse ? await guichet.retrouver({ liasse: formalite.numero_liasse, siren: formalite.siren }) : null;
+    if (!vraie?.inpi_id || vraie.inpi_id === String(formalite.inpi_id)) {
+      // Introuvable par son identifiant comme par sa liasse : supprimée sur le portail ?
+      if (await supprimeeAuGuichet(formalite)) return detacher(formalite, 'introuvable au guichet (404)');
+      throw e;
+    }
     await db(supabase.from('formalites').update({ inpi_id: vraie.inpi_id }).eq('id', id).select());
     await journal(id, 'statut', `Identifiant INPI corrigé : ${formalite.inpi_id} → ${vraie.inpi_id} (retrouvé par la liasse ${formalite.numero_liasse}).`);
     formalite.inpi_id = vraie.inpi_id;
     etat = await guichet.lire(vraie.inpi_id, formalite.service);
   }
   if (!etat) return { ...formalite, synchronise: false };
+  if (STATUT_SUPPRIME.test(String(etat.statut_brut || '')) && STATUTS_NON_PAYES.includes(formalite.statut)) {
+    return detacher(formalite, `statut « ${etat.statut_brut} » au guichet`);
+  }
 
   // Capturé avant la mise à jour : c'est cette valeur qui est journalisée.
   const statutPrecedent = formalite.statut;
@@ -465,6 +472,49 @@ async function synchroniser(id) {
     }
   }
   return { ...maj, synchronise: true, changement };
+}
+
+/** Statut brut d'une formalité supprimée, si le guichet en renvoie un. */
+const STATUT_SUPPRIME = /DELET|SUPPRIM|CANCEL|REMOVED/i;
+
+/**
+ * Une lecture en 404 ne suffit pas à conclure à la suppression : constaté en
+ * production, la fiche d'une formalité existante peut répondre 404 sous un
+ * identifiant erroné alors que son historique répond. La formalité n'est
+ * tenue pour supprimée que si l'historique répond lui aussi 404, et seulement
+ * si elle n'était pas payée (une formalité payée ne se supprime pas).
+ */
+async function supprimeeAuGuichet(formalite) {
+  if (formalite.origine === 'inpi' || formalite.simule || String(formalite.inpi_id).startsWith('SIM-')) return false;
+  if (!STATUTS_NON_PAYES.includes(formalite.statut)) return false;
+  try {
+    await guichet.historique(formalite.inpi_id);
+    return false;
+  } catch (e) {
+    return e.status === 404;
+  }
+}
+
+/**
+ * La formalité n'existe plus au guichet : le dossier repasse « non
+ * enregistré » (étape Validation), avec ses données et ses pièces, pour un
+ * nouvel enregistrement sans redépôt. L'ancienne liasse reste au journal.
+ */
+async function detacher(formalite, motif) {
+  const ancienne = { inpi_id: String(formalite.inpi_id), liasse: formalite.numero_liasse || null, statut: formalite.statut, statut_inpi: formalite.statut_inpi || null };
+  const typologie = { ...(formalite.typologie || {}) };
+  delete typologie._pieces_guichet;
+  typologie._liasses_supprimees = [...(typologie._liasses_supprimees || []), { ...ancienne, date: new Date().toISOString() }];
+  const maj = await db(supabase.from('formalites').update({
+    inpi_id: null, numero_liasse: null, statut: 'BROUILLON', statut_inpi: null,
+    statut_date: new Date().toISOString(), action_attendue: null, montant: null, num_nat: null,
+    signature_date: null, paiement_date: null, regularisations: [], simule: false, typologie,
+    updated_at: new Date().toISOString(),
+  }).eq('id', formalite.id).select().single());
+  await journal(formalite.id, 'statut',
+    `Formalité supprimée au guichet (n° ${ancienne.inpi_id}, liasse ${ancienne.liasse || '—'}, ${motif}) : dossier repassé « non enregistré », données et pièces conservées.`,
+    { ancienne_formalite: ancienne });
+  return { ...maj, synchronise: true, changement: true, supprimee_au_guichet: ancienne };
 }
 
 /** Synchronise tous les dossiers non terminés (appel manuel ou planifié). */
