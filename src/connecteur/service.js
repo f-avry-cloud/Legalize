@@ -75,6 +75,24 @@ async function chargerModifiable(reference) {
   return f;
 }
 
+/**
+ * Un dossier marqué enregistré est relu au guichet avant d'être tenu pour
+ * verrouillé : supprimé sur le portail (404), il repasse « non enregistré ».
+ * Une lecture impossible pour une autre raison laisse le dossier en l'état.
+ */
+async function rafraichirEnregistrement(f) {
+  if (!f.inpi_id || f.simule || String(f.inpi_id).startsWith('SIM-')) return { f };
+  let synchro = null;
+  try { synchro = await formalites.synchroniser(f.id); } catch (e) { return { f, erreur: e.message }; }
+  if (!synchro?.supprimee_au_guichet) return { f };
+  const [a] = await q(supabase.from('formalites').select('*').eq('id', f.id));
+  return { f: a, supprimee: synchro.supprimee_au_guichet };
+}
+
+function messageSuppression(s) {
+  return `La formalité n° ${s.inpi_id} (liasse ${s.liasse || '—'}) n’existe plus au guichet (supprimée sur le portail) : le dossier est repassé « non enregistré », à l’étape Validation, avec ses données et ses pièces. Il peut être corrigé puis enregistré de nouveau, sans redéposer les pièces.`;
+}
+
 /** Le dossier Legalize (client) auquel rattacher la formalité : numéro ou référence (2026-0012). */
 async function dossierLegalize(valeur) {
   if (valeur === undefined || valeur === null || valeur === '') return null;
@@ -457,10 +475,11 @@ async function ouvrirDepotPieces({ reference, siren, operations, typologie, repo
 }
 
 async function renseignerFormalite({ reference, operations, typologie, reponses, exigences_champs: exigencesChamps }) {
-  const f = await chargerModifiable(reference);
+  const { f, supprimee } = await rafraichirEnregistrement(await chargerModifiable(reference));
   if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : il se modifie sur le portail.', 409);
   await appliquerSaisies(f.id, { operations: operations ? operationsValides(operations) : null, typologie, reponses, exigences_champs: exigencesChamps });
-  return vueDossier(f.id);
+  const vue = await vueDossier(f.id);
+  return supprimee ? { formalite_supprimee_au_guichet: messageSuppression(supprimee), ...vue } : vue;
 }
 
 async function piecesRecues({ reference }) {
@@ -537,6 +556,11 @@ async function controlerFormalite({ reference }) {
   }
   if (v.guichet_simulation) alertes.push(`Mode simulation : rien ne sera transmis à l’INPI (${v.motif_simulation}).`);
   if (f.fiche?.radiee) alertes.push('Société radiée au registre.');
+  const cp = f.inpi_id && !f.simule ? f.typologie?._pieces_guichet : null;
+  if (f.inpi_id && !f.simule && !cp?.complet) {
+    alertes.push(cp ? `Pièces non confirmées au guichet (${cp.confirmees}/${cp.attendues}${cp.manquantes?.length ? ` ; manquantes : ${cp.manquantes.join(', ')}` : ''}) : la formalité n’est pas déposée tant qu’elles ne le sont pas.`
+      : 'Pièces jamais contrôlées au guichet : vérifier avec consulter_formalite_guichet avant de signer.');
+  }
   await controleBodaccTup(f, alertes);
   for (const l of levees.filter((x) => x.etat !== 'inoperante')) {
     const etat = l.etat === 'renseigne' ? 'renseigné (transmis)' : l.etat === 'partiel' ? 'renseigné en partie (non transmis)' : 'non renseigné';
@@ -573,7 +597,7 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
   if (confirmation !== true) {
     throw erreur('Enregistrement refusé : l’avocat doit d’abord confirmer expressément (confirmation_avocat: true, après son accord explicite).', 412);
   }
-  const f = await chargerModifiable(reference);
+  const { f, supprimee } = await rafraichirEnregistrement(await chargerModifiable(reference));
   if (f.inpi_id) {
     return { deja_enregistre: true, message: 'Dossier déjà enregistré au guichet : ne pas relancer, passer au suivi.', inpi: { identifiant: f.inpi_id, liasse: f.numero_liasse, montant: f.montant, simule: f.simule } };
   }
@@ -586,17 +610,40 @@ async function enregistrerFormalite({ reference, confirmation_avocat: confirmati
   const depot = await parcoursSvc.deposer(f.id);
   const [apres] = await q(supabase.from('formalites').select('*').eq('id', f.id));
   const pg = depot?.pieces_guichet;
+  const controle = pg?.controle;
+  // « Déposé » seulement quand la relecture du guichet confirme toutes les pièces.
+  const depose = Boolean(apres.simule) ? false : Boolean(controle?.complet);
   return {
     enregistre: true,
+    depose,
     simule: Boolean(apres.simule),
-    ...(pg && !pg.simule ? {
-      pieces_au_guichet: pg.erreur ? { erreur: pg.erreur, suite: 'Relancer transmettre_pieces, ou joindre les pièces sur le portail avant de signer.' }
-        : { transmises: pg.transmises.length, deja_presentes: pg.deja_presentes.length, echecs: pg.echecs },
-    } : {}),
+    ...(supprimee ? { ancienne_formalite_supprimee: { identifiant: supprimee.inpi_id, liasse: supprimee.liasse } } : {}),
+    ...(pg && !pg.simule ? { pieces_au_guichet: vuePiecesGuichet(pg) } : {}),
     ...(apres.simule ? { motif_simulation: guichet.motifSimulation(), message: 'Simulation : rien n’a été transmis à l’INPI.' } : {}),
+    ...(!apres.simule && !depose ? {
+      attention: 'Formalité enregistrée mais PAS déposée : toutes les pièces ne sont pas confirmées au guichet. Ne pas la présenter comme déposée ni la signer avant de les avoir complétées (transmettre_pieces, ou jointes sur le portail), puis vérifiées avec consulter_formalite_guichet.',
+    } : {}),
     inpi: { identifiant: apres.inpi_id, liasse: apres.numero_liasse, montant: apres.montant },
     statut: statutInfo(apres.statut).libelle,
-    suite: 'L’avocat signe puis paie sur le portail du guichet unique ; la formalité y reste modifiable ou supprimable tant qu’elle n’est pas payée.',
+    suite: depose || apres.simule
+      ? 'L’avocat signe puis paie sur le portail du guichet unique ; la formalité y reste modifiable ou supprimable tant qu’elle n’est pas payée.'
+      : 'Compléter les pièces manquantes avant toute signature ; la formalité reste modifiable ou supprimable sur le portail tant qu’elle n’est pas payée.',
+  };
+}
+
+/** Bilan des pièces au guichet, sans le contenu des PDF. */
+function vuePiecesGuichet(pg) {
+  const c = pg.controle || {};
+  return {
+    ...(pg.erreur ? { erreur: pg.erreur } : {}),
+    transmises: (pg.transmises || []).length,
+    deja_presentes: (pg.deja_presentes || []).length,
+    echecs: pg.echecs || [],
+    controle_guichet: c.erreur ? { erreur: c.erreur, complet: false } : {
+      complet: Boolean(c.complet), attendues: c.attendues, confirmees: (c.confirmees || []).length,
+      manquantes: c.manquantes || [],
+    },
+    ...(c.complet ? {} : { suite: 'Relancer transmettre_pieces, ou joindre les pièces manquantes sur le portail avant de signer.' }),
   };
 }
 
@@ -612,11 +659,14 @@ async function transmettrePiecesGuichet({ reference, confirmation_avocat: confir
   if (f.origine !== ORIGINE) throw erreur('Dossier ouvert dans Legalize : ses pièces se gèrent dans Legalize.', 403);
   if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet : les pièces partiront avec enregistrer_formalite.', 409);
   const r = await parcoursSvc.transmettrePieces(f.id);
+  const c = r.controle || {};
   return {
     reference: f.reference,
     ...(r.simule ? { simule: true, message: 'Dossier simulé : rien n’est transmis à l’INPI.' } : {}),
     transmises: r.transmises, deja_presentes: r.deja_presentes, echecs: r.echecs,
-    suite: r.echecs.length ? 'Joindre les pièces en échec sur le portail avant de signer.' : 'Vérifier la liste des pièces sur le portail, puis signer et payer.',
+    ...(r.simule ? {} : { controle_guichet: vuePiecesGuichet(r).controle_guichet, depose: Boolean(c.complet) }),
+    suite: r.simule || c.complet ? 'Toutes les pièces sont confirmées au guichet : l’avocat peut signer puis payer sur le portail.'
+      : 'Pièces non confirmées au guichet : les joindre sur le portail (ou relancer) avant de signer.',
   };
 }
 
@@ -640,6 +690,7 @@ async function statutFormalite({ reference }) {
     try { synchro = await formalites.synchroniser(f.id); } catch (e) { synchro = { erreur: e.message }; }
   }
   const [a] = await q(supabase.from('formalites').select('*').eq('id', f.id));
+  const controlePieces = a.inpi_id && !a.simule ? a.typologie?._pieces_guichet : null;
   const info = statutInfo(a.statut);
   const action = a.statut === 'BROUILLON' && !a.inpi_id ? null : (a.action_attendue || info.action);
   return {
@@ -650,6 +701,12 @@ async function statutFormalite({ reference }) {
     echeance: echeanceDe(a.operations || [], a.reponses || {}),
     ...(synchro?.erreur ? { avertissement: `Lecture du guichet impossible : ${synchro.erreur}` } : {}),
     ...(synchro?.changement ? { changement: true } : {}),
+    ...(synchro?.supprimee_au_guichet ? { formalite_supprimee_au_guichet: messageSuppression(synchro.supprimee_au_guichet) } : {}),
+    ...(a.inpi_id && !a.simule ? {
+      pieces_au_guichet: controlePieces
+        ? { complet: controlePieces.complet, confirmees: controlePieces.confirmees, attendues: controlePieces.attendues, manquantes: controlePieces.manquantes, controle_du: controlePieces.date, ...(controlePieces.erreur ? { erreur: controlePieces.erreur } : {}) }
+        : { complet: false, message: 'Pièces jamais contrôlées au guichet : vérifier avec consulter_formalite_guichet.' },
+    } : {}),
     journal: await journalDe(a.id),
   };
 }
@@ -774,6 +831,28 @@ function champsVides(o, prefixe = '', out = [], profondeur = 0) {
   return out;
 }
 
+/** Pièces du dossier dans Legalize (ce qui devait partir, pas ce que le guichet a reçu). */
+async function piecesDuDossier(id) {
+  return (await q(supabase.from('formalite_pieces').select('code, filename, taille').eq('formalite_id', id).order('id')))
+    .map((p) => ({ code: p.code, nom: p.filename, taille: p.taille }));
+}
+
+/** Confronte les pièces du dossier à celles relues au guichet. */
+async function comparaisonPieces(id, auGuichet) {
+  const pieces = await piecesDuDossier(id);
+  if (!Array.isArray(auGuichet)) {
+    return { pieces_du_dossier: pieces, ecart_pieces: { verifiable: false, motif: 'Liste des pièces du guichet illisible.' } };
+  }
+  const c = parcoursSvc.confronterPieces(pieces.map((p) => ({ code: p.code, filename: p.nom })), auGuichet);
+  return {
+    pieces_du_dossier: pieces,
+    ecart_pieces: {
+      complet: c.complet, attendues: c.attendues, confirmees: c.confirmees.length, manquantes_au_guichet: c.manquantes,
+      note: 'pieces_du_dossier = pièces chargées dans Legalize ; seules celles de pieces_au_guichet sont rattachées à la formalité.',
+    },
+  };
+}
+
 /**
  * La formalité telle que le guichet l'a enregistrée : statut, frais, pièces,
  * données vides, et le texte du document de synthèse que le portail présente
@@ -784,7 +863,11 @@ async function consulterFormaliteGuichet({ reference }) {
   if (!f.inpi_id) throw erreur('Ce dossier n’a pas encore été enregistré au guichet.', 409);
   if (String(f.inpi_id).startsWith('SIM-')) throw erreur('Dossier simulé : il n’existe pas au guichet.', 409);
   // La synchronisation retrouve et corrige au besoin l'identifiant de la formalité.
-  try { await formalites.synchroniser(f.id); } catch (e) { /* lecture directe ci-dessous */ }
+  let synchro = null;
+  try { synchro = await formalites.synchroniser(f.id); } catch (e) { /* lecture directe ci-dessous */ }
+  if (synchro?.supprimee_au_guichet) {
+    return { reference: f.reference, formalite_supprimee_au_guichet: messageSuppression(synchro.supprimee_au_guichet), pieces_du_dossier: await piecesDuDossier(f.id) };
+  }
   const [a] = await q(supabase.from('formalites').select('inpi_id').eq('id', f.id));
   f.inpi_id = a?.inpi_id || f.inpi_id;
   let brut;
@@ -807,8 +890,7 @@ async function consulterFormaliteGuichet({ reference }) {
       introuvable: `Le guichet ne trouve pas la formalité n° ${f.inpi_id} (liasse ${f.numero_liasse || '—'}) sur le compte du connecteur.`,
       pieces_au_guichet: piecesAuGuichet,
       historique_au_guichet: historiqueGuichet,
-      pieces_envoyees: (await q(supabase.from('formalite_pieces').select('code, filename, taille').eq('formalite_id', f.id).order('id')))
-        .map((p) => ({ code: p.code, nom: p.filename, taille: p.taille })),
+      ...(await comparaisonPieces(f.id, piecesAuGuichet)),
       formalites_visibles_du_compte: visibles.map((x) => (x.erreur ? x : {
         identifiant: x.inpi_id, liasse: x.numero_liasse, societe: x.denomination || x.brut?.companyName || null, siren: x.siren || x.brut?.siren || null,
         statut: statutInfo(x.statut).libelle, statut_brut: x.statut_brut, date: x.statut_date, montant: x.montant,
@@ -837,6 +919,7 @@ async function consulterFormaliteGuichet({ reference }) {
     frais: { total_ttc: norm.montant, detail: frais },
     evenements_reconnus: brut?.events || [],
     pieces_au_guichet: pieces,
+    ...(await comparaisonPieces(f.id, pieces)),
     donnees_vides: {
       formalite: champsVides(Object.fromEntries(Object.entries(brut || {}).filter(([k]) => !['content', 'carts', 'attachments'].includes(k)))).slice(0, 60),
       contenu: champsVides(contenu).slice(0, 150),

@@ -39,7 +39,7 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `pieces_recues` | Pièces reçues et manquantes |
 | `controler_formalite` | Bloquants, alertes, échéance, mode simulation |
 | `enregistrer_formalite` | Transmission au guichet, **uniquement avec `confirmation_avocat: true`** |
-| `transmettre_pieces` | Dépose sur une formalité enregistrée les pièces que le guichet n'a pas (sans doublon) ; sur accord de l'avocat. L'enregistrement le fait de lui-même : le guichet ne conserve pas les PDF joints au corps de la formalité (constaté sur LGZ-2026-00052) |
+| `transmettre_pieces` | Dépose sur une formalité enregistrée les pièces que le guichet n'a pas (sans doublon) ; sur accord de l'avocat. L'enregistrement le fait de lui-même : le guichet ne conserve pas les PDF joints au corps de la formalité (constaté sur LGZ-2026-00052). Après chaque envoi, la liste des pièces du guichet est relue : seule cette relecture fait foi (un envoi accepté en 2xx mais absent de la formalité compte en échec), et le dossier n'est dit « déposé » (`depose: true`) que lorsque toutes ses pièces y sont confirmées |
 | `statut_formalite`, `lister_formalites` | Suivi (statut relu auprès de l'INPI, régularisations, journal) |
 | `reclasser_piece`, `retirer_piece`, `catalogue_pieces` | Ranger une pièce reçue sous la bonne ligne ou un autre type officiel |
 | `lister_pieces_deposees` | Actes et comptes annuels déposés au registre pour un SIREN (lecture seule) |
@@ -191,3 +191,16 @@ Stockage : `typologie.manuel_champs` (`{"<groupe>.<name>": {"requis": false, "mo
 - `src/routes-formalites-ai.js`, `public/formalites-ai.js` : onglet Suivi Formalités AI.
 - `src/inpi/rne-documents.js`, `src/inpi/texte-pdf.js` : pièces déposées au registre, texte et OCR.
 - Tests : `node scripts/test-connecteur.js`, `node scripts/test-registre.js`, `node scripts/test-categorie-activite.js` (API INPI simulée).
+
+## Formalité supprimée sur le portail
+
+Quand le guichet ne connaît plus la formalité (lecture en 404, introuvable par
+sa liasse et historique en 404 lui aussi, ou statut « supprimé »), et qu'elle
+n'était pas payée, le dossier repasse « non enregistré » (Brouillon, étape
+Validation) : identifiant, liasse et montant sont effacés, les données et les
+pièces sont conservées pour un nouvel enregistrement sans redépôt. L'ancienne
+formalité est inscrite au journal (et dans `typologie._liasses_supprimees`).
+La vérification a lieu à `statut_formalite`, `consulter_formalite_guichet`,
+`renseigner_formalite` et `enregistrer_formalite`. Un 404 sur la seule fiche,
+alors que l'historique répond, ne détache pas le dossier (identifiant de
+lecture erroné, déjà constaté).

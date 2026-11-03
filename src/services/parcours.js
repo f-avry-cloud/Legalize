@@ -580,36 +580,91 @@ async function deposer(id) {
   if (nonReconnus.length) {
     await journal(id, 'depot', `Attention : le guichet n’a pas reconnu ${nonReconnus.join(', ')}. Vérifier le dossier avant de le signer.`, { reconnus: r.evenements });
   }
-  await journal(id, 'depot', r.simule ? `Dépôt simulé (${r.motif_simulation}).` : `Déposé au guichet unique — liasse ${r.numero_liasse}.`, { inpi_id: r.inpi_id, montant: r.montant });
+  // Réel : « enregistré » seulement. Le mot « déposé » attend que toutes les
+  // pièces soient relues au guichet (contrôle ci-dessous).
+  await journal(id, 'depot', r.simule ? `Dépôt simulé (${r.motif_simulation}).` : `Enregistré au guichet unique — liasse ${r.numero_liasse} ; pièces en cours de contrôle.`, { inpi_id: r.inpi_id, montant: r.montant });
   // Constaté en production (LGZ-2026-00052) : les PDF joints au corps de la
   // formalité ne sont pas conservés par le guichet ; ils se déposent ensuite,
-  // un par un, sur la formalité créée.
+  // un par un, sur la formalité créée, puis la liste du guichet est relue.
   let piecesGuichet = null;
   if (!r.simule) {
     try { piecesGuichet = await transmettrePieces(id); } catch (e) {
-      piecesGuichet = { erreur: e.message };
+      piecesGuichet = { erreur: e.message, controle: { complet: false, erreur: e.message } };
+      await memoriserControle(id, piecesGuichet.controle);
       await journal(id, 'depot', `Pièces non transmises au guichet : ${e.message}. À relancer (transmettre_pieces) ou à joindre sur le portail.`);
+    }
+    if (piecesGuichet?.controle?.complet) {
+      await journal(id, 'depot', `Déposé au guichet unique — liasse ${r.numero_liasse} : ${piecesGuichet.controle.confirmees.length} pièce(s) confirmée(s) au guichet.`);
     }
   }
   return { ...(await lire(id)), pieces_guichet: piecesGuichet };
 }
 
+const clePiece = (code, nom) => `${code}|${String(nom || '').trim()}`;
+
+/**
+ * Confronte les pièces du dossier à la liste relue au guichet. Seule la
+ * relecture fait foi : une réponse 2xx à l'envoi ne prouve pas que la pièce
+ * est rattachée à la formalité.
+ */
+function confronterPieces(pieces, presentes) {
+  const auGuichet = new Set(presentes.map((x) => clePiece(x.code, x.nom)));
+  const confirmees = [];
+  const manquantes = [];
+  for (const p of pieces) (auGuichet.has(clePiece(p.code, p.filename)) ? confirmees : manquantes).push({ code: p.code, nom: p.filename });
+  return {
+    date: new Date().toISOString(),
+    attendues: pieces.length,
+    confirmees,
+    manquantes,
+    au_guichet: presentes.map((x) => ({ code: x.code, nom: x.nom })),
+    complet: manquantes.length === 0,
+  };
+}
+
+/** Garde le dernier contrôle des pièces sur le dossier (sans le contenu des PDF). */
+async function memoriserControle(id, controle) {
+  const f = await charger(id);
+  const resume = controle ? {
+    date: controle.date || new Date().toISOString(), complet: Boolean(controle.complet),
+    attendues: controle.attendues ?? null, confirmees: (controle.confirmees || []).length,
+    manquantes: (controle.manquantes || []).map((x) => x.code), ...(controle.erreur ? { erreur: controle.erreur } : {}),
+  } : null;
+  await db(supabase.from('formalites').update({ typologie: { ...(f.typologie || {}), _pieces_guichet: resume } }).eq('id', id).select());
+}
+
+/** Relit les pièces au guichet et les confronte au dossier, sans rien envoyer. */
+async function controlerPiecesGuichet(id) {
+  const f = await charger(id);
+  if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet.', 409);
+  if (f.simule || String(f.inpi_id).startsWith('SIM-')) return { simule: true, complet: true, confirmees: [], manquantes: [], attendues: 0 };
+  const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
+  let controle;
+  try {
+    controle = confronterPieces(pieces, await guichet.listerPieces(f.inpi_id));
+  } catch (e) {
+    controle = { date: new Date().toISOString(), attendues: pieces.length, confirmees: [], manquantes: pieces.map((p) => ({ code: p.code, nom: p.filename })), complet: false, erreur: `Relecture des pièces au guichet impossible : ${e.message}` };
+  }
+  await memoriserControle(id, controle);
+  return controle;
+}
+
 /**
  * Dépose sur la formalité enregistrée les pièces du dossier que le guichet
  * n'a pas encore (comparées par type et nom de fichier) : sans doublon, et
- * relançable sans risque.
+ * relançable sans risque. La liste du guichet est ensuite relue : une pièce
+ * « acceptée » à l'envoi mais absente de la relecture compte en échec.
  */
 async function transmettrePieces(id) {
   const f = await charger(id);
   if (!f.inpi_id) throw erreur('Dossier pas encore enregistré au guichet.', 409);
-  if (f.simule || String(f.inpi_id).startsWith('SIM-')) return { simule: true, transmises: [], deja_presentes: [], echecs: [] };
+  if (f.simule || String(f.inpi_id).startsWith('SIM-')) return { simule: true, transmises: [], deja_presentes: [], echecs: [], controle: { simule: true, complet: true } };
   const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
   const presentes = await guichet.listerPieces(f.inpi_id);
-  const cle = (code, nom) => `${code}|${String(nom || '').trim()}`;
-  const deja = new Set(presentes.map((x) => cle(x.code, x.nom)));
+  const deja = new Set(presentes.map((x) => clePiece(x.code, x.nom)));
   const out = { transmises: [], deja_presentes: [], echecs: [] };
   for (const p of pieces) {
-    if (deja.has(cle(p.code, p.filename))) { out.deja_presentes.push({ code: p.code, nom: p.filename }); continue; }
+    if (deja.has(clePiece(p.code, p.filename))) { out.deja_presentes.push({ code: p.code, nom: p.filename }); continue; }
     try {
       const base64 = (await downloadFile(p.filepath)).toString('base64');
       const rep = await guichet.ajouterPiece(f.inpi_id, { code: p.code, nom: p.filename, base64 });
@@ -618,8 +673,20 @@ async function transmettrePieces(id) {
       out.echecs.push({ code: p.code, nom: p.filename, motif: e.message });
     }
   }
-  const resume = `Pièces au guichet : ${out.transmises.length} transmise(s), ${out.deja_presentes.length} déjà présente(s)${out.echecs.length ? `, ${out.echecs.length} en échec (${out.echecs.map((x) => x.code).join(', ')})` : ''}.`;
-  await journal(id, 'piece', resume, { transmises: out.transmises.map((x) => x.code), echecs: out.echecs });
+  // Relecture : ce que le guichet a réellement rattaché à la formalité.
+  out.controle = await controlerPiecesGuichet(id);
+  if (!out.controle.erreur) {
+    const absentes = new Set(out.controle.manquantes.map((x) => clePiece(x.code, x.nom)));
+    const nonRattachees = out.transmises.filter((x) => absentes.has(clePiece(x.code, x.nom)));
+    out.transmises = out.transmises.filter((x) => !absentes.has(clePiece(x.code, x.nom)));
+    for (const x of nonRattachees) {
+      out.echecs.push({ code: x.code, nom: x.nom, motif: `Envoi accepté par le guichet${x.id_guichet ? ` (pièce n° ${x.id_guichet})` : ' sans identifiant de pièce'}, mais absente de la formalité à la relecture.` });
+    }
+  }
+  const c = out.controle;
+  const resume = `Pièces au guichet : ${out.transmises.length} transmise(s), ${out.deja_presentes.length} déjà présente(s)${out.echecs.length ? `, ${out.echecs.length} en échec (${out.echecs.map((x) => x.code).join(', ')})` : ''}. `
+    + (c.erreur ? `${c.erreur}.` : `Relecture : ${c.confirmees.length}/${c.attendues} pièce(s) confirmée(s)${c.complet ? '.' : ` — manquantes : ${c.manquantes.map((x) => x.code).join(', ')}.`}`);
+  await journal(id, 'piece', resume, { transmises: out.transmises.map((x) => x.code), echecs: out.echecs.map((x) => ({ code: x.code, motif: x.motif })), confirmees: (c.confirmees || []).map((x) => x.code), manquantes: (c.manquantes || []).map((x) => x.code) });
   return out;
 }
 
@@ -640,5 +707,5 @@ function referentiels() {
 
 module.exports = {
   TYPE, creer, referentiels, redigerPouvoir, relireFiche, lire, majOperations, majTypologie, majReponses, majExigences, refusLevee,
-  ajouterPiece, inscrirePiece, transmettrePieces, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
+  ajouterPiece, inscrirePiece, transmettrePieces, controlerPiecesGuichet, confronterPieces, cheminPiece, majPiece, reclasserPiece, retirerPiece, analyser, apercu, deposer,
 };
