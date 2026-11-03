@@ -433,7 +433,7 @@ async function synchroniser(id) {
     const vraie = formalite.numero_liasse ? await guichet.retrouver({ liasse: formalite.numero_liasse, siren: formalite.siren }) : null;
     if (!vraie?.inpi_id || vraie.inpi_id === String(formalite.inpi_id)) {
       // Introuvable par son identifiant comme par sa liasse : supprimée sur le portail ?
-      if (supprimeeAuGuichet(formalite)) return detacher(formalite, 'fiche en 404 et liasse absente du compte mandataire');
+      if (supprimeeAuGuichet(formalite)) return detacher(formalite, { certitude: 'introuvable', motif: 'fiche en 404 et liasse absente du compte mandataire' });
       e.message = `${e.message} — formalité introuvable, mais non détachée : ${STATUTS_NON_PAYES.includes(formalite.statut) ? 'dossier importé ou simulé' : `statut « ${statutInfo(formalite.statut).libelle} » (une formalité payée ne se supprime pas)`}.`;
       throw e;
     }
@@ -444,7 +444,7 @@ async function synchroniser(id) {
   }
   if (!etat) return { ...formalite, synchronise: false };
   if (STATUT_SUPPRIME.test(String(etat.statut_brut || '')) && STATUTS_NON_PAYES.includes(formalite.statut)) {
-    return detacher(formalite, `statut « ${etat.statut_brut} » au guichet`);
+    return detacher(formalite, { certitude: 'supprimee', motif: `statut « ${etat.statut_brut} » au guichet` });
   }
 
   // Capturé avant la mise à jour : c'est cette valeur qui est journalisée.
@@ -491,25 +491,46 @@ function supprimeeAuGuichet(formalite) {
 }
 
 /**
- * La formalité n'existe plus au guichet : le dossier repasse « non
+ * La formalité a quitté le compte mandataire : le dossier repasse « non
  * enregistré » (étape Validation), avec ses données et ses pièces, pour un
- * nouvel enregistrement sans redépôt. L'ancienne liasse reste au journal.
+ * nouvel enregistrement sans redépôt. Le connecteur ne supprime rien au
+ * guichet : il constate une absence.
+ *
+ * Deux cas, qu'on ne confond pas :
+ *  - « supprimee » : le guichet renvoie un statut de suppression ;
+ *  - « introuvable » : fiche en 404 et liasse absente du compte. Constaté le
+ *    3/11 (LGZ-2026-00052, trois fois) : c'est aussi ce que produit une
+ *    formalité « À signer » ramenée en brouillon sur le portail. Ce brouillon
+ *    peut subsister : un nouvel enregistrement risque le doublon, et le
+ *    connecteur exige que l'avocat l'ait vérifié (_doublon_a_verifier).
  */
-async function detacher(formalite, motif) {
-  const ancienne = { inpi_id: String(formalite.inpi_id), liasse: formalite.numero_liasse || null, statut: formalite.statut, statut_inpi: formalite.statut_inpi || null };
+async function detacher(formalite, { certitude, motif }) {
+  const ancienne = {
+    inpi_id: String(formalite.inpi_id), liasse: formalite.numero_liasse || null,
+    statut: formalite.statut, statut_inpi: formalite.statut_inpi || null, certitude,
+  };
   const typologie = { ...(formalite.typologie || {}) };
   delete typologie._pieces_guichet;
-  typologie._liasses_supprimees = [...(typologie._liasses_supprimees || []), { ...ancienne, date: new Date().toISOString() }];
+  delete typologie._transmission;
+  typologie._formalites_disparues = [
+    ...(typologie._formalites_disparues || typologie._liasses_supprimees || []),
+    { ...ancienne, date: new Date().toISOString() },
+  ];
+  delete typologie._liasses_supprimees;
+  if (certitude === 'introuvable') typologie._doublon_a_verifier = true;
   const maj = await db(supabase.from('formalites').update({
     inpi_id: null, numero_liasse: null, statut: 'BROUILLON', statut_inpi: null,
     statut_date: new Date().toISOString(), action_attendue: null, montant: null, num_nat: null,
     signature_date: null, paiement_date: null, regularisations: [], simule: false, typologie,
     updated_at: new Date().toISOString(),
   }).eq('id', formalite.id).select().single());
+  const constat = certitude === 'supprimee'
+    ? `Formalité supprimée au guichet (n° ${ancienne.inpi_id}, liasse ${ancienne.liasse || '—'}, ${motif})`
+    : `Formalité introuvable sur le compte mandataire (n° ${ancienne.inpi_id}, liasse ${ancienne.liasse || '—'}, ${motif}) : ramenée en brouillon sur le portail, ou supprimée`;
   await journal(formalite.id, 'statut',
-    `Formalité supprimée au guichet (n° ${ancienne.inpi_id}, liasse ${ancienne.liasse || '—'}, ${motif}) : dossier repassé « non enregistré », données et pièces conservées.`,
+    `${constat}. Constat d’absence, le connecteur n’a rien supprimé. Dossier repassé « non enregistré », données et pièces conservées.`,
     { ancienne_formalite: ancienne });
-  return { ...maj, synchronise: true, changement: true, supprimee_au_guichet: ancienne };
+  return { ...maj, synchronise: true, changement: true, disparue: ancienne };
 }
 
 /** Synchronise tous les dossiers non terminés (appel manuel ou planifié). */

@@ -80,7 +80,7 @@ function verifier(nom, condition, detail) {
   verifier('notification : 202 sans corps', notif.statut === 202);
   const liste = await rpc('tools/list', {});
   const noms = liste.corps.result.tools.map((t) => t.name);
-  verifier('vingt outils, aucun ne signe ni ne paie', noms.length === 20 && !noms.some((x) => /sign|pay/i.test(x)), noms);
+  verifier('vingt et un outils, aucun ne signe ni ne paie', noms.length === 21 && !noms.some((x) => /sign|pay/i.test(x)), noms);
   verifier('outil inconnu : erreur JSON-RPC', (await rpc('tools/call', { name: 'payer', arguments: {} })).corps.error?.code === -32602);
   verifier('méthode inconnue : erreur JSON-RPC', (await rpc('resources/read', {})).corps.error?.code === -32601);
 
@@ -195,7 +195,7 @@ function verifier(nom, condition, detail) {
   const sansCle = await rpc('tools/list', {});
   const outilSansCle = await rpc('tools/call', { name: 'lister_formalites', arguments: {} });
   verifier('sans clé de service : connexion possible, l’outil explique ce qui manque',
-    sansCle.statut === 200 && sansCle.corps.result.tools.length === 20
+    sansCle.statut === 200 && sansCle.corps.result.tools.length === 21
     && outilSansCle.corps.result.isError && /SUPABASE_SERVICE_ROLE_KEY/.test(outilSansCle.corps.result.content[0].text), outilSansCle.corps);
   faux.service = service;
 
@@ -522,7 +522,7 @@ function verifier(nom, condition, detail) {
     if (/inpi\.fr/i.test(String(u))) { appelsInpi.push(String(u)); throw new Error('appel INPI interdit pendant les tests'); }
     return fetchOrigine(u, o);
   };
-  const sauve2 = { lire: guichet.lire, historique: guichet.historique, retrouver: guichet.retrouver, deposer: guichet.deposer,
+  const sauve2 = { retirerPieceGuichet: guichet.retirerPieceGuichet, lire: guichet.lire, historique: guichet.historique, retrouver: guichet.retrouver, deposer: guichet.deposer,
     listerPieces: guichet.listerPieces, ajouterPiece: guichet.ajouterPiece, brut: guichet.brut, synthese: guichet.synthese };
   const err404 = () => Object.assign(new Error('API INPI (guichet) — 404 Not Found'), { status: 404 });
   const piecesF46 = () => tables.formalite_pieces.filter((p) => p.formalite_id === f46.id);
@@ -553,18 +553,21 @@ function verifier(nom, condition, detail) {
 
   // Cas réel LGZ-2026-00052 : fiche en 404, liasse absente du compte, mais l'historique est encore servi.
   const ren = await outil('renseigner_formalite', { reference: ref46, reponses: {} });
-  verifier('formalité supprimée au guichet : renseigner_formalite redevient possible et le dit',
-    !ren.erreur && /n’existe plus au guichet/.test(ren.json.formalite_supprimee_au_guichet || '') && ren.json.inpi === null, ren.texte);
+  verifier('formalité introuvable : renseigner_formalite redevient possible, constat d’absence (brouillon ou suppression), rien supprimé',
+    !ren.erreur && /introuvable sur le compte mandataire : elle a été ramenée en brouillon sur le portail, ou supprimée/.test(ren.json.formalite_disparue_du_guichet || '')
+    && /n’a rien supprimé/.test(ren.json.formalite_disparue_du_guichet) && ren.json.inpi === null, ren.texte);
   verifier('dossier repassé « non enregistré » (Brouillon), sans liasse ni montant',
     f46.inpi_id === null && f46.numero_liasse === null && f46.statut === 'BROUILLON' && f46.montant === null && !f46.typologie._pieces_guichet, f46);
   verifier('données et pièces conservées', piecesF46().length === nb46 && nb46 > 0 && JSON.stringify(f46.reponses) === reponses46);
   verifier('ancienne liasse gardée au journal',
-    tables.formalite_evenements.some((e) => e.formalite_id === f46.id && /supprimée au guichet/.test(e.message) && e.message.includes(ancienId) && e.message.includes(ancienneLiasse)
+    tables.formalite_evenements.some((e) => e.formalite_id === f46.id && /introuvable sur le compte mandataire/.test(e.message) && !/supprimée au guichet/.test(e.message) && e.message.includes(ancienId) && e.message.includes(ancienneLiasse)
       && e.donnees?.ancienne_formalite?.liasse === ancienneLiasse));
   const stApres = await outil('statut_formalite', { reference: ref46 });
   verifier('statut_formalite : « non enregistré »', !stApres.erreur && stApres.json.inpi === null && /pas encore enregistré/.test(stApres.json.action_attendue), stApres.json);
   const ctlApres = await outil('controler_formalite', { reference: ref46 });
-  verifier('controler_formalite : prêt, plus « déjà enregistré »', ctlApres.json.pret && ctlApres.json.deja_enregistre === false, ctlApres.json);
+  verifier('controler_formalite : prêt, plus « déjà enregistré », risque de doublon signalé',
+    ctlApres.json.pret && ctlApres.json.deja_enregistre === false && ctlApres.json.doublon_a_verifier?.identifiant === ancienId
+    && ctlApres.json.alertes.some((a) => /Risque de doublon/.test(a) && /procedures\.inpi\.fr/.test(a)), ctlApres.json);
 
   // Nouvel enregistrement, sans redépôt : le guichet accepte chaque envoi (2xx) mais ne rattache rien.
   const nouvelId = '22540001';
@@ -574,7 +577,10 @@ function verifier(nom, condition, detail) {
   guichet.listerPieces = async () => auGuichet2.slice();
   guichet.ajouterPiece = async (id, { code, nom }) => { envois2.push({ id, code, nom }); return { id: 500 + envois2.length }; };
   const nbEvAvant = tables.formalite_evenements.filter((e) => e.formalite_id === f46.id).length;
-  const enr2 = await outil('enregistrer_formalite', { reference: ref46, confirmation_avocat: true });
+  const suspendu = await outil('enregistrer_formalite', { reference: ref46, confirmation_avocat: true });
+  verifier('nouvel enregistrement suspendu tant que l’absence de brouillon sur le portail n’est pas vérifiée',
+    suspendu.erreur && /risque de doublon/.test(suspendu.texte) && /brouillon_portail_verifie: true/.test(suspendu.texte) && f46.inpi_id === null, suspendu.texte);
+  const enr2 = await outil('enregistrer_formalite', { reference: ref46, confirmation_avocat: true, brouillon_portail_verifie: true });
   verifier('nouvel enregistrement possible, toutes les pièces du dossier reparties sans redépôt',
     !enr2.erreur && enr2.json.enregistre && f46.inpi_id === nouvelId && envois2.length === nb46 && envois2.every((e) => e.id === nouvelId), enr2.texte);
   verifier('envoi accepté mais pièce absente à la relecture : comptée en échec, pas en transmise',
@@ -583,6 +589,8 @@ function verifier(nom, condition, detail) {
   verifier('pièces non confirmées : « déposé » non annoncé, mise en garde explicite',
     enr2.json.depose === false && /PAS déposée/.test(enr2.json.attention || '') && enr2.json.pieces_au_guichet.controle_guichet.complet === false
     && enr2.json.pieces_au_guichet.controle_guichet.manquantes.length === nb46, enr2.json);
+  // La nouvelle formalité existe au guichet : controler_formalite la relit désormais (point 6).
+  guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'SIGNATURE_PENDING', liasseNumber: 'J00000000002' }, id);
   const ev2 = tables.formalite_evenements.filter((e) => e.formalite_id === f46.id).slice(nbEvAvant);
   verifier('journal : « enregistré », jamais « déposé », écart relu',
     ev2.some((e) => /^Enregistré au guichet unique/.test(e.message)) && !ev2.some((e) => /Déposé au guichet/.test(e.message))
@@ -592,7 +600,6 @@ function verifier(nom, condition, detail) {
     !ev2.some((e) => noms46.some((n) => e.message.includes(n) || JSON.stringify(e.donnees || {}).includes(n))), ev2);
   const ctlPieces = await outil('controler_formalite', { reference: ref46 });
   verifier('controler_formalite : alerte « pièces non confirmées »', ctlPieces.json.alertes.some((a) => new RegExp(`Pièces non confirmées au guichet \\(0/${nb46}`).test(a)), ctlPieces.json.alertes);
-  guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'SIGNATURE_PENDING', liasseNumber: 'J00000000002' }, id);
   guichet.brut = async (id) => ({ id, status: 'SIGNATURE_PENDING', liasseNumber: 'J00000000002', content: {} });
   guichet.synthese = async () => { throw new Error('synthèse non simulée'); };
   const cons = await outil('consulter_formalite_guichet', { reference: ref46 });
@@ -615,9 +622,100 @@ function verifier(nom, condition, detail) {
   guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'DELETED' }, id);
   const st3 = await outil('statut_formalite', { reference: ref46 });
   verifier('statut « supprimé » au guichet : dossier détaché, journal tenu',
-    f46.inpi_id === null && f46.statut === 'BROUILLON' && /n’existe plus au guichet/.test(st3.json.formalite_supprimee_au_guichet || '')
-    && f46.typologie._liasses_supprimees.length === 2 && piecesF46().length === nb46, st3.json);
+    f46.inpi_id === null && f46.statut === 'BROUILLON' && /est supprimée au guichet \(statut renvoyé par l’INPI\)/.test(st3.json.formalite_disparue_du_guichet || '')
+    && f46.typologie._formalites_disparues.length === 2 && f46.typologie._formalites_disparues[1].certitude === 'supprimee'
+    && f46.typologie._doublon_a_verifier === false && piecesF46().length === nb46, st3.json);
+  verifier('suppression certaine : pas de contrôle de doublon exigé', !(await outil('controler_formalite', { reference: ref46 })).json.doublon_a_verifier);
 
+
+  console.log('\nLGZ-2026-00052 (3/11) : pièces jointes à la création, noms renommés par le guichet, retrait au guichet');
+  // Noms tels que le cabinet les charge ; le guichet les renomme (accents, espaces, parenthèses, « .docx.pdf »).
+  const nomsCabinet = ['attestation-parution (14).pdf', 'Statuts signés.docx.pdf', 'Pièce d’identité – président.pdf', 'Attestation  dépôt (fonds).pdf'];
+  piecesF46().forEach((p, i) => { p.filename = nomsCabinet[i % nomsCabinet.length].replace('.pdf', i >= nomsCabinet.length ? ` ${i}.pdf` : '.pdf'); });
+  verifier('normalisation des noms comme le guichet', guichet.nomGuichet('attestation-parution (14).pdf') === 'attestation-parution_14.pdf'
+    && guichet.nomGuichet('Statuts signés.docx.pdf') === 'Statuts_signes_docx.pdf', [guichet.nomGuichet('attestation-parution (14).pdf'), guichet.nomGuichet('Statuts signés.docx.pdf')]);
+  let auGuichet3 = [];
+  let idPiece = 412102150;
+  const envois3 = [];
+  const syntheses3 = () => [{ id: 412102100, code: 'PJ_99', nom: 'synthese.pdf', taille: 90000 }, { id: 412102101, code: 'PJ_119', nom: 'synthese_be.pdf', taille: 40000 }];
+  // Le guichet garde les PDF du corps de la création, sous ses propres noms, avec la même taille.
+  guichet.deposer = async (requete) => {
+    const joints = requete.corps?.content?.piecesJointes || requete.corps?.newFormality?.content?.piecesJointes || [];
+    auGuichet3 = [...syntheses3(), ...joints.map((pj) => {
+      const local = piecesF46().find((p) => p.code === pj.typeDocument && p.filename === pj.nomDocument);
+      return { id: ++idPiece, code: pj.typeDocument, nom: guichet.nomGuichet(pj.nomDocument), taille: local?.taille ?? null };
+    })];
+    return { simule: false, inpi_id: '22539064', numero_liasse: 'J00297491839', statut: 'SIGNATURE_PENDING', statut_brut: 'SIGNATURE_PENDING', montant: 53.16, evenements: [] };
+  };
+  guichet.listerPieces = async () => auGuichet3.slice();
+  guichet.ajouterPiece = async (id, { code, nom, base64 }) => {
+    envois3.push(code); auGuichet3.push({ id: ++idPiece, code, nom: guichet.nomGuichet(nom), taille: Buffer.from(base64, 'base64').length }); return { id: idPiece };
+  };
+  guichet.lire = async () => { throw err404(); };
+  await outil('statut_formalite', { reference: ref46 });
+  guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'SIGNATURE_PENDING', liasseNumber: 'J00297491839' }, id);
+  const enr3 = await outil('enregistrer_formalite', { reference: ref46, confirmation_avocat: true, brouillon_portail_verifie: true });
+  verifier('enregistrement : une formalité, pièces jointes à la création non renvoyées',
+    !enr3.erreur && f46.inpi_id === '22539064' && envois3.length === 0 && enr3.json.pieces_au_guichet.transmises === 0
+    && enr3.json.pieces_au_guichet.deja_presentes === nb46, { envois3, r: enr3.json.pieces_au_guichet });
+  verifier(`relecture : ${nb46}/${nb46} confirmées, ${nb46} pièces + PJ_99 + PJ_119 au guichet, « déposé »`,
+    enr3.json.depose === true && enr3.json.pieces_au_guichet.controle_guichet.confirmees === nb46 && enr3.json.pieces_au_guichet.controle_guichet.complet
+    && auGuichet3.length === nb46 + 2 && !enr3.json.pieces_au_guichet.controle_guichet.en_trop, enr3.json.pieces_au_guichet);
+  verifier('mise en garde : ne pas ramener en brouillon, signer depuis « À signer »',
+    /Ne pas ramener cette formalité en brouillon/.test(enr3.json.avertissement_portail || '') && /« À signer »/.test(enr3.json.avertissement_portail), enr3.json);
+  verifier('ancienne formalité : constat d’absence, rien supprimé par le connecteur',
+    /n’a rien supprimé/.test(enr2.json.ancienne_formalite_disparue?.constat || '') && enr2.json.ancienne_formalite_disparue.identifiant === ancienId
+    && !('ancienne_formalite_supprimee' in enr2.json) && !('ancienne_formalite_disparue' in enr3.json), { enr2: enr2.json, enr3: enr3.json });
+  for (let i = 0; i < 2; i += 1) await outil('transmettre_pieces', { reference: ref46, confirmation_avocat: true });
+  verifier('transmettre_pieces répété : aucune pièce ajoutée', envois3.length === 0 && auGuichet3.length === nb46 + 2, envois3);
+  const cons3 = await outil('consulter_formalite_guichet', { reference: ref46 });
+  verifier('consulter_formalite_guichet : écart nul malgré les noms renommés',
+    cons3.json.ecart_pieces.complet && cons3.json.ecart_pieces.confirmees === nb46 && !cons3.json.ecart_pieces.en_trop_au_guichet, cons3.json.ecart_pieces);
+  // Taille seule : un nom que le guichet aurait transformé autrement reste rapproché par code + taille.
+  auGuichet3[2] = { ...auGuichet3[2], nom: 'fichier_renomme_autrement.pdf' };
+  verifier('rapprochement par code + taille quand le nom diffère', (await outil('consulter_formalite_guichet', { reference: ref46 })).json.ecart_pieces.complet);
+  // Une pièce réellement absente est bien déclarée manquante.
+  const retiree3 = auGuichet3.splice(3, 1)[0];
+  const cons4 = await outil('consulter_formalite_guichet', { reference: ref46 });
+  verifier('pièce réellement absente : seule elle est manquante', cons4.json.ecart_pieces.confirmees === nb46 - 1
+    && cons4.json.ecart_pieces.manquantes_au_guichet.length === 1 && cons4.json.ecart_pieces.manquantes_au_guichet[0].code === retiree3.code, cons4.json.ecart_pieces);
+  auGuichet3.splice(3, 0, retiree3);
+
+  // Doublons du 3/11 : chaque pièce envoyée deux fois. Ils sont repérés, et se retirent au guichet sur accord.
+  const doublons = auGuichet3.filter((g) => !guichet.CODES_SYNTHESE.includes(g.code)).map((g) => ({ ...g, id: ++idPiece }));
+  auGuichet3.push(...doublons);
+  const cons5 = await outil('consulter_formalite_guichet', { reference: ref46 });
+  verifier('doublons au guichet repérés, identifiants donnés', cons5.json.ecart_pieces.complet && cons5.json.ecart_pieces.en_trop_au_guichet?.length === nb46
+    && cons5.json.ecart_pieces.en_trop_au_guichet.every((x) => x.id_guichet > 412102150), cons5.json.ecart_pieces);
+  const retraits = [];
+  guichet.retirerPieceGuichet = async (id, pieceId) => { retraits.push({ id, pieceId: String(pieceId) }); auGuichet3 = auGuichet3.filter((g) => String(g.id) !== String(pieceId)); return { ok: true }; };
+  const cible = String(doublons[0].id);
+  verifier('retirer_piece_guichet : refusé sans l’accord de l’avocat',
+    (await outil('retirer_piece_guichet', { reference: ref46, piece_id: cible, confirmation_avocat: false })).erreur && retraits.length === 0);
+  verifier('retirer_piece_guichet : la synthèse PJ_99 ne se retire pas',
+    /document de synthèse/.test((await outil('retirer_piece_guichet', { reference: ref46, piece_id: '412102100', confirmation_avocat: true })).texte) && retraits.length === 0);
+  verifier('retirer_piece_guichet : pièce inconnue de la formalité refusée',
+    /n’est pas rattachée/.test((await outil('retirer_piece_guichet', { reference: ref46, piece_id: '1', confirmation_avocat: true })).texte) && retraits.length === 0);
+  const retG = await outil('retirer_piece_guichet', { reference: ref46, piece_id: cible, confirmation_avocat: true });
+  verifier('retirer_piece_guichet : doublon retiré, confirmé par relecture, journalisé',
+    !retG.erreur && retG.json.retiree && retraits.length === 1 && retraits[0].id === '22539064' && retraits[0].pieceId === cible && retG.json.controle_guichet.complet
+    && retG.json.controle_guichet.en_trop.length === nb46 - 1
+    && tables.formalite_evenements.some((e) => e.formalite_id === f46.id && e.message.includes(`Pièce n° ${cible}`) && /retirée/.test(e.message)), retG.json);
+  for (const d of doublons.slice(1)) await outil('retirer_piece_guichet', { reference: ref46, piece_id: String(d.id), confirmation_avocat: true });
+  verifier('tous les doublons retirés : 10 pièces + 2 synthèses', auGuichet3.length === nb46 + 2 && retraits.length === nb46);
+  f46.statut = 'PAYMENT_PENDING';
+  guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'PAYMENT_PENDING', liasseNumber: 'J00297491839' }, id);
+  verifier('retirer_piece_guichet : refusé après signature', /après la signature/.test((await outil('retirer_piece_guichet', { reference: ref46, piece_id: String(auGuichet3[3].id), confirmation_avocat: true })).texte));
+  f46.statut = 'SIGNATURE_PENDING';
+
+  // Ramenée en brouillon sur le portail : controler_formalite le constate de lui-même (sans statut_formalite d'abord).
+  guichet.lire = async () => { throw err404(); };
+  const ctl6 = await outil('controler_formalite', { reference: ref46 });
+  verifier('controler_formalite rafraîchit l’état : plus « déjà enregistré », doublon signalé',
+    !ctl6.erreur && ctl6.json.deja_enregistre === false && f46.inpi_id === null && ctl6.json.doublon_a_verifier?.identifiant === '22539064'
+    && ctl6.json.alertes.some((a) => /ramenée en brouillon sur le portail, ou supprimée/.test(a)), ctl6.json);
+  verifier('journal : « introuvable », jamais « supprimée au guichet » pour une formalité ramenée en brouillon',
+    !tables.formalite_evenements.some((e) => e.formalite_id === f46.id && /22539064/.test(e.message) && /supprimée au guichet/.test(e.message)));
   Object.assign(guichet, sauve2);
 
   // Recherche par liasse sur tout le compte (création : pas de SIREN), sur un hôte fictif — jamais l'INPI.
@@ -641,6 +739,61 @@ function verifier(nom, condition, detail) {
   verifier('liasse d’une création retrouvée au-delà de la première page du compte', trouvee?.inpi_id === '3001' && pagesLues.join(',') === '1,2,3', { trouvee, pagesLues });
   const absente = await guichet.retrouver({ liasse: 'J99999999999' });
   verifier('liasse absente de tout le compte : null', absente === null);
+
+  // Les 10 pièces de LGZ-2026-00052 (PJ_25 en double), noms rendus par le guichet, puis le double envoi du 3/11.
+  const dix = [['PJ_01', 'statuts signés (1).pdf', 812345], ['PJ_08', 'attestation-parution (14).pdf', 136210], ['PJ_25', 'CNI président recto.pdf', 402331],
+    ['PJ_25', 'CNI président verso.pdf', 398774], ['PJ_06', 'Attestation dépôt fonds.docx.pdf', 220031], ['PJ_20', 'Justificatif siège (bail).pdf', 2512004],
+    ['PJ_11', 'Déclaration non-condamnation.pdf', 150022], ['PJ_17', 'Liste des souscripteurs.pdf', 160440], ['PJ_51', 'Pouvoir – mandataire.pdf', 141877], ['PJ_138', 'Kbis PROVIDENCIEL.pdf', 301999]]
+    .map(([code, nom, taille]) => ({ code, nom, taille }));
+  const unJeu = (base) => dix.map((p, i) => ({ id: base + i, code: p.code, nom: guichet.nomGuichet(p.nom), taille: p.taille }));
+  const syntheses = [{ id: 1, code: 'PJ_99', nom: 'synthese.pdf', taille: 1 }, { id: 2, code: 'PJ_119', nom: 'synthese_be.pdf', taille: 2 }];
+  const r10 = guichet.rapprocherPieces(dix, [...syntheses, ...unJeu(412102151)]);
+  verifier('10 pièces renommées par le guichet : 10/10 rapprochées, rien de manquant ni en trop hors synthèses',
+    r10.paires.length === 10 && !r10.manquantes.length && r10.en_trop.length === 2 && r10.en_trop.every((g) => guichet.CODES_SYNTHESE.includes(g.code)), r10);
+  verifier('PJ_25 en double : chaque exemplaire rapproché du sien (taille)',
+    r10.paires.filter((p) => p.dossier.code === 'PJ_25').every((p) => p.dossier.taille === p.guichet.taille));
+  const r20 = guichet.rapprocherPieces(dix, [...syntheses, ...unJeu(412102151), ...unJeu(412102263)]);
+  verifier('double envoi du 3/11 : 10 confirmées, les 10 doublons repérés en trop', r20.paires.length === 10 && r20.en_trop.filter((g) => !guichet.CODES_SYNTHESE.includes(g.code)).length === 10);
+  const r9 = guichet.rapprocherPieces(dix, [...syntheses, ...unJeu(412102151).filter((g) => g.code !== 'PJ_17')]);
+  verifier('pièce réellement absente : seule PJ_17 manquante', r9.manquantes.length === 1 && r9.manquantes[0].code === 'PJ_17');
+
+  // Synthèse (point 5) : /synthesis refuse application/pdf (406) ; lue comme pièce PJ_99, sur un hôte fictif.
+  const PDF_SYNTH = fs.readFileSync(path.join(__dirname, 'fixtures/piece-test.pdf'));
+  Object.assign(cfgInpi.guichet, { baseUrl: 'https://guichet.test.invalid', username: 'test', password: 'test' });
+  require('../src/inpi/client').viderCache();
+  const demandes = [];
+  let pj99EnJson = false;
+  global.fetch = async (u, o) => {
+    const url = new URL(String(u));
+    if (url.hostname !== 'guichet.test.invalid') return fetchGuard(u, o);
+    const accept = o?.headers?.Accept;
+    demandes.push(`${o?.method || 'GET'} ${url.pathname} [${accept}]`);
+    const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'Content-Type': 'application/json' } });
+    if (o?.method === 'POST') return json({ token: 'jeton.de.test' });
+    if (/\/synthesis$/.test(url.pathname)) {
+      return accept === 'application/pdf' ? json({ detail: 'Requested format "application/pdf" is not supported. Supported MIME types are "application/ld+json", "application/json", "text/html".' }, 406)
+        : json({ document: PDF_SYNTH.toString('base64') });
+    }
+    if (/\/attachments$/.test(url.pathname)) return json(pj99EnJson ? [] : [{ id: 412102100, nomDocument: 'synthese.pdf', typeDocument: 'PJ_99' }]);
+    if (/\/api\/attachments\/412102100\/file$/.test(url.pathname)) return new Response(PDF_SYNTH, { status: 200, headers: { 'Content-Type': 'application/pdf' } });
+    return json({}, 404);
+  };
+  const s1 = await guichet.synthese('22539064', { avecSource: true });
+  verifier('synthèse lue via la pièce PJ_99, sans Accept: application/pdf sur /synthesis',
+    s1.pdf.equals(PDF_SYNTH) && /PJ_99 n° 412102100/.test(s1.source) && !demandes.some((d) => /synthesis \[application\/pdf\]/.test(d)), { source: s1.source, demandes });
+  pj99EnJson = true;
+  const s2 = await guichet.synthese('22539064', { avecSource: true });
+  verifier('sans pièce PJ_99 : synthèse lue sur /synthesis en JSON (PDF encodé)', s2.pdf.equals(PDF_SYNTH) && /JSON/.test(s2.source), s2.source);
+  global.fetch = fetchGuard;
+  Object.assign(cfgInpi.guichet, { baseUrl: cfgAvant.baseUrl, username: cfgAvant.username, password: cfgAvant.password });
+  require('../src/inpi/client').viderCache();
+
+  // Journal d'annonces (point 7) : « Actu.fr – Terra » n'est pas dans la liste du guichet → « Autre » ; entrées proches proposées.
+  const { alerteJournal } = require('../src/connecteur/service');
+  const aj = alerteJournal({ operations: ['01M'], reponses: { c_publication: { journal_publication: 'Actu.fr – Terra' } } });
+  verifier('journal hors liste : alerte « Autre » avec actu.fr et Terra/Edition du Finistère proposés',
+    aj.length === 1 && /« Autre »/.test(aj[0]) && aj[0].includes('actu.fr') && aj[0].includes('Terra/Edition du Finistère'), aj);
+  verifier('journal de la liste : pas d’alerte', !alerteJournal({ operations: ['01M'], reponses: { c_publication: { journal_publication: 'Terra/Edition du Finistère' } } }).length);
   global.fetch = fetchGuard;
   Object.assign(cfgInpi.guichet, { baseUrl: cfgAvant.baseUrl, username: cfgAvant.username, password: cfgAvant.password });
   require('../src/inpi/client').viderCache();
