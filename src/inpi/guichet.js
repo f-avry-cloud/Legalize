@@ -392,13 +392,18 @@ function rapprocherPieces(duDossier, auGuichet) {
 async function retirerPieceGuichet(id, pieceId) {
   if (String(id).startsWith('SIM-')) return { ok: true, simule: true };
   const ch = chemin(config.guichet.paths.pieceInvalider, { formaliteId: id, pieceId });
+  let methode = 'PUT';
+  let reponse;
   try {
-    await appel('guichet', { methode: 'PUT', chemin: ch, corps: {} });
+    reponse = await appel('guichet', { methode, chemin: ch, corps: {} });
   } catch (e) {
     if (e.status !== 405) throw e;
-    await appel('guichet', { methode: 'POST', chemin: ch, corps: {} });
+    methode = 'POST';
+    reponse = await appel('guichet', { methode, chemin: ch, corps: {} });
   }
-  return { ok: true };
+  // La réponse du guichet est rendue telle quelle (sans contenu de fichier) : constaté
+  // en production, un retrait accepté laissait la pièce dans la liste.
+  return { ok: true, methode, reponse: resumeReponse(reponse) };
 }
 
 /** Ajoute une pièce à un dépôt existant (PDF en base64, 10 Mo maximum). */
@@ -467,7 +472,30 @@ async function listerPieces(id) {
   const rep = await appel('guichet', { chemin: chemin(config.guichet.paths.piecesFormalite, { id }) });
   return listeHydra(rep).map((p) => ({
     id: p.id, nom: p.nomDocument, code: p.typeDocument, taille: p.size ?? null, date: p.created || null,
+    // Marques d'état éventuelles (pièce invalidée ou retirée mais encore listée).
+    ...etatPiece(p),
   }));
+}
+
+/** Champs d'état d'une pièce du guichet, quel que soit leur nom exact. */
+function etatPiece(p = {}) {
+  const etat = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (/remov|delet|invalid|valid|statu|state|actif|active|archiv/i.test(k) && (typeof v !== 'object' || v === null)) etat[k] = v;
+  }
+  return Object.keys(etat).length ? { etat_guichet: etat } : {};
+}
+
+/** Réponse du guichet ramenée à ses champs simples (jamais le contenu d'un fichier). */
+function resumeReponse(r) {
+  if (r === null || r === undefined || r === '') return null;
+  if (typeof r !== 'object') return String(r).slice(0, 500);
+  const out = {};
+  for (const [k, v] of Object.entries(r)) {
+    if (/base64|content|file/i.test(k)) continue;
+    out[k] = v && typeof v === 'object' ? JSON.stringify(v).slice(0, 300) : v;
+  }
+  return out;
 }
 
 module.exports = {

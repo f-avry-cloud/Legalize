@@ -760,7 +760,10 @@ async function retirerPieceGuichetOutil({ reference, piece_id: pieceId, confirma
   return {
     reference: r0.f.reference, retiree: r.retiree, piece: r.piece,
     controle_guichet: vuePiecesGuichet({ controle: r.controle }).controle_guichet,
-    ...(r.retiree ? {} : { attention: 'La pièce figure toujours sur la formalité à la relecture : vérifier sur le portail.' }),
+    ...(r.retiree ? {} : {
+      attention: 'La pièce figure toujours sur la formalité à la relecture : ne pas relancer ; vérifier sur le portail et, au besoin, la retirer à la main avant de signer.',
+      diagnostic: r.diagnostic,
+    }),
   };
 }
 

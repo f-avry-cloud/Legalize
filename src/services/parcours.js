@@ -731,17 +731,22 @@ async function retirerPieceGuichet(id, pieceId) {
   const cible = presentes.find((x) => String(x.id) === String(pieceId));
   if (!cible) throw erreur(`La pièce n° ${pieceId} n’est pas rattachée à la formalité n° ${f.inpi_id}. Pièces au guichet : ${presentes.map((x) => `${x.id} (${x.code})`).join(', ') || 'aucune'}.`, 404);
   if (guichet.CODES_SYNTHESE.includes(cible.code)) throw erreur(`La pièce n° ${pieceId} (${cible.code}) est un document de synthèse produit par l’INPI : elle ne se retire pas.`, 409);
-  await guichet.retirerPieceGuichet(f.inpi_id, cible.id);
+  const envoi = await guichet.retirerPieceGuichet(f.inpi_id, cible.id);
   // Relecture : la pièce ne compte comme retirée que si elle a quitté la liste du guichet.
   const apres = await guichet.listerPieces(f.inpi_id);
-  const retiree = !apres.some((x) => String(x.id) === String(pieceId));
+  const restante = apres.find((x) => String(x.id) === String(pieceId));
+  const retiree = !restante;
   const pieces = await db(supabase.from('formalite_pieces').select('*').eq('formalite_id', id).order('id'));
   const controle = confronterPieces(pieces, apres);
   await memoriserControle(id, controle);
   await journal(id, 'piece', retiree
     ? `Pièce n° ${pieceId} (${cible.code}) retirée de la formalité au guichet.`
-    : `Retrait de la pièce n° ${pieceId} (${cible.code}) demandé au guichet, mais elle figure toujours sur la formalité.`, { id_guichet: String(pieceId), code: cible.code });
-  return { retiree, piece: { id_guichet: String(pieceId), code: cible.code }, controle };
+    : `Retrait de la pièce n° ${pieceId} (${cible.code}) demandé au guichet, mais elle figure toujours sur la formalité.`,
+  { id_guichet: String(pieceId), code: cible.code, methode: envoi?.methode, reponse: envoi?.reponse ?? null, etat_avant: cible.etat_guichet || null, etat_apres: restante?.etat_guichet || null });
+  return {
+    retiree, piece: { id_guichet: String(pieceId), code: cible.code }, controle,
+    diagnostic: { methode: envoi?.methode || null, reponse_guichet: envoi?.reponse ?? null, etat_avant: cible.etat_guichet || null, etat_apres: restante?.etat_guichet || null },
+  };
 }
 
 /** Listes de référence du guichet pour les écrans : journaux, nationalités, catégories d'activité. */

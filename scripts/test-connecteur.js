@@ -701,6 +701,19 @@ function verifier(nom, condition, detail) {
     !retG.erreur && retG.json.retiree && retraits.length === 1 && retraits[0].id === '22539064' && retraits[0].pieceId === cible && retG.json.controle_guichet.complet
     && retG.json.controle_guichet.en_trop.length === nb46 - 1
     && tables.formalite_evenements.some((e) => e.formalite_id === f46.id && e.message.includes(`Pièce n° ${cible}`) && /retirée/.test(e.message)), retG.json);
+  // Constaté en production : retrait accepté (2xx), pièce toujours listée. Le diagnostic rend la réponse du guichet et l'état de la pièce.
+  const retraitSansEffet = guichet.retirerPieceGuichet;
+  const resteListee = doublons[1];
+  resteListee.etat_guichet = { status: 'VALID' };
+  guichet.retirerPieceGuichet = async (id, pieceId) => { retraits.push({ id, pieceId: String(pieceId) }); return { ok: true, methode: 'PUT', reponse: { id: Number(pieceId), status: 'VALID' } }; };
+  const sansEffet = await outil('retirer_piece_guichet', { reference: ref46, piece_id: String(resteListee.id), confirmation_avocat: true });
+  verifier('retrait sans effet au guichet : retiree false, ne pas relancer, réponse et état de la pièce rendus',
+    sansEffet.json.retiree === false && /ne pas relancer/.test(sansEffet.json.attention) && sansEffet.json.diagnostic?.methode === 'PUT'
+    && sansEffet.json.diagnostic.reponse_guichet?.status === 'VALID' && sansEffet.json.diagnostic.etat_apres?.status === 'VALID'
+    && tables.formalite_evenements.some((e) => e.formalite_id === f46.id && /figure toujours/.test(e.message) && e.donnees?.reponse?.status === 'VALID'), sansEffet.json);
+  delete resteListee.etat_guichet;
+  retraits.pop();
+  guichet.retirerPieceGuichet = retraitSansEffet;
   for (const d of doublons.slice(1)) await outil('retirer_piece_guichet', { reference: ref46, piece_id: String(d.id), confirmation_avocat: true });
   verifier('tous les doublons retirés : 10 pièces + 2 synthèses', auGuichet3.length === nb46 + 2 && retraits.length === nb46);
   f46.statut = 'PAYMENT_PENDING';
