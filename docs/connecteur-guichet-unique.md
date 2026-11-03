@@ -194,13 +194,19 @@ Stockage : `typologie.manuel_champs` (`{"<groupe>.<name>": {"requis": false, "mo
 
 ## Formalité supprimée sur le portail
 
-Quand le guichet ne connaît plus la formalité (lecture en 404, introuvable par
-sa liasse et historique en 404 lui aussi, ou statut « supprimé »), et qu'elle
-n'était pas payée, le dossier repasse « non enregistré » (Brouillon, étape
-Validation) : identifiant, liasse et montant sont effacés, les données et les
-pièces sont conservées pour un nouvel enregistrement sans redépôt. L'ancienne
-formalité est inscrite au journal (et dans `typologie._liasses_supprimees`).
+Quand la fiche de la formalité répond 404 et que sa liasse est introuvable sur
+tout le compte mandataire (toutes les pages, pas seulement les plus récentes),
+ou que le guichet renvoie un statut « supprimé », et qu'elle n'était pas payée,
+le dossier repasse « non enregistré » (Brouillon, étape Validation) :
+identifiant, liasse et montant sont effacés, les données et les pièces sont
+conservées pour un nouvel enregistrement sans redépôt. L'ancienne formalité est
+inscrite au journal (et dans `typologie._liasses_supprimees`).
+
+L'historique des statuts n'est pas un critère : l'INPI le sert encore après la
+suppression (constaté sur LGZ-2026-00052). Un identifiant de lecture erroné est
+corrigé par la liasse avant toute conclusion. Si le compte ne peut pas être lu,
+le dossier reste verrouillé et `enregistrer_formalite` / `renseigner_formalite`
+disent pourquoi (`verification_guichet`).
+
 La vérification a lieu à `statut_formalite`, `consulter_formalite_guichet`,
-`renseigner_formalite` et `enregistrer_formalite`. Un 404 sur la seule fiche,
-alors que l'historique répond, ne détache pas le dossier (identifiant de
-lecture erroné, déjà constaté).
+`renseigner_formalite` et `enregistrer_formalite`.
