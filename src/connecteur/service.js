@@ -161,6 +161,8 @@ const FORMATS_CHAMPS = {
     + '"code_insee_naissance" (si né en France), "pays_naissance": "FRANCE", "nationalite": "Française", '
     + '"adresse": {"numVoie", "typeVoie", "voie": nom de la rue ou lieu-dit, "codePostal", "commune"}}',
   adresse: 'Objet : {"numVoie", "typeVoie", "voie": nom de la rue ou lieu-dit, "codePostal", "commune"}',
+  beneficiaires: 'Liste d’objets personne (nom, prenoms, date_naissance, lieu_naissance, code_insee_naissance, nationalite, adresse) avec, pour chacun, '
+    + require('../inpi/controle-be').FORMAT_CONTROLE + ' Le texte libre est refusé.',
   categorie: 'Code d’une catégorie de la nomenclature du guichet : "07-02-03-01" ou "07020301" (« 00 » pour un niveau absent), '
     + 'ou {"categorisationActivite1": "07", …, "categorisationActivite4": "01"}. Un mot (« restauration ») rend les catégories candidates '
     + '(categories_candidates) sans en retenir aucune : faites choisir l’avocat, puis renseignez le code choisi.',
@@ -168,12 +170,23 @@ const FORMATS_CHAMPS = {
 
 /** Valeurs admises des sous-champs codés : le guichet refuse le texte libre. */
 const VALEURS_SOUS_CHAMPS = {
+  beneficiaires: {
+    controle: {
+      detentions: { direct: 'détention directe', indirect_personnes_morales: 'détention indirecte par une ou plusieurs personnes morales', indirect_indivision: 'détention indirecte en indivision' },
+      droits_capital: ['pleine_propriete', 'nue_propriete'],
+      droits_votes: ['pleine_propriete', 'nue_propriete', 'usufruit'],
+      autres: ['pouvoir_decision_ag', 'pouvoir_nomination', 'autres_moyens', 'representant_legal'],
+    },
+    modalitesDeControle: Object.entries(require('../inpi/controle-be').CODES_MODALITES),
+  },
   personne: {
     forme_sociale: [['0', 'Non applicable'], ['1', 'Sans affiliation sociale'], ['3', 'Avec affiliation sociale (travailleur non salarié)']],
     genre: [['1', 'Masculin'], ['2', 'Féminin']],
     nationalite: 'Libellé ou code du référentiel des nationalités du guichet (ex. « Française » ou « FRA »).',
   },
   personne_morale: {
+    forme_juridique_code: 'Code du référentiel des formes juridiques du guichet, pas un libellé : 5710 SAS, 5499 SARL, 5599 SA à conseil d’administration, 5202 SNC, 6540 SCI, 6599 autre société civile, 5785 SELAS…',
+    pays: 'Société française : déduit du SIREN (code « FRA »).',
     greffe: 'Nom de la ville du greffe d’immatriculation (ex. « Quimper »), transmis en majuscules.',
   },
 };

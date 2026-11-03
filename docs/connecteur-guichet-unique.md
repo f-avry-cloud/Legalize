@@ -85,7 +85,8 @@ Le portail du guichet n'ouvre la signature que si la société est complète, m�
   champ `representant_<rang>`) : nom de naissance, prénoms, sexe, date, commune et pays de naissance,
   nationalité, domicile avec la voie. Elle se lit sur l'extrait Kbis de la société représentée (ou, pour un
   commissaire aux comptes, sur sa lettre de mission ou son rapport) ;
-- **pays de la personne morale** : « FRANCE » pour une société inscrite par son SIREN ; sans lui, le portail
+- **pays de la personne morale** : code « FRA » pour une société inscrite par son SIREN (le libellé « FRANCE » est
+  refusé par l'API : « Choisissez un code pays valide ») ; sans lui, le portail
   juge sa forme juridique invalide ;
 - **« Avez-vous une autre fonction ? »** : non, chaque fonction étant un pouvoir distinct du registre ;
 - **caractères** : apostrophe et guillemets typographiques, points de suspension, tirets longs, puces et
@@ -109,6 +110,32 @@ Une catégorie reconnue est rangée sous son code ; ses codes, libellés et sa f
 non reconnue n'est pas « remplie » : `controler_formalite` la bloque, et la liasse n'est pas construite (erreur 422)
 plutôt que transmise sans catégorie. La liasse porte `categorisationActivite1…n` (les niveaux existants) et la
 `formeExercice` déduite de la catégorie.
+
+## Bénéficiaires effectifs et dirigeant personne morale
+
+Le guichet refuse les modalités de contrôle en texte libre (« Choisissez un type d'origine valide »). Chaque
+bénéficiaire porte un objet `controle`, d'où le connecteur calcule le bloc `modalite` du guichet
+(`src/inpi/controle-be.js`, BlocModaliteControle du dictionnaire de données) :
+
+```json
+{"capital": {"direct": {"pleine_propriete": 49}},
+ "votes":   {"direct": {"pleine_propriete": 49}}}
+{"capital": {"indirect_personnes_morales": {"pleine_propriete": 25.5}},
+ "votes":   {"indirect_personnes_morales": {"pleine_propriete": 25.5}}}
+```
+
+- Détentions : `direct`, `indirect_personnes_morales`, `indirect_indivision` ; droits : `pleine_propriete`,
+  `nue_propriete` (capital et votes), `usufruit` (votes seulement, comme le dictionnaire).
+- Autres critères : `autres` = `pouvoir_decision_ag`, `pouvoir_nomination`, `autres_moyens`, `representant_legal`.
+- Codes `modalitesDeControle` : « 1 » au-delà de 25 % du capital ou des votes (comme une création validée par le
+  portail), « 5 » pouvoir de nomination, « 6 » autre moyen de contrôle, « 0 » représentant légal à défaut. Tous les
+  autres champs du bloc partent à 0 ou false.
+- `controler_formalite` bloque un texte libre, un code inconnu, un pourcentage hors de 0–100, un total supérieur à
+  100 % et un bénéficiaire sans aucun critère (25 % tout juste ne suffit pas). L'écran Legalize (cases à cocher et
+  pourcentages) reste accepté ; seuls les codes du référentiel partent.
+
+Dirigeant personne morale : `forme_juridique_code` est un code du référentiel (5710 pour une SAS, pas « SAS ») et le
+pays de la société part en code « FRA ».
 
 ## Valeurs par défaut
 

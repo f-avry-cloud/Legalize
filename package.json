@@ -24,6 +24,7 @@
     "banc:guichet": "node scripts/banc-guichet.js",
     "test:connecteur": "node scripts/test-connecteur.js",
     "test:registre": "node scripts/test-registre.js",
+    "test:president-be": "node scripts/test-president-pm-be.js",
     "test:categorie": "node scripts/test-categorie-activite.js"
   },
   "engines": {

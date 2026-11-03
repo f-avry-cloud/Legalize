@@ -126,7 +126,18 @@ function beneficiairesInpi(liste) {
   const beneficiaires = (liste || [])
     .filter((b) => b.personne?.nom)
     .map((b, i) => {
-      const modalites = [].concat(b.modalites || b.modalite_controle || []).map(String).filter(Boolean);
+      // Saisie structurée (« controle ») : la ventilation exacte attendue par le guichet.
+      if (b.personne?.controle) {
+        return {
+          beneficiaireId: String(i + 1),
+          beneficiaire: { descriptionPersonne: descriptionPersonne(b.personne), adresseDomicile: adresseInpi(b.personne?.adresse) },
+          modalite: require('./controle-be').modaliteInpi(b.personne.controle, dateInpi(b.personne?.date_effet)),
+          statutPourLaFormalite: '1',
+        };
+      }
+      // Saisie par codes (écran Legalize) : seuls les codes du référentiel partent.
+      const { CODES_MODALITES } = require('./controle-be');
+      const modalites = [].concat(b.modalites || b.modalite_controle || []).map(String).filter((c) => CODES_MODALITES[c]);
       const capital = nombre(b.pourcentage_capital);
       const votes = nombre(b.pourcentage_votes);
       const indirecte = b.personne?.detention === 'indirecte' || b.personne?.detention === 'les_deux';
