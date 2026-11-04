@@ -1,0 +1,90 @@
+# Corpus des synthèses du Guichet unique
+
+Le programme `scripts/corpus-syntheses.js` lit un dossier de synthèses du guichet
+(PDF), les anonymise et en tire des statistiques. Il sert à régler le connecteur
+sur la pratique réelle du cabinet :
+- quelles formalités le cabinet dépose ;
+- quelles rubriques sont réellement remplies ;
+- quelles valeurs sont retenues ;
+- quelles pièces sont jointes ;
+- ce qui change d'une version à l'autre.
+
+## Lancer l'analyse
+
+```
+npm run corpus:syntheses -- "<dossier des PDF>" --sortie "<dossier des résultats>"
+```
+
+Le programme n'a besoin que de Node.js 20 ou plus récent et de `pdfjs-dist`, qui
+figure dans les dépendances du projet.
+
+Il parcourt aussi les sous-dossiers du dossier indiqué. Il ignore :
+- les fichiers cachés, dont les `._…` de macOS ;
+- les PDF qui ne sont pas des synthèses (reçus, actes…).
+
+Les versions d'une même formalité sont regroupées : v1, v2, signée, et
+bénéficiaires effectifs à part. Deux fichiers identiques comptent pour une
+seule version.
+
+Options :
+- `--limite <n>` : ne traiter que les n premiers PDF, pour un essai ;
+- `--sans-fiches` : ne pas écrire de fiche par formalité.
+
+Durée : environ 0,2 seconde par PDF, soit une vingtaine de minutes pour
+6 000 synthèses. Il n'y a pas de reconnaissance de caractères : les synthèses
+du guichet sont des PDF générés, dont le texte se lit directement.
+
+## Ce qui sort, ce qui ne sort pas
+
+Le dossier de résultats contient trois fichiers :
+- `rapport.md` : la synthèse lisible ;
+- `agregats.json` : les statistiques complètes ;
+- `fiches.jsonl` : une fiche par formalité.
+
+Ces fichiers ne contiennent que :
+- la structure : titres sans leur partie nominative, libellés des rubriques,
+  présence ou absence d'une valeur ;
+- les valeurs de liste : type de formalité, forme juridique, greffe, rôle,
+  journal d'annonces légales, catégories d'activité, régimes fiscaux, oui / non ;
+- des tranches : capital, pourcentages de détention des bénéficiaires effectifs ;
+- le mois de dépôt ;
+- l'intitulé et l'origine de chaque pièce jointe : déposant, guichet ou greffe.
+
+Ne sortent jamais :
+- les noms et prénoms ;
+- les dates et lieux de naissance ;
+- les adresses, téléphones et courriels ;
+- les noms de fichiers ;
+- les numéros de liasse, SIREN et SIRET, la dénomination ;
+- l'objet social, les observations et la référence client.
+
+Une formalité n'est désignée que par un pseudonyme. Il est tiré d'une clé
+aléatoire propre à chaque exécution, qui n'est écrite nulle part. Les fichiers
+illisibles sont listés à l'écran, jamais dans les résultats.
+
+## Lire les résultats
+
+Les statistiques sont calculées par strate :
+- par type de formalité ;
+- par type croisé avec la forme juridique ;
+- par type croisé avec chaque modification déclarée.
+
+Chaque strate porte une mention de fiabilité :
+
+| Exemplaires dans la strate | Fiabilité |
+|---|---|
+| 60 ou plus | fiable : tout ce qui figure dans au moins 5 % des dossiers est repéré |
+| 30 à 59 | indicatif |
+| moins de 30 | insuffisant |
+
+Les « rubriques modifiées » d'une version à l'autre excluent ce qui relève du
+dépôt lui-même : signature, paiement, pièces jointes et observations. Il reste
+les corrections de contenu, signe probable d'une régularisation demandée par
+le greffe.
+
+Les libellés inconnus restent réduits à leur présence. Après une première
+analyse, la liste des valeurs conservées (`VALEURS_LISTE` dans
+`src/inpi/synthese-gu.js`) peut être complétée.
+
+Tests : `npm run test:syntheses`. Ils utilisent des synthèses fictives et un PDF
+généré à la volée, jamais de vraie synthèse.

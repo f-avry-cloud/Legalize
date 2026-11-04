@@ -7,3 +7,4 @@ templates/generated/
 .env
 .env.*
 !.env.example
+resultats-syntheses/
