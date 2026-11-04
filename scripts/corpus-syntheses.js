@@ -83,7 +83,7 @@ async function main() {
     } catch (e) {
       const r = raison(e);
       erreurs[r] = (erreurs[r] || 0) + 1;
-      enErreur.push(`${r} : ${path.relative(o.dossier, f)}`);
+      enErreur.push(`${r} : ${path.relative(o.dossier, f)} (${String(e?.message || e).split('\n')[0].slice(0, 160)})`);
       continue;
     }
     if (!analyse.est_synthese || !analyse.liasse || analyse.rubriques.length < 5) { ignores += 1; continue; }

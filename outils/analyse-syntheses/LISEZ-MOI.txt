@@ -1,0 +1,37 @@
+Analyse des synthèses du Guichet unique (Legalize)
+==================================================
+
+Ce programme lit vos synthèses du Guichet unique sur votre PC et produit des
+statistiques anonymes. Les PDF ne sont ni modifiés, ni copiés, ni envoyés.
+
+1. Node.js doit être installé (version LTS, gratuite) : https://nodejs.org
+   Pour vérifier : touche Windows, tapez « cmd », Entrée, puis « node -v ».
+   Le numéro affiché doit être 20.16 ou plus.
+
+2. Double-cliquez sur LANCER.cmd.
+   Il lit le dossier « Téléchargements\Documents de synthèse pour Legalize ».
+   Pour un autre dossier, glissez-le sur LANCER.cmd.
+   Comptez environ 20 minutes pour 6 000 PDF.
+   Si Windows affiche « Windows a protégé votre ordinateur » :
+   « Informations complémentaires », puis « Exécuter quand même ».
+
+3. À la fin, le dossier « Téléchargements\Resultats syntheses Legalize »
+   s'ouvre. Il contient trois fichiers :
+     rapport.md     la synthèse lisible (ouvrable avec le Bloc-notes)
+     agregats.json  les statistiques complètes
+     fiches.jsonl   une fiche anonyme par formalité
+   Envoyez ces trois fichiers à Claude, dans la conversation.
+
+Ce qui sort : la structure des synthèses (titres, libellés, présence d'une
+valeur), les valeurs de liste (type de formalité, forme juridique, rôle,
+journal, catégories d'activité, oui / non), des tranches (capital,
+pourcentages de détention), le mois de dépôt, l'intitulé des pièces jointes.
+
+Ce qui ne sort jamais : noms, prénoms, dates et lieux de naissance, adresses,
+téléphones, courriels, noms de fichiers, numéros de liasse, SIREN et SIRET,
+dénominations, objet social, observations, référence client.
+
+Vous pouvez ouvrir rapport.md et fiches.jsonl avec le Bloc-notes pour le
+vérifier avant de les envoyer.
+
+Lecture des PDF : pdf.js (Mozilla, licence Apache 2.0, dans node_modules).

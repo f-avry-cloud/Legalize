@@ -15,8 +15,24 @@ sur la pratique réelle du cabinet :
 npm run corpus:syntheses -- "<dossier des PDF>" --sortie "<dossier des résultats>"
 ```
 
-Le programme n'a besoin que de Node.js 20 ou plus récent et de `pdfjs-dist`, qui
-figure dans les dépendances du projet.
+Le programme n'a besoin que de Node.js 20.16 ou plus récent et de `pdfjs-dist`,
+qui figure dans les dépendances du projet.
+
+### Sur un poste Windows, hors du projet
+
+`node scripts/paquet-syntheses.js` fabrique `analyse-syntheses-legalize.zip`
+(environ 600 Ko). Le zip contient le lanceur `LANCER.cmd` et sa notice
+(`outils/analyse-syntheses`), le programme, le module de lecture et pdf.js.
+
+Sur le poste, il suffit de Node.js : pas d'installation de paquets, pas de
+réseau. On extrait le zip, puis on double-clique sur `LANCER.cmd`.
+- Par défaut, il lit `Téléchargements\Documents de synthèse pour Legalize` et
+  écrit dans `Téléchargements\Resultats syntheses Legalize`.
+- Un autre dossier de synthèses peut être glissé sur `LANCER.cmd`.
+
+pdf.js réclame à son chargement une bibliothèque graphique native
+(`@napi-rs/canvas`), absente du paquet. Une matrice minimale la remplace :
+la lecture du texte n'a pas besoin de dessiner les pages.
 
 Il parcourt aussi les sous-dossiers du dossier indiqué. Il ignore :
 - les fichiers cachés, dont les `._…` de macOS ;

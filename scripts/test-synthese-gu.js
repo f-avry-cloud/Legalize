@@ -16,7 +16,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const s = require('../src/inpi/synthese-gu');
 
 let ok = 0;
@@ -368,6 +368,19 @@ async function main() {
       && JSON.stringify(creationFiche.versions.rubriques_modifiees) === JSON.stringify(["Identité de l'entreprise › Montant capital"]), creationFiche?.versions);
     const ecrits = ['agregats.json', 'rapport.md', 'fiches.jsonl'].map((f) => fs.readFileSync(path.join(sortie, f), 'utf8')).join('\n');
     verifier('aucune donnée personnelle, aucun nom de fichier dans les résultats', fuites(ecrits).length === 0 && !/casse|creation_v|\.pdf/i.test(ecrits.replace(/Document_de_Synthese/g, '')), fuites(ecrits));
+
+    // Poste sans la bibliothèque graphique native de pdf.js (analyse lancée hors du projet, sous Windows) :
+    // la lecture du texte doit fonctionner quand même, sans avertissement à l'écran.
+    const bloqueur = path.join(racine, 'sans-canvas.js');
+    fs.writeFileSync(bloqueur, `const M = require('module'); const r = M._resolveFilename;
+M._resolveFilename = function (req, ...a) { if (String(req).startsWith('@napi-rs/canvas')) { const e = new Error('Cannot find module ' + req); e.code = 'MODULE_NOT_FOUND'; throw e; } return r.call(this, req, ...a); };`);
+    const script = `require(${JSON.stringify(path.join(__dirname, '..', 'src', 'inpi', 'synthese-gu.js'))})
+  .lireSynthese(require('fs').readFileSync(${JSON.stringify(path.join(dossier, 'creation_v1.pdf'))}))
+  .then((a) => console.log('rubriques=' + a.rubriques.length + ' matrice=' + (globalThis.DOMMatrix && globalThis.DOMMatrix.name)));`;
+    const lecture = spawnSync(process.execPath, ['-r', bloqueur, '-e', script], { encoding: 'utf8' });
+    verifier('lecture sans la bibliothèque graphique native, sans avertissement affiché',
+      lecture.status === 0 && lecture.stdout.trim() === `rubriques=${a1.rubriques.length} matrice=MatriceMinimale` && !/Warning/.test(lecture.stderr),
+      { sortie: lecture.stdout, erreurs: lecture.stderr });
   } finally {
     fs.rmSync(racine, { recursive: true, force: true });
   }

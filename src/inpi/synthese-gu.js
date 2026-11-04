@@ -52,10 +52,71 @@ const EN_TETE = /^(synthese de depot au guichet unique|formalite j\d{6,}|page \d
 // 1. Lecture du PDF
 // ---------------------------------------------------------------------------
 
+/**
+ * Matrice 2D minimale. pdf.js en construit une dès son chargement pour le dessin
+ * des pages ; sous Node, il la tient de @napi-rs/canvas (bibliothèque native).
+ * Sans elle, par exemple sur un poste où l'analyse tourne hors du projet, le
+ * chargement échouerait alors que la lecture du texte n'en a pas besoin.
+ */
+class MatriceMinimale {
+  constructor(init) {
+    const m = init && typeof init.length === 'number' && init.length >= 6 ? Array.from(init).slice(0, 6) : [1, 0, 0, 1, 0, 0];
+    [this.a, this.b, this.c, this.d, this.e, this.f] = m;
+  }
+
+  get is2D() { return true; }
+
+  get isIdentity() { return this.a === 1 && this.b === 0 && this.c === 0 && this.d === 1 && this.e === 0 && this.f === 0; }
+
+  multiplySelf(autre) {
+    const m = autre instanceof MatriceMinimale ? autre : new MatriceMinimale(autre);
+    const { a, b, c, d, e, f } = this;
+    Object.assign(this, {
+      a: a * m.a + c * m.b, b: b * m.a + d * m.b, c: a * m.c + c * m.d, d: b * m.c + d * m.d, e: a * m.e + c * m.f + e, f: b * m.e + d * m.f + f,
+    });
+    return this;
+  }
+
+  preMultiplySelf(autre) {
+    const m = new MatriceMinimale(autre instanceof MatriceMinimale ? [autre.a, autre.b, autre.c, autre.d, autre.e, autre.f] : autre).multiplySelf(this);
+    Object.assign(this, { a: m.a, b: m.b, c: m.c, d: m.d, e: m.e, f: m.f });
+    return this;
+  }
+
+  translate(x = 0, y = 0) { return new MatriceMinimale([this.a, this.b, this.c, this.d, this.e, this.f]).multiplySelf([1, 0, 0, 1, x, y]); }
+
+  scale(sx = 1, sy = sx) { return new MatriceMinimale([this.a, this.b, this.c, this.d, this.e, this.f]).multiplySelf([sx, 0, 0, sy, 0, 0]); }
+
+  invertSelf() {
+    const { a, b, c, d, e, f } = this;
+    const det = a * d - b * c;
+    if (!det) return Object.assign(this, { a: NaN, b: NaN, c: NaN, d: NaN, e: NaN, f: NaN });
+    return Object.assign(this, { a: d / det, b: -b / det, c: -c / det, d: a / det, e: (c * f - d * e) / det, f: (b * e - a * f) / det });
+  }
+}
+
+let chargement = null;
+/** pdf.js, chargé une fois ; ses avertissements de chargement (dessin indisponible) sont tus. */
+function pdfjs() {
+  if (!chargement) {
+    if (!globalThis.DOMMatrix) {
+      try { require.resolve('@napi-rs/canvas'); } catch { globalThis.DOMMatrix = MatriceMinimale; }
+    }
+    const originaux = ['warn', 'log'].map((n) => [n, console[n]]);
+    for (const [n, f] of originaux) {
+      console[n] = (...args) => { if (!(typeof args[0] === 'string' && args[0].startsWith('Warning: '))) f(...args); };
+    }
+    chargement = import('pdfjs-dist/legacy/build/pdf.mjs').finally(() => {
+      for (const [n, f] of originaux) console[n] = f;
+    });
+  }
+  return chargement;
+}
+
 /** Texte positionné d'un PDF : { pages, elements: [{ page, x, y, h, w, s }] }. */
 async function elementsPdf(buffer) {
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer), verbosity: 0, isEvalSupported: false }).promise;
+  const bibliotheque = await pdfjs();
+  const doc = await bibliotheque.getDocument({ data: new Uint8Array(buffer), verbosity: 0, isEvalSupported: false }).promise;
   try {
     const elements = [];
     for (let n = 1; n <= doc.numPages; n += 1) {
