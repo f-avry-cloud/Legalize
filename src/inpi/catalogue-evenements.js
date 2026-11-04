@@ -283,7 +283,11 @@ const DETAIL = {
       ['Nouvelle durée', 'BlocDetailPersonneMorale.duree'],
       ['Nouvelle date de clôture', 'BlocDetailPersonneMorale.dateClotureExerciceSocial'],
     ],
-    pieces: [PV, STATUTS_MAJ, ANNONCE],
+    // Synthèses du cabinet 2023-2026 : 76 % des changements de clôture, validés
+    // compris, sont déposés sans annonce. L'avis de constitution (C. com.,
+    // art. R. 210-4) ne mentionne pas la date de clôture : seule une
+    // modification de la durée appelle l'avis de modification (art. R. 210-9).
+    pieces: [PV, STATUTS_MAJ, ['PJ_08', 'si la durée de la société est modifiée ; un changement de la seule date de clôture n’appelle pas d’annonce']],
   },
   '17M': {
     famille: 'identite',
@@ -615,7 +619,8 @@ const DETAIL = {
       ['Date de la décision et de la transmission du patrimoine', 'BlocDetailCessation.dateTransfertPatrimoine'],
       ['Identité de l’associé unique qui reçoit le patrimoine', null],
     ],
-    pieces: [['PJ_108'], ANNONCE],
+    pieces: [['PJ_108'], ANNONCE,
+      ['PJ_188', 'extrait d’immatriculation de l’associé unique qui recueille le patrimoine (joint dans la moitié des TUP validées du cabinet)']],
     note: 'La transmission n’a lieu qu’à l’issue du délai d’opposition des créanciers (30 jours après la publication au Bodacc). Le procès-verbal n’a pas à être enregistré.',
   },
   '41M': {
@@ -630,6 +635,10 @@ const DETAIL = {
       ['PJ_161', 'fusion : projet de fusion'],
       ['PJ_199', 'scission : projet de scission'],
       ['PJ_175'], ['PJ_135'], ['PJ_85'], ['PJ_176'],
+      // Synthèses du cabinet : annonce de la disparition dans les 25 radiations
+      // d'absorbées, Kbis des sociétés participantes dans 96 % d'entre elles.
+      ANNONCE,
+      ['PJ_20', 'extrait Kbis de la société absorbante (ou des sociétés bénéficiaires de la scission)'],
       ['PJ_202', 'lorsqu’un commissaire à la fusion est désigné'],
       ['PJ_203', 'scission : rapport du commissaire'],
     ],

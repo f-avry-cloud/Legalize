@@ -106,7 +106,7 @@ function verifier(nom, condition, detail) {
   console.log('\nOuverture du dossier et lien de dépôt');
   const ouv = await outil('ouvrir_depot_pieces', {
     siren: '552100554', operations: ['10M'],
-    reponses: { commun: { date_decision: '2026-10-01' }, '10M': { nouvelle_denomination: 'NOUVEAU NOM' } },
+    reponses: { commun: { date_decision: '2026-10-01', diffusion_commerciale: false }, '10M': { nouvelle_denomination: 'NOUVEAU NOM' } },
   });
   verifier('dossier ouvert, lien de dépôt rendu', !ouv.erreur && /\/depot\/[\w-]{30,}$/.test(ouv.json.lien_depot), ouv.texte);
   const ref = ouv.json.dossier.reference;
@@ -263,7 +263,7 @@ function verifier(nom, condition, detail) {
   const refM = ouvM.json.dossier.reference;
   const fM = tables.formalites.find((x) => x.reference === refM);
   fM.fiche = ficheSansObjet;
-  const r2 = await outil('renseigner_formalite', { reference: refM, typologie: formeClaude, reponses: { commun: { date_decision: '2026-09-01' } } });
+  const r2 = await outil('renseigner_formalite', { reference: refM, typologie: formeClaude, reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false } } });
   verifier('dossier : Kbis de BD France exigé', r2.json.pieces.obligatoires.some((p) => p.cle === 'PJ_20:m0'), r2.json.pieces);
   verifier('le pré-remplissage du registre ne vaut pas déclaration du changement',
     r2.json.etat.champs_manquants.some((m) => /BD France.*changement à déclarer/.test(m)), r2.json.etat.champs_manquants);
@@ -410,7 +410,7 @@ function verifier(nom, condition, detail) {
     return http('POST', `/depot/${jeton46}/confirmer`, { cle, chemin: t.corps.chemin, nom });
   };
   await outil('renseigner_formalite', { reference: ref46, typologie: { mises_a_jour: [{ nom: 'BD France', motif: 'denomination' }], statuts_modifies: false },
-    reponses: { commun: { date_decision: '2026-09-01' }, _registre: { objet: 'Production et vente de poussins.' } } });
+    reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false }, _registre: { objet: 'Production et vente de poussins.' } } });
   const v46 = (await outil('renseigner_formalite', { reference: ref46 })).json;
   const maj46 = v46.champs.find((g) => g.groupe === 'MAJDIR').champs.find((c) => c.name === 'maj_0').valeur;
   const reg46 = v46.champs.find((g) => g.groupe === '_registre').champs;
@@ -872,7 +872,7 @@ function verifier(nom, condition, detail) {
   const ech = require('../src/connecteur/service').echeanceDe(['28M'], { commun: { date_decision: '2026-09-01' }, '28M': { date_transmission: '2026-10-08' } }, new Date('2026-10-26'));
   verifier('TUP : échéance d’un mois à compter de la transmission', ech.depart === '2026-10-08' && ech.limite === '2026-11-08', ech);
   const corpsTup = construireParcours({ operations: ['28M'], fiche: await rne.entreprise('552100554'), siren: '552100554', typologie: {},
-    reponses: { commun: { date_decision: '2026-09-01' }, '28M': { date_transmission: '2026-10-08',
+    reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false }, '28M': { date_transmission: '2026-10-08',
       associe_unique: { denomination: 'HOLDING MERE', siren: '552032534', forme_juridique_code: '5710', greffe: 'Quimper', adresse: { voie: 'rue de Brest', codePostal: '29000', commune: 'Quimper' } } } }, pieces: [] }).corps;
   const dc = corpsTup.content.personneMorale.detailCessationEntreprise;
   verifier('TUP : dissolution à la décision, transmission et cessation à l’issue du délai d’opposition',
@@ -902,7 +902,7 @@ function verifier(nom, condition, detail) {
   verifier('annonces_bodacc : SIREN ou famille invalides refusés en clair',
     /SIREN invalide/.test((await outil('annonces_bodacc', { siren: '123' })).texte) && /Famille d’annonces inconnue/.test((await outil('annonces_bodacc', { siren: '552100554', famille: 'x' })).texte));
   const ouvT = await outil('ouvrir_depot_pieces', { siren: '552100554', operations: ['28M'],
-    reponses: { commun: { date_decision: '2026-09-01' }, '28M': { date_transmission: '2026-10-05' } } });
+    reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false }, '28M': { date_transmission: '2026-10-05' } } });
   const ctlT = await outil('controler_formalite', { reference: ouvT.json.dossier.reference });
   verifier('TUP : publication de la dissolution au BODACC retrouvée, fin du délai d’opposition calculée, transmission antérieure signalée',
     ctlT.json.alertes.some((a) => /dissolution publiée le 2026-09-10/.test(a) && /expirant le 2026-10-10/.test(a) && /\(2026-10-05\) est antérieure/.test(a)), ctlT.json.alertes);
