@@ -193,6 +193,7 @@ Stockage : `typologie.manuel_champs` (`{"<groupe>.<name>": {"requis": false, "mo
 - `src/routes-formalites-ai.js`, `public/formalites-ai.js` : onglet Suivi Formalités AI.
 - `src/inpi/rne-documents.js`, `src/inpi/texte-pdf.js` : pièces déposées au registre, texte et OCR.
 - Tests : `node scripts/test-connecteur.js`, `node scripts/test-registre.js`, `node scripts/test-categorie-activite.js` (API INPI simulée).
+- Écarts avec la pratique du cabinet relevés dans ses synthèses du guichet : `docs/ecarts-syntheses.md` ; tests `npm run test:pratique`.
 
 ## Formalité sortie du compte mandataire
 

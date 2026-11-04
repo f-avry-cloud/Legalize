@@ -27,6 +27,7 @@
     "test:president-be": "node scripts/test-president-pm-be.js",
     "test:categorie": "node scripts/test-categorie-activite.js",
     "test:syntheses": "node scripts/test-synthese-gu.js",
+    "test:pratique": "node scripts/test-pratique-syntheses.js",
     "corpus:syntheses": "node scripts/corpus-syntheses.js"
   },
   "engines": {

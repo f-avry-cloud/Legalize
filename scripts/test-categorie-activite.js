@@ -66,7 +66,7 @@ function dossier(categorie) {
       c_dirigeants: { entrant_0: PP('ESSAI', 'Anne') },
       c_be: { beneficiaires: [{ ...PP('ESSAI', 'Anne'), modalites: ['3', '1'], pourcentage_capital: 100, pourcentage_votes: 100 }] },
       c_fiscal: { regime_benefices: '114', regime_tva: '311' },
-      c_publication: { journal_publication: 'actu-juridique.fr', date_publication: '2026-10-20', acre: false },
+      c_publication: { journal_publication: 'actu-juridique.fr', date_publication: '2026-10-20', acre: false, diffusion_commerciale: false },
     },
     pieces: [],
   };
@@ -195,13 +195,14 @@ const refus = (fn) => { try { fn(); return null; } catch (e) { return e; } };
   delete sansDefauts.reponses.c_activite.emploi_salaries;
   delete sansDefauts.reponses.c_fiscal;
   delete sansDefauts.reponses.c_publication.acre;
+  delete sansDefauts.reponses.c_publication.diffusion_commerciale;
   const o2 = await outil('ouvrir_depot_pieces', { operations: sansDefauts.operations, typologie: sansDefauts.typologie, reponses: sansDefauts.reponses });
   const aConf = o2.json.dossier.champs.flatMap((g) => g.champs).filter((c) => c.a_confirmer).map((c) => c.name).sort();
-  verifier('défauts non fournis : « à confirmer », pas « remplis »', JSON.stringify(aConf) === JSON.stringify(['acre', 'capital_variable', 'emploi_salaries', 'exercice_activite', 'regime_benefices', 'regime_tva']), aConf);
+  verifier('défauts non fournis : « à confirmer », pas « remplis »', JSON.stringify(aConf) === JSON.stringify(['acre', 'capital_variable', 'diffusion_commerciale', 'emploi_salaries', 'exercice_activite', 'regime_benefices', 'regime_tva']), aConf);
   const ctl2 = await outil('controler_formalite', { reference: o2.json.dossier.reference });
-  verifier('contrôle : un bloquant par défaut à confirmer', ctl2.json.bloquants.filter((b) => /par défaut à confirmer/.test(b)).length === 6, ctl2.json.bloquants);
+  verifier('contrôle : un bloquant par défaut à confirmer', ctl2.json.bloquants.filter((b) => /par défaut à confirmer/.test(b)).length === 7, ctl2.json.bloquants);
   const conf = await outil('renseigner_formalite', { reference: o2.json.dossier.reference,
-    reponses: { c_societe: { capital_variable: false }, c_activite: { exercice_activite: 'P', emploi_salaries: false }, c_fiscal: { regime_benefices: '114', regime_tva: '311' }, c_publication: { acre: false } } });
+    reponses: { c_societe: { capital_variable: false }, c_activite: { exercice_activite: 'P', emploi_salaries: false }, c_fiscal: { regime_benefices: '114', regime_tva: '311' }, c_publication: { acre: false, diffusion_commerciale: false } } });
   verifier('défauts confirmés par l’avocat : plus rien à confirmer', !conf.json.champs.flatMap((g) => g.champs).some((c) => c.a_confirmer));
 
   const codes = await outil('renseigner_formalite', { reference: o2.json.dossier.reference,
