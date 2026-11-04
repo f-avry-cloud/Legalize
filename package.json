@@ -25,7 +25,10 @@
     "test:connecteur": "node scripts/test-connecteur.js",
     "test:registre": "node scripts/test-registre.js",
     "test:president-be": "node scripts/test-president-pm-be.js",
-    "test:categorie": "node scripts/test-categorie-activite.js"
+    "test:categorie": "node scripts/test-categorie-activite.js",
+    "test:syntheses": "node scripts/test-synthese-gu.js",
+    "test:pratique": "node scripts/test-pratique-syntheses.js",
+    "corpus:syntheses": "node scripts/corpus-syntheses.js"
   },
   "engines": {
     "node": ">=20"
@@ -41,6 +44,7 @@
     "express": "^5.2.1",
     "multer": "^2.2.0",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "5.4.296",
     "pizzip": "^3.2.0",
     "tesseract.js": "^7.0.0"
   }

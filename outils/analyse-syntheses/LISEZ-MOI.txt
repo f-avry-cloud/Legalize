@@ -1,0 +1,40 @@
+Analyse des synthèses du Guichet unique (Legalize)
+==================================================
+
+Ce programme lit vos synthèses du Guichet unique sur votre PC et produit des
+statistiques anonymes. Les PDF ne sont pas modifiés et rien n'est envoyé.
+
+1. Node.js doit être installé (version LTS, gratuite) : https://nodejs.org
+   Pour vérifier : touche Windows, tapez « cmd », Entrée, puis « node -v ».
+   Le numéro affiché doit être 20.16 ou plus.
+
+2. Double-cliquez sur LANCER.cmd.
+   Il lit le dossier « Téléchargements\Documents de synthèse pour Legalize ».
+   Pour un autre dossier, glissez-le sur LANCER.cmd.
+   Comptez environ 20 minutes pour 6 000 PDF.
+   Si Windows affiche « Windows a protégé votre ordinateur » :
+   « Informations complémentaires », puis « Exécuter quand même ».
+
+3. À la fin, deux dossiers s'ouvrent dans Téléchargements :
+   « Resultats syntheses Legalize » :
+     rapport.md     la synthèse lisible (ouvrable avec le Bloc-notes)
+     agregats.json  les statistiques complètes
+   « Exemples syntheses a envoyer » :
+     jusqu'à 3 PDF de chaque cas de lecture difficile (PDF écartés, type de
+     formalité introuvable, lecture à vérifier). Ce sont des copies de vos
+     synthèses, avec leurs données personnelles : elles servent à corriger
+     la lecture du programme.
+   Envoyez à Claude rapport.md, agregats.json et, si vous le souhaitez, les
+   PDF d'exemples.
+
+Ce qui sort dans les résultats : la structure des synthèses (titres, libellés,
+présence d'une valeur), les valeurs de liste (type de formalité, forme
+juridique, rôle, journal, catégories d'activité, oui / non), des tranches
+(capital, pourcentages de détention), le mois de dépôt, l'intitulé des pièces.
+Tout élément présent dans moins de 3 formalités est masqué.
+
+Ce qui ne sort jamais dans les résultats : noms, prénoms, dates et lieux de
+naissance, adresses, téléphones, courriels, noms de fichiers, numéros de
+liasse, SIREN et SIRET, dénominations, objet social, observations.
+
+Lecture des PDF : pdf.js (Mozilla, licence Apache 2.0, dans node_modules).

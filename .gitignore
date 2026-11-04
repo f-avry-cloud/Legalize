@@ -7,3 +7,5 @@ templates/generated/
 .env
 .env.*
 !.env.example
+resultats-syntheses/
+analyse-syntheses-legalize.zip

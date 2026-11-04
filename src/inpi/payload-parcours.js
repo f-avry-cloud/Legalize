@@ -425,7 +425,8 @@ function construireCessation(dossier, op) {
     endpoint: 'formalites', methode: 'POST',
     corps: {
       companyName: denomination, referenceMandataire: dossier.reference || undefined, nomDossier: dossier.libelle || undefined,
-      typeFormalite: 'R', typePersonne: TYPES_PERSONNE.MORALE, diffusionINSEE: 'O', diffusionCommerciale: 'O',
+      typeFormalite: 'R', typePersonne: TYPES_PERSONNE.MORALE, diffusionINSEE: 'O',
+      diffusionCommerciale: dossier.reponses?.commun?.diffusion_commerciale === false ? 'N' : 'O',
       indicateurEntreeSortieRegistre: true, siren: nettoyerSiren(dossier.siren) || undefined, content: c,
     },
   };
@@ -575,6 +576,7 @@ function reponsesCreation(dossier) {
     journal_publication: pub.journal_publication,
     date_publication: pub.date_publication,
     acre: pub.acre === true,
+    diffusion_commerciale: pub.diffusion_commerciale,
     beneficiaires_effectifs: (rep.c_be?.beneficiaires || []).map((b) => ({
       personne: b, modalites: b.modalites, pourcentage_capital: b.pourcentage_capital, pourcentage_votes: b.pourcentage_votes,
     })),
@@ -693,7 +695,8 @@ function construireParcours(dossierRecu) {
         typeFormalite: TYPES_FORMALITE.MODIFICATION,
         typePersonne: TYPES_PERSONNE.MORALE,
         diffusionINSEE: 'O',
-        diffusionCommerciale: 'O',
+        // Choix du client (champ commun) ; « Oui » pour un dossier antérieur qui ne le porte pas.
+        diffusionCommerciale: commun.diffusion_commerciale === false ? 'N' : 'O',
         indicateurEntreeSortieRegistre: false,
         siren: nettoyerSiren(dossier.siren) || undefined,
         content,

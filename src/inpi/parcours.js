@@ -148,6 +148,18 @@ const QUESTIONS = {
     aide: 'Changement de tribunal de commerce : double annonce légale et liste des sièges antérieurs.',
     type: 'choix', options: OUI_NON,
   },
+  objet_16M: {
+    libelle: 'Qu’est-ce qui change : la date de clôture, la durée, ou les deux ?',
+    aide: 'Seule une modification de la durée appelle une annonce légale : l’avis de constitution ne mentionne pas la date de clôture.',
+    type: 'choix',
+    options: [['cloture', 'La date de clôture de l’exercice'], ['duree', 'La durée de la société'], ['les_deux', 'Les deux']],
+  },
+  liquidateur_en_place: {
+    libelle: 'Le liquidateur est-il un dirigeant déjà inscrit au registre (gérant ou président en fonction) ?',
+    aide: 'Ses pièces d’identité figurent déjà au dossier du greffe : aucune n’est jointe dans les 60 dissolutions du cabinet de 2023 à 2026.',
+    type: 'choix', options: OUI_NON,
+    si: (t) => (t.entrants || []).some((e) => e?.fonction === 'liquidateur' && e.nature !== 'PM'),
+  },
   capital_sens: {
     libelle: 'Augmentation ou réduction ?',
     type: 'choix', options: [['augmentation', 'Augmentation'], ['reduction', 'Réduction']],
@@ -301,8 +313,12 @@ const REGLES = {
     pieces: { PJ_02: (t) => def(t.statuts_modifies, () => t.statuts_modifies === true) },
     personnes: true,
   },
+  '16M': {
+    questions: ['objet_16M'],
+    pieces: { PJ_08: (t) => def(t.objet_16M, () => t.objet_16M !== 'cloture') },
+  },
   '22M': {
-    questions: ['entrants'],
+    questions: ['entrants', 'liquidateur_en_place'],
     personnes: true,
   },
   '54PMF': {
@@ -479,8 +495,15 @@ function resoudre(operations, typologie = {}, fiche = {}, rep = {}) {
       for (const [i, e] of (t.entrants || []).entries()) {
         if (!e || !e.nom) continue;
         if (op === '22M' && e.fonction !== 'liquidateur') continue;
+        // Liquidateur déjà dirigeant inscrit : ses pièces sont au dossier du
+        // greffe ; elles restent proposées, l'avocat apprécie.
+        const dejaInscrit = op === '22M' && e.nature !== 'PM' && t.liquidateur_en_place === true;
         for (const code of piecesEntrant(e, forme)) {
-          ajouter(`${code}:e${i}`, code, 'obligatoire', op, { personne: e.nom });
+          if (dejaInscrit) {
+            ajouter(`${code}:e${i}`, code, 'a_preciser', op, { personne: e.nom, condition: 'liquidateur déjà inscrit au registre comme dirigeant : pièce en principe inutile', question: 'liquidateur_en_place' });
+          } else {
+            ajouter(`${code}:e${i}`, code, 'obligatoire', op, { personne: e.nom });
+          }
         }
         // Ressortissant d'un État hors Union européenne : titre de séjour,
         // s'il réside en France. Seul l'intéressé sait s'il y réside.
@@ -612,6 +635,24 @@ function controlesDates(ops, rep = {}) {
 /* ------------------------------------------------------------------ champs */
 
 /**
+ * Diffusion commerciale des données du registre (réutilisation par des tiers).
+ * Choix du client, transmis à chaque formalité : le cabinet répond « Non »
+ * dans 91 % des créations de 2023 à 2026 (synthèses du guichet). Proposé à
+ * « Non », à confirmer par l'avocat.
+ */
+const DIFFUSION_COMMERCIALE = {
+  name: 'diffusion_commerciale', label: 'Diffusion commerciale des données (réutilisation par des tiers)', type: 'ouinon', defaut: false,
+  aide: 'Choix du client. Pratique du cabinet : « Non » dans 91 % des créations.',
+};
+
+/** Journal et date de parution d'une annonce que le portail demande en rubrique. */
+const PUBLICATION = (objet) => [
+  { name: 'journal_publication', label: `Journal d’annonces légales (publicité ${objet})`, type: 'journal', requis: true,
+    aide: 'Choisissez dans la liste du guichet ; un titre absent sera déclaré en « Autre ».' },
+  { name: 'date_publication', label: `Date de parution (publicité ${objet})`, type: 'date', requis: true },
+];
+
+/**
  * Les informations à saisir : uniquement celles qui changent. Chaque champ
  * porte la valeur actuelle du registre quand elle existe, pour comparaison.
  * Les clés reprennent celles des questionnaires existants, afin que le dépôt
@@ -628,7 +669,8 @@ function champs(ops, t, fiche, rep = {}) {
       champs: [{ name: 'date_decision', type: 'date', requis: true,
         // Une mise à jour (nouvelle dénomination d'un dirigeant…) ne suit pas une décision de la société.
         label: modifs.every((c) => c === 'MAJDIR') ? 'Date d’effet du changement (par exemple, date de la nouvelle dénomination)'
-          : 'Date de la décision (PV ou décision de l’associé unique)' }],
+          : 'Date de la décision (PV ou décision de l’associé unique)' },
+      DIFFUSION_COMMERCIALE],
     });
   }
   const adresse = fiche.adresse?.texte || '';
@@ -647,9 +689,17 @@ function champs(ops, t, fiche, rep = {}) {
       { name: 'nouvelle_duree', label: 'Nouvelle durée (années), si elle change', type: 'number', actuel: fiche.duree ? `${fiche.duree} ans` : '' }],
     '17M': [{ name: 'associe_unique', label: 'La société a désormais un associé unique', type: 'ouinon', requis: true }],
     '20M': [{ name: 'date_debut_activite', label: 'Nouvelle date de début d’activité', type: 'date', requis: true, actuel: fiche.date_debut_activite }],
+    // Rubriques que le portail demande pour une dissolution (synthèses du cabinet :
+    // poursuite d'activité et publicité dans 98 à 100 % des dossiers ; 19 des 60
+    // dissolutions sont « avec poursuite d'activité »).
     '22M': [{ name: 'lieu_liquidation', label: 'Siège de la liquidation', type: 'choix', options: [['S', 'Au siège social'], ['L', 'À l’adresse du liquidateur'], ['A', 'À une autre adresse']], defaut: 'S' },
-      { name: 'adresse_liquidation', label: 'Adresse de liquidation (si autre)', type: 'adresse' }],
-    '42M': [{ name: 'date_cloture_liquidation', label: 'Date de clôture de la liquidation', type: 'date', requis: true }],
+      { name: 'adresse_liquidation', label: 'Adresse de liquidation (si autre)', type: 'adresse' },
+      { name: 'poursuite_activite', label: 'L’activité se poursuit pendant la liquidation', type: 'ouinon', requis: true },
+      { name: 'date_cessation_activite', label: 'Date de cessation d’activité, si l’activité ne se poursuit pas', type: 'date',
+        aide: 'En général la date de la dissolution ; elle fixe aussi la fermeture des établissements.' },
+      ...PUBLICATION('de la dissolution')],
+    '42M': [{ name: 'date_cloture_liquidation', label: 'Date de clôture de la liquidation', type: 'date', requis: true },
+      ...PUBLICATION('de la clôture de la liquidation')],
     '18M': [{ name: 'ess', label: 'La société a la qualité d’entreprise de l’ESS', type: 'ouinon', requis: true }],
     '19M': [{ name: 'nature_gerance', label: 'Nouvelle nature de la gérance', type: 'choix', requis: true, options: NATURES_GERANCE }],
     '29M': [{ name: 'societe_mission', label: 'La société a la qualité de société à mission', type: 'ouinon', requis: true }],
@@ -989,6 +1039,7 @@ function operationsProposees() {
 }
 
 module.exports = {
+  DIFFUSION_COMMERCIALE,
   OPERATIONS, QUESTIONS, REGLES, FONCTIONS, MOTIFS_DEPART, CHANGEMENTS, REVALIDES, infoOperation, pouvoirActuel, ficheOp, resoudre,
   operationsProposees, nomOperation, piecesEntrant, evenementAttendu, normaliserTypologie, cleRejet, champVise,
 };

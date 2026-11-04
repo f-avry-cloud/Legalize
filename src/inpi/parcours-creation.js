@@ -230,6 +230,8 @@ function champsCreation(op, t, rep = {}) {
         aide: 'Choisissez dans la liste du guichet ; un titre absent sera déclaré en « Autre ».' },
       { name: 'date_publication', label: 'Date de parution', type: 'date', requis: true },
       { name: 'acre', label: 'Demande d’ACRE (aide aux créateurs et repreneurs)', type: 'ouinon', defaut: false },
+      { name: 'diffusion_commerciale', label: 'Diffusion commerciale des données (réutilisation par des tiers)', type: 'ouinon', defaut: false,
+        aide: 'Choix du client. Pratique du cabinet : « Non » dans 91 % des créations.' },
     ],
   });
   return groupes;
