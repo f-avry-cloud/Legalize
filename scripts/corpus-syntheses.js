@@ -23,7 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { lireSynthese, anonymiser, empreintesContenu, rubriquesModifiees, agreger, rapport } = require('../src/inpi/synthese-gu');
+const { lireSynthese, anonymiser, empreintesContenu, rubriquesModifiees, retenirValeursFrequentes, agreger, rapport } = require('../src/inpi/synthese-gu');
 
 function lireOptions(argv) {
   const o = { dossier: null, sortie: path.resolve('resultats-syntheses'), limite: Infinity, fiches: true };
@@ -113,6 +113,9 @@ async function main() {
     fiches.push({ ...g.meilleure.fiche, versions: { nombre: v.length, rubriques_modifiees: [...modifiees].sort() } });
   }
 
+  // Valeurs des rubriques inconnues : ne sortent que si elles reviennent dans au moins
+  // 20 formalités ; les autres sont effacées avant toute écriture.
+  retenirValeursFrequentes(fiches);
   const agregats = agreger(fiches, { lus: fichiers.length, ignores, erreurs });
   fs.mkdirSync(o.sortie, { recursive: true });
   fs.writeFileSync(path.join(o.sortie, 'agregats.json'), `${JSON.stringify(agregats, null, 1)}\n`);

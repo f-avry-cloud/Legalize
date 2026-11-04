@@ -36,7 +36,11 @@ const X_VAL = 174.6;
 const CORPS = 8.4;
 const INTERLIGNE = 10.2;
 
-function composer({ liasse, nature = 'principale', date, contenu }) {
+/** Modèle du guichet observé ; une variante (colonne, tailles) simule une autre version du modèle. */
+const MODELE = { xVal: X_VAL, corps: CORPS, titre1: 10.8, titre2: 9.6, interligne: INTERLIGNE };
+
+function composer({ liasse, nature = 'principale', date, contenu }, modele = MODELE) {
+  const { xVal, corps, titre1, titre2, interligne } = modele;
   const elements = [];
   let page = 1;
   let y = 735;
@@ -44,20 +48,21 @@ function composer({ liasse, nature = 'principale', date, contenu }) {
     elements.push({ page, x, y: yy, h, w: 0, s: texte });
     if (gras) elements.push({ page, x: x - 0.3, y: yy, h, w: 0, s: texte });
   };
-  pose(200, 805, 10.2, 'GUICHET UNIQUE DES ENTREPRISES');
-  pose(230, 790, 10.2, nature === 'beneficiaires' ? 'Synthèse de dépôt des bénéficiaires effectifs' : 'Synthèse de dépôt', true);
-  pose(60, 775, 10.2, 'Ce document récapitule les informations contenues dans la formalité');
-  pose(400, 775, 10.2, liasse, true);
-  pose(470, 775, 10.2, 'concernant la société');
-  pose(60, 763, 10.2, 'EXEMPLE FICTIF', true);
-  pose(140, 763, 10.2, 'à la');
-  pose(160, 763, 10.2, 'date du');
-  pose(200, 763, 10.2, date, true);
+  const intro = corps + 1.8;
+  pose(200, 805, intro, 'GUICHET UNIQUE DES ENTREPRISES');
+  pose(230, 790, intro, nature === 'beneficiaires' ? 'Synthèse de dépôt des bénéficiaires effectifs' : 'Synthèse de dépôt', true);
+  pose(60, 775, intro, 'Ce document récapitule les informations contenues dans la formalité');
+  pose(400, 775, intro, liasse, true);
+  pose(470, 775, intro, 'concernant la société');
+  pose(60, 763, intro, 'EXEMPLE FICTIF', true);
+  pose(140, 763, intro, 'à la');
+  pose(160, 763, intro, 'date du');
+  pose(200, 763, intro, date, true);
   for (const b of contenu) {
     if (b.saut) { page += 1; y = 790; continue; }
     if (b.titre) {
       // Gras du générateur : la ligne entière est tracée, puis retracée 0,3 pt plus à gauche.
-      const h = b.niveau === 2 ? 9.6 : 10.8;
+      const h = b.niveau === 2 ? titre2 : titre1;
       for (const decalage of [0, -0.3]) {
         let x = X_LIB + decalage;
         for (const m of [].concat(b.titre)) { pose(x, y, h, m); x += m.length * 5.5 + 3; }
@@ -65,21 +70,21 @@ function composer({ liasse, nature = 'principale', date, contenu }) {
       y -= 22;
       continue;
     }
-    if (b.mention) { pose(X_LIB, y, CORPS, b.mention, true); y -= 18; continue; }
+    if (b.mention) { pose(X_LIB, y, corps, b.mention, true); y -= 18; continue; }
     const lib = [].concat(b.libelle);
     const val = [].concat(b.valeur ?? []).filter((v) => v !== '');
     const n = Math.max(lib.length, val.length, 1);
-    const bas = y - (n - 1) * INTERLIGNE;
-    lib.forEach((t, i) => pose(X_LIB, bas + (lib.length - 1 - i) * INTERLIGNE, CORPS, t));
-    pose(X_LIB + lib[lib.length - 1].length * 4.2 + 3, bas, CORPS, ':');
-    val.forEach((t, i) => pose(X_VAL, bas + (val.length - 1 - i) * INTERLIGNE, CORPS, t));
+    const bas = y - (n - 1) * interligne;
+    lib.forEach((t, i) => pose(X_LIB, bas + (lib.length - 1 - i) * interligne, corps, t));
+    pose(X_LIB + lib[lib.length - 1].length * 4.2 + 3, bas, corps, ':');
+    val.forEach((t, i) => pose(xVal, bas + (val.length - 1 - i) * interligne, corps, t));
     y = bas - 20;
     if (y < 60) throw new Error(`page ${page} trop pleine : ajouter un saut de page`);
   }
   for (let p = 1; p <= page; p += 1) {
-    elements.push({ page: p, x: X_LIB, y: 815, h: CORPS, w: 0, s: 'Synthèse de dépôt au Guichet Unique' });
-    elements.push({ page: p, x: 448.3, y: 815, h: CORPS, w: 0, s: `Formalité ${liasse}` });
-    elements.push({ page: p, x: 448.3, y: 25, h: 8, w: 0, s: `Page ${p}/${page}` });
+    elements.push({ page: p, x: X_LIB, y: 815, h: corps, w: 0, s: 'Synthèse de dépôt au Guichet Unique' });
+    elements.push({ page: p, x: 448.3, y: 815, h: corps, w: 0, s: `Formalité ${liasse}` });
+    elements.push({ page: p, x: 448.3, y: 25, h: corps - 0.4, w: 0, s: `Page ${p}/${page}` });
   }
   return elements;
 }
@@ -133,7 +138,7 @@ const resume = ({ type, forme, depot, liasse }) => [
 ];
 
 /** Création de SAS ; la version 2 est signée, payée, et porte un capital différent. */
-function creation(version) {
+function creation(version, modele = MODELE) {
   const v2 = version === 2;
   return composer({
     liasse: L1,
@@ -191,7 +196,7 @@ function creation(version) {
       { libelle: 'Observations', valeur: ["Merci d'adresser le Kbis à Maître DUPONT,", 'durand@exemple.test'] },
       ...(v2 ? [{ libelle: 'Diffusion INSEE', valeur: 'Oui' }] : []),
     ],
-  });
+  }, modele);
 }
 
 function beneficiaires() {
@@ -237,6 +242,8 @@ function modification() {
       { titre: 'Pièces jointes' },
       { libelle: ['Intitulé de la pièce jointe', 'demandée'], valeur: "Attestation de parution de l'avis de modification" },
       { libelle: 'Nom du fichier', valeur: 'jal_dupont.pdf' },
+      { libelle: ['Intitulé de la pièce jointe', 'demandée'], valeur: '' },
+      { libelle: 'Nom du fichier', valeur: 'RECEPISSE_ESSAI.pdf' },
     ],
   });
 }
@@ -275,6 +282,19 @@ async function main() {
   verifier('phrase en gras : mention, pas début de libellé', c.mentions.some((m) => m.texte === MENTION) && rubrique(c, 'Nombre de pouvoirs définis')?.valeur === '0', { mentions: c.mentions, r: c.rubriques.map((r) => r.libelle) });
 
   // -------------------------------------------------------------------------
+  console.log('Indépendance envers la version du modèle du guichet');
+  verifier('mise en page mesurée : texte 8,4 pt, colonne des valeurs à 174,5 pt, aucune ligne hors rubrique',
+    a1.lecture.corps === 8.4 && a1.lecture.colonne_valeur === 174.5 && a1.lecture.orphelines === 0 && a1.lecture.sans_libelle === 0 && a1.lecture.rubriques === a1.rubriques.length, a1.lecture);
+  const VARIANTE = { xVal: 210, corps: 9, titre1: 11.4, titre2: 10.2, interligne: 11 };
+  const variante = s.analyserElements(creation(1, VARIANTE));
+  const essentiel = (a) => JSON.stringify({ r: a.rubriques.map((r) => [r.bloc, r.libelle, r.valeur]), t: a.titres.map((t) => [t.niveau, t.texte]), m: a.mentions.map((m) => m.texte) });
+  verifier('autre version du modèle (colonne à 210 pt, texte 9 pt, titres 10,2 et 11,4 pt) : même lecture', essentiel(variante) === essentiel(a1) && variante.lecture.colonne_valeur === 210 && variante.lecture.corps === 9,
+    { lecture: variante.lecture, rubriques: variante.rubriques.slice(0, 4) });
+  verifier('lecture douteuse signalée : colonne inhabituelle, ligne hors rubrique, trop peu de rubriques',
+    !s.lectureDouteuse(a1.lecture, 174.5) && s.lectureDouteuse(variante.lecture, 174.5)
+    && s.lectureDouteuse({ ...a1.lecture, orphelines: 1 }, 174.5) && s.lectureDouteuse({ ...a1.lecture, rubriques: 4 }, 174.5));
+
+  // -------------------------------------------------------------------------
   console.log('Anonymisation');
   const sel = 'sel-de-test';
   const f1 = s.anonymiser(a1, { sel });
@@ -306,6 +326,27 @@ async function main() {
   verifier('titre nominatif masqué', s.titrePublic('DUPONT Jean') === '[titre masqué]' && s.titrePublic("Description de l'activité numéro 2") === "Description de l'activité numéro N");
 
   // -------------------------------------------------------------------------
+  console.log('Règle de fréquence pour les rubriques inconnues');
+  const analyseCessation = (i, motif) => ({
+    liasse: `J1000000${String(i).padStart(4, '0')}`, nature: 'principale', date_synthese: '2024-03-01', titres: [], mentions: [], lecture: null,
+    rubriques: [
+      { section: 'Résumé de votre formalité', bloc: 'Résumé de votre formalité', libelle: 'Type de formalité', valeur: 'Cessation' },
+      { section: 'Cessation', bloc: 'Cessation', libelle: 'Motif de la cessation', valeur: motif },
+      { section: 'Cessation', bloc: 'Cessation', libelle: 'Nom du déclarant', valeur: 'DURAND' },
+      { section: 'Cessation', bloc: 'Cessation', libelle: 'Genre', valeur: 'Masculin' },
+      { section: 'Cessation', bloc: 'Cessation', libelle: 'Destination du fonds', valeur: `vente au repreneur ${i}` },
+    ],
+  });
+  const fichesCessation = Array.from({ length: 25 }, (_, i) => s.anonymiser(analyseCessation(i, i === 0 ? 'Motif très rare' : 'Dissolution anticipée'), { sel }));
+  const rendues = s.retenirValeursFrequentes(fichesCessation, { seuil: 20 });
+  const motifs = fichesCessation.map((f) => f.champs.find((x) => x.cle === 'Cessation › Motif de la cessation'));
+  verifier('valeur inconnue présente dans 24 formalités (seuil 20) : rendue ; valeur rare : présence seulement',
+    motifs.filter((m) => m.valeur === 'Dissolution anticipée').length === 24 && motifs[0].valeur === undefined && motifs[0].renseigne === true && rendues === 24, motifs.slice(0, 2));
+  verifier('jamais de valeur pour un nom ou le genre, même présents partout ; valeur unique effacée ; aucune candidate laissée',
+    !/DURAND|Masculin|repreneur|_candidat|Motif très rare/.test(JSON.stringify(fichesCessation)));
+  verifier('seuil de fréquence par défaut : 20 formalités', s.SEUIL_FREQUENCE === 20);
+
+  // -------------------------------------------------------------------------
   console.log('Versions');
   const modifiees = s.rubriquesModifiees(s.empreintesContenu(a1), s.empreintesContenu(a2));
   verifier('seule la rubrique de contenu modifiée est relevée (pas la signature, le paiement ni les pièces)', JSON.stringify(modifiees) === JSON.stringify(["Identité de l'entreprise › Montant capital"]), modifiees);
@@ -330,9 +371,13 @@ async function main() {
   verifier('versions : contenu modifié et rubrique comptés', cr.versions.plusieurs_versions === 1 && cr.versions.contenu_modifie === 1
     && cr.versions.rubriques_modifiees["Identité de l'entreprise › Montant capital"] === 1);
   verifier('répartition par type et combinaisons de modifications', ag.repartition.type['Création'] === 1 && ag.repartition.type.Modification === 1 && Object.keys(ag.combinaisons).length === 1);
+  verifier('pièce du déposant sans intitulé comptée à part', ag.strates.Modification.pieces_sans_intitule_par_dossier === 1 && ag.strates.Modification.pieces.length === 1, ag.strates.Modification.pieces);
+  verifier('qualité de la lecture par année et par type', ag.lecture.colonne_usuelle === 174.5 && ag.lecture.par_annee['2024']?.documents === 3
+    && ag.lecture.par_annee['2024'].a_verifier === 0 && ag.lecture.par_type['Création']?.documents === 1, ag.lecture);
   verifier('seuils de fiabilité (60 fiable, 30 indicatif)', s.fiabilite(60) === 'fiable' && s.fiabilite(59) === 'indicatif' && s.fiabilite(30) === 'indicatif' && s.fiabilite(29) === 'insuffisant');
   const md = s.rapport(ag);
-  verifier('rapport lisible, sans donnée personnelle', md.startsWith('# Corpus des synthèses du Guichet unique') && md.includes('## Fiabilité par strate') && fuites(md).length === 0, fuites(md));
+  verifier('rapport lisible, sans donnée personnelle', md.startsWith('# Corpus des synthèses du Guichet unique') && md.includes('## Fiabilité par strate')
+    && md.includes('## Qualité de la lecture') && fuites(md).length === 0, fuites(md));
 
   // -------------------------------------------------------------------------
   console.log('Lecture d’un PDF de bout en bout');
@@ -367,7 +412,8 @@ async function main() {
       && creationFiche.signe === true && creationFiche.numero_national === true
       && JSON.stringify(creationFiche.versions.rubriques_modifiees) === JSON.stringify(["Identité de l'entreprise › Montant capital"]), creationFiche?.versions);
     const ecrits = ['agregats.json', 'rapport.md', 'fiches.jsonl'].map((f) => fs.readFileSync(path.join(sortie, f), 'utf8')).join('\n');
-    verifier('aucune donnée personnelle, aucun nom de fichier dans les résultats', fuites(ecrits).length === 0 && !/casse|creation_v|\.pdf/i.test(ecrits.replace(/Document_de_Synthese/g, '')), fuites(ecrits));
+    verifier('aucune donnée personnelle, aucun nom de fichier, aucune valeur candidate dans les résultats',
+      fuites(ecrits).length === 0 && !/casse|creation_v|RECEPISSE|\.pdf|_candidat/i.test(ecrits.replace(/Document_de_Synthese/g, '')), fuites(ecrits));
 
     // Poste sans la bibliothèque graphique native de pdf.js (analyse lancée hors du projet, sous Windows) :
     // la lecture du texte doit fonctionner quand même, sans avertissement à l'écran.

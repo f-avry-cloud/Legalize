@@ -74,6 +74,18 @@ Ne sortent jamais :
 - les numéros de liasse, SIREN et SIRET, la dénomination ;
 - l'objet social, les observations et la référence client.
 
+Le programme ne connaît d'avance que les rubriques des formalités déjà vues. Pour
+une rubrique qu'il ne connaît pas, la valeur ne sort que si elle figure dans au
+moins 20 formalités distinctes : c'est alors une valeur de liste (motif,
+nature, option…), non une donnée propre à un dossier. Une valeur qui reste
+sous ce seuil est réduite à sa présence.
+
+Cette règle ne s'applique jamais aux libellés qui désignent :
+- une personne : nom, prénom, naissance, genre, nationalité ;
+- des coordonnées : adresse, courriel, téléphone ;
+- une date, un numéro, un montant ;
+- un texte libre : objet, description, observations.
+
 Une formalité n'est désignée que par un pseudonyme. Il est tiré d'une clé
 aléatoire propre à chaque exécution, qui n'est écrite nulle part. Les fichiers
 illisibles sont listés à l'écran, jamais dans les résultats.
@@ -92,6 +104,21 @@ Chaque strate porte une mention de fiabilité :
 | 60 ou plus | fiable : tout ce qui figure dans au moins 5 % des dossiers est repéré |
 | 30 à 59 | indicatif |
 | moins de 30 | insuffisant |
+
+La mise en page est mesurée sur chaque document, et non fixée d'après les
+exemples. Le programme mesure la taille du texte courant, en déduit les seuils
+des titres, puis repère la colonne des valeurs.
+
+La section « Qualité de la lecture » donne, par année et par type de
+formalité, la part des documents « à vérifier ». Un document est à vérifier
+dans l'un de ces cas :
+- il compte moins de 10 rubriques ;
+- une rubrique n'a pas de libellé ;
+- une ligne est restée hors rubrique ;
+- sa colonne des valeurs est inhabituelle.
+
+Une autre version du modèle du guichet apparaîtrait ainsi au lieu de fausser
+les statistiques en silence.
 
 Les « rubriques modifiées » d'une version à l'autre excluent ce qui relève du
 dépôt lui-même : signature, paiement, pièces jointes et observations. Il reste

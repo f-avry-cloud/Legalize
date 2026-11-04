@@ -193,6 +193,38 @@ function dateFr(texte) {
  *   de niveau 1, bloc = dernier titre, quel que soit son niveau) ;
  *   mentions : phrases hors rubrique (« La modification effectuée ne porte pas… »).
  */
+/** Valeur la plus fréquente d'une liste (null si vide). */
+function mode(valeurs) {
+  const compte = new Map();
+  let meilleure = null;
+  let n = 0;
+  for (const v of valeurs) {
+    const k = (compte.get(v) || 0) + 1;
+    compte.set(v, k);
+    if (k > n) { meilleure = v; n = k; }
+  }
+  return meilleure;
+}
+
+/**
+ * Mise en page mesurée sur le document lui-même, pour ne pas dépendre d'une version
+ * du modèle du guichet : taille du texte courant (la plus fréquente), seuils des
+ * titres relatifs à cette taille, colonne des valeurs (abscisse la plus fréquente
+ * du premier morceau placé à droite des deux-points).
+ */
+function mesurer(corps) {
+  const taille = mode(corps.map((it) => Math.round(it.h * 10) / 10)) || 8.4;
+  const titre = taille + (HAUTEUR_TITRE - 8.4);
+  const titre1 = taille + (HAUTEUR_TITRE_1 - 8.4);
+  const xs = [];
+  for (const l of lignes(corps.filter((it) => it.h < titre))) {
+    const i = l.items.findIndex((it) => /:$/.test(it.s));
+    if (i >= 0 && l.items[i + 1]) xs.push(Math.round(l.items[i + 1].x * 2) / 2);
+  }
+  const xValeur = mode(xs);
+  return { taille, titre, titre1, xValeur, colonne: xValeur ? xValeur - 4 : COLONNE_VALEUR };
+}
+
 function analyserElements(elements) {
   const items = dedoublonner((elements || []).filter((e) => e && e.s));
   let liasse = null;
@@ -203,11 +235,12 @@ function analyserElements(elements) {
     if (EN_TETE.test(cle(it.s))) continue;
     corps.push(it);
   }
+  const mise = mesurer(corps);
 
   // Zone de titre (page 1) : au-dessus du premier titre « Résumé de votre formalité »,
   // ou à défaut au-dessus du premier texte courant.
-  const resume = corps.find((it) => it.page === 1 && it.h >= HAUTEUR_TITRE && cle(it.s) === 'resume de votre formalite');
-  const premierCourant = corps.filter((it) => it.page === 1 && it.h < HAUTEUR_TITRE).sort((a, b) => b.y - a.y)[0];
+  const resume = corps.find((it) => it.page === 1 && it.h >= mise.titre && cle(it.s) === 'resume de votre formalite');
+  const premierCourant = corps.filter((it) => it.page === 1 && it.h < mise.titre).sort((a, b) => b.y - a.y)[0];
   const limite = resume ? resume.y + TOLERANCE_LIGNE : (premierCourant ? premierCourant.y + TOLERANCE_LIGNE : Infinity);
   const zoneTitre = corps.filter((it) => it.page === 1 && it.y > limite);
   const reste = corps.filter((it) => !(it.page === 1 && it.y > limite));
@@ -219,24 +252,28 @@ function analyserElements(elements) {
   const mentions = [];
   let section = null;
   let bloc = null;
+  let orphelines = 0; // lignes restées sans deux-points : signe d'une mise en page mal lue
   let attente = { libelle: [], valeur: [], textes: [], page: null };
   const vider = () => {
-    if (attente.textes.length) mentions.push({ section, bloc, texte: norm(attente.textes.join(' ')), page: attente.page });
+    if (attente.textes.length) {
+      mentions.push({ section, bloc, texte: norm(attente.textes.join(' ')), page: attente.page });
+      orphelines += attente.textes.length;
+    }
     attente = { libelle: [], valeur: [], textes: [], page: null };
   };
 
   for (const l of lignes(reste)) {
-    if (l.items.some((it) => it.h >= HAUTEUR_TITRE)) {
+    if (l.items.some((it) => it.h >= mise.titre)) {
       vider();
       const texte = joindre(l.items);
-      const niveau = Math.max(...l.items.map((it) => it.h)) >= HAUTEUR_TITRE_1 ? 1 : 2;
+      const niveau = Math.max(...l.items.map((it) => it.h)) >= mise.titre1 ? 1 : 2;
       if (niveau === 1) section = texte;
       bloc = texte;
       titres.push({ niveau, texte, page: l.page });
       continue;
     }
-    const gauche = l.items.filter((it) => it.x < COLONNE_VALEUR);
-    const droite = l.items.filter((it) => it.x >= COLONNE_VALEUR);
+    const gauche = l.items.filter((it) => it.x < mise.colonne);
+    const droite = l.items.filter((it) => it.x >= mise.colonne);
     const deuxPoints = gauche.some((it) => /:$/.test(it.s));
     // Phrase en gras sans deux-points : mention, pas un début de libellé.
     if (!deuxPoints && l.items.every((it) => it.gras)) {
@@ -264,6 +301,13 @@ function analyserElements(elements) {
     titres,
     rubriques,
     mentions,
+    lecture: {
+      corps: mise.taille,
+      colonne_valeur: mise.xValeur,
+      rubriques: rubriques.length,
+      sans_libelle: rubriques.filter((r) => !r.libelle).length,
+      orphelines,
+    },
   };
 }
 
@@ -370,6 +414,16 @@ function tranchePourcentage(v) {
 
 const SUSPECT = /@|\d{2}\/\d{2}\/\d{4}|\d{6,}|\+\d{2}\s?\d/;
 
+/**
+ * Libellés dont la valeur ne sort jamais, même fréquente : identité, coordonnées,
+ * dates, numéros, textes libres (le nom du signataire revient dans des centaines
+ * de synthèses : la fréquence seule ne suffit pas).
+ */
+const LIBELLES_PERSONNELS = /\bnom\b|prenom|pseudonyme|naissance|genre|sexe|nationalite|matrimonial|conjoint|adresse|courriel|mail\b|telephon|indicatif|signataire|declarant|denomination|enseigne|sigle|reference|siren|siret|\bnic\b|numero|n° |identifi|securite sociale|observation|objet|description|precision|commune|code postal|voie|ville|lieu|date|montant|fichier|intitule/;
+
+/** Seuil de la règle de fréquence : une valeur sort si elle figure dans au moins 20 formalités distinctes. */
+const SEUIL_FREQUENCE = 20;
+
 /** Ce qui peut sortir d'une valeur : la valeur elle-même (liste, oui / non, tranche) ou sa seule présence. */
 function valeurPublique(libelle, valeur) {
   const k = cle(libelle);
@@ -384,7 +438,41 @@ function valeurPublique(libelle, valeur) {
   if (k.startsWith('detention') && /%$/.test(v)) return { valeur: tranchePourcentage(v) };
   if (k.startsWith('nombre de') && /^\d+$/.test(v)) return { valeur: v };
   if (VALEURS_LISTE.has(k)) return SUSPECT.test(v) ? { renseigne: true, masquee: true } : { valeur: v.slice(0, 200) };
+  // Libellé inconnu : la valeur reste en mémoire comme candidate ; elle ne sortira que si
+  // elle revient dans assez de formalités pour être une valeur de liste (retenirValeursFrequentes).
+  if (!LIBELLES_PERSONNELS.test(k) && v.length <= 80 && !SUSPECT.test(v) && !semblePersonnel(v)) return { renseigne: true, _candidat: v };
   return { renseigne: true };
+}
+
+/**
+ * Règle de fréquence, sur l'ensemble du corpus : la valeur candidate d'une rubrique
+ * sort si elle figure dans au moins `seuil` formalités distinctes ; sinon seule sa
+ * présence reste. Les candidates sont toujours effacées. Modifie les fiches.
+ * @returns {number} nombre de valeurs rendues
+ */
+function retenirValeursFrequentes(fiches, { seuil = SEUIL_FREQUENCE } = {}) {
+  const docs = new Map();
+  fiches.forEach((f, i) => {
+    for (const c of f.champs) {
+      if (c._candidat === undefined) continue;
+      const k = `${c.cle}\u0000${c._candidat}`;
+      if (!docs.has(k)) docs.set(k, new Set());
+      docs.get(k).add(f.doc || `#${i}`);
+    }
+  });
+  let rendues = 0;
+  for (const f of fiches) {
+    for (const c of f.champs) {
+      if (c._candidat === undefined) continue;
+      if (docs.get(`${c.cle}\u0000${c._candidat}`).size >= seuil) {
+        c.valeur = c._candidat;
+        delete c.renseigne;
+        rendues += 1;
+      }
+      delete c._candidat;
+    }
+  }
+  return rendues;
 }
 
 const premiere = (rubriques, libelle) => rubriques.find((r) => cle(r.libelle) === libelle)?.valeur || null;
@@ -450,7 +538,15 @@ function anonymiser(analyse, { sel }) {
       origine: originePiece(p.fichier),
     })),
     mentions: analyse.mentions.map((m) => (semblePersonnel(m.texte) ? '[mention masquée]' : m.texte.slice(0, 300))),
+    lecture: analyse.lecture ? { ...analyse.lecture } : null,
   };
+}
+
+/** Lecture à vérifier : mise en page inhabituelle ou lignes restées sans rubrique. */
+function lectureDouteuse(lecture, colonneUsuelle) {
+  if (!lecture) return true;
+  return lecture.rubriques < 10 || lecture.sans_libelle > 0 || lecture.orphelines > 0
+    || (colonneUsuelle !== null && lecture.colonne_valeur !== null && Math.abs(lecture.colonne_valeur - colonneUsuelle) > 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -488,13 +584,28 @@ function agreger(documents, { lus = documents.length, ignores = 0, erreurs = {} 
   const combinaisons = {};
   const accus = new Map();
   const accu = (nom) => {
-    if (!accus.has(nom)) accus.set(nom, { n: 0, champs: new Map(), pieces: {}, piecesDeposees: 0, plusieurs: 0, modifiees: 0, rubriques: {} });
+    if (!accus.has(nom)) accus.set(nom, { n: 0, champs: new Map(), pieces: {}, piecesDeposees: 0, sansIntitule: 0, plusieurs: 0, modifiees: 0, rubriques: {} });
     return accus.get(nom);
+  };
+
+  // Qualité de la lecture, par année et par type : une version différente du modèle
+  // du guichet se verrait ici (colonne des valeurs déplacée, lignes hors rubrique).
+  const colonneUsuelle = mode(documents.map((d) => d.lecture?.colonne_valeur).filter((x) => x !== null && x !== undefined));
+  const lecture = { colonne_usuelle: colonneUsuelle, colonnes: {}, corps: {}, par_annee: {}, par_type: {} };
+  const noter = (groupe, k, d) => {
+    if (!groupe[k]) groupe[k] = { documents: 0, a_verifier: 0, rubriques: [] };
+    groupe[k].documents += 1;
+    if (lectureDouteuse(d.lecture, colonneUsuelle)) groupe[k].a_verifier += 1;
+    groupe[k].rubriques.push(d.lecture?.rubriques ?? 0);
   };
 
   for (const d of documents) {
     plus(repartition.nature, d.nature === 'beneficiaires' ? 'Bénéficiaires effectifs' : 'Synthèse principale');
     plus(repartition.annee, (d.mois || 'inconnue').slice(0, 4));
+    plus(lecture.colonnes, String(d.lecture?.colonne_valeur ?? 'inconnue'));
+    plus(lecture.corps, String(d.lecture?.corps ?? 'inconnu'));
+    noter(lecture.par_annee, (d.mois || 'inconnue').slice(0, 4), d);
+    noter(lecture.par_type, d.nature === 'beneficiaires' ? 'Bénéficiaires effectifs' : (d.type || 'inconnu'), d);
     if (d.nature === 'principale') {
       plus(repartition.type, d.type || 'inconnu');
       plus(repartition.forme, d.forme || 'inconnue');
@@ -518,9 +629,12 @@ function agreger(documents, { lus = documents.length, ignores = 0, erreurs = {} 
         const st = a.champs.get(k);
         if (plein) st.docs += 1; else st.vides += 1;
       }
+      // Pièces du déposant : celles qui portent un intitulé ; les autres sont comptées à part.
       const deposees = d.pieces.filter((p) => p.origine === 'deposant');
-      a.piecesDeposees += deposees.length;
-      for (const intitule of new Set(deposees.map((p) => p.intitule || '(sans intitulé)'))) plus(a.pieces, intitule);
+      const typees = deposees.filter((p) => p.intitule);
+      a.piecesDeposees += typees.length;
+      a.sansIntitule += deposees.length - typees.length;
+      for (const intitule of new Set(typees.map((p) => p.intitule))) plus(a.pieces, intitule);
       if ((d.versions?.nombre || 1) > 1) a.plusieurs += 1;
       if (d.versions?.rubriques_modifiees?.length) {
         a.modifiees += 1;
@@ -535,6 +649,7 @@ function agreger(documents, { lus = documents.length, ignores = 0, erreurs = {} 
       n: a.n,
       fiabilite: fiabilite(a.n),
       pieces_deposees_par_dossier: Math.round((10 * a.piecesDeposees) / a.n) / 10,
+      pieces_sans_intitule_par_dossier: Math.round((10 * a.sansIntitule) / a.n) / 10,
       champs: [...a.champs]
         .map(([k, st]) => ({
           cle: k,
@@ -554,12 +669,22 @@ function agreger(documents, { lus = documents.length, ignores = 0, erreurs = {} 
     };
   }
 
+  const mediane = (t) => { const s = [...t].sort((x, y) => x - y); return s.length ? s[Math.floor((s.length - 1) / 2)] : 0; };
+  for (const groupe of [lecture.par_annee, lecture.par_type]) {
+    for (const q of Object.values(groupe)) {
+      q.rubriques_mediane = mediane(q.rubriques);
+      q.part_a_verifier = pourcent(q.a_verifier, q.documents);
+      delete q.rubriques;
+    }
+  }
+
   return {
     genere_le: new Date().toISOString(),
     documents_lus: lus,
     documents_ignores: ignores,
     erreurs,
     formalites: documents.length,
+    lecture,
     repartition: Object.fromEntries(Object.entries(repartition).map(([k, v]) => [k, Object.fromEntries(classer(v))])),
     modifications: Object.fromEntries(classer(modifications)),
     combinaisons: Object.fromEntries(classer(combinaisons, 50)),
@@ -587,6 +712,15 @@ function rapport(agregats, { stratesDetaillees = 12 } = {}) {
   out.push(`- PDF écartés (pas une synthèse du guichet) : ${a.documents_ignores}`);
   out.push(`- PDF illisibles : ${Object.values(a.erreurs).reduce((s, n) => s + n, 0)}`);
   out.push(`- Formalités retenues (dernière version, synthèse principale ou des bénéficiaires effectifs) : ${a.formalites}`, '');
+
+  if (a.lecture) {
+    out.push('## Qualité de la lecture', '');
+    out.push(`Colonne des valeurs la plus fréquente : ${a.lecture.colonne_usuelle ?? 'inconnue'} pt. « À vérifier » : moins de 10 rubriques, rubrique sans libellé, ligne restée hors rubrique ou colonne des valeurs inhabituelle, signe probable d'une autre version du modèle du guichet.`, '');
+    tableau(['Année', 'Formalités', 'Rubriques (médiane)', 'À vérifier'], Object.entries(a.lecture.par_annee).sort()
+      .map(([k, q]) => [k, q.documents, q.rubriques_mediane, `${q.a_verifier} (${q.part_a_verifier} %)`]));
+    tableau(['Type', 'Formalités', 'Rubriques (médiane)', 'À vérifier'], Object.entries(a.lecture.par_type).sort((x, y) => y[1].documents - x[1].documents)
+      .map(([k, q]) => [k, q.documents, q.rubriques_mediane, `${q.a_verifier} (${q.part_a_verifier} %)`]));
+  }
 
   out.push('## Répartition', '');
   tableau(['Type de formalité', 'Nombre'], classer(a.repartition.type).map(([k, v]) => [k, v]));
@@ -619,7 +753,7 @@ function rapport(agregats, { stratesDetaillees = 12 } = {}) {
       out.push('**Valeurs relevées** :', '');
       tableau(['Rubrique', 'Valeurs (nombre)'], listes.slice(0, 40).map((c) => [c.cle, classer(c.valeurs, 6).map(([v, n]) => `${v} (${n})`).join(' ; ')]));
     }
-    out.push(`**Pièces versées par le déposant** (${s.pieces_deposees_par_dossier} par dossier en moyenne) :`, '');
+    out.push(`**Pièces versées par le déposant** (${s.pieces_deposees_par_dossier} par dossier en moyenne, plus ${s.pieces_sans_intitule_par_dossier} sans intitulé) :`, '');
     tableau(['Pièce', 'Présence'], s.pieces.slice(0, 30).map((p) => [p.intitule, `${p.taux} %`]));
     if (s.versions.contenu_modifie) {
       out.push(`**Versions** : ${s.versions.plusieurs_versions} formalités à plusieurs versions, dont ${s.versions.contenu_modifie} au contenu modifié. Rubriques le plus souvent modifiées :`, '');
@@ -642,6 +776,9 @@ module.exports = {
   empreintesContenu,
   rubriquesModifiees,
   agreger,
+  retenirValeursFrequentes,
+  lectureDouteuse,
+  SEUIL_FREQUENCE,
   fiabilite,
   rapport,
   COLONNE_VALEUR,
