@@ -44,7 +44,17 @@ seule version.
 
 Options :
 - `--limite <n>` : ne traiter que les n premiers PDF, pour un essai ;
-- `--sans-fiches` : ne pas écrire de fiche par formalité.
+- `--sans-fiches` : ne pas écrire de fiche par formalité ;
+- `--seuil <n>` : nombre de formalités en deçà duquel un élément est masqué
+  (3 par défaut, voir plus bas) ;
+- `--exemples <dossier>` : met de côté jusqu'à 3 PDF par cas de lecture
+  difficile, sur le poste seulement. Les cas sont : PDF écarté, type de
+  formalité introuvable, lecture à vérifier. Ce sont des copies des
+  synthèses, avec leurs données personnelles, qui servent à corriger la
+  lecture.
+
+Le paquet Windows lance l'analyse avec `--sans-fiches` (les fiches pèsent trop
+lourd pour être envoyées) et `--exemples Téléchargements\Exemples syntheses a envoyer`.
 
 Durée : environ 0,2 seconde par PDF, soit une vingtaine de minutes pour
 6 000 synthèses. Il n'y a pas de reconnaissance de caractères : les synthèses
@@ -76,9 +86,20 @@ Ne sortent jamais :
 
 Le programme ne connaît d'avance que les rubriques des formalités déjà vues. Pour
 une rubrique qu'il ne connaît pas, la valeur ne sort que si elle figure dans au
-moins 20 formalités distinctes : c'est alors une valeur de liste (motif,
+moins 3 formalités distinctes : c'est alors une valeur de liste (motif,
 nature, option…), non une donnée propre à un dossier. Une valeur qui reste
 sous ce seuil est réduite à sa présence.
+
+Le même seuil vaut pour tout ce qui sort, quelle que soit la qualité de la
+lecture : libellés, titres, mentions, intitulés de pièces, valeurs, types,
+formes et greffes. Un élément présent dans moins de 3 formalités est remplacé
+par « [rubrique rare] » ou « [rare] », et le rapport indique combien
+d'éléments ont été masqués.
+
+Ce garde-fou a été ajouté après une première analyse. Sur des modèles mal lus,
+des dénominations et des adresses de siège avaient été prises pour des
+libellés. Le seuil est bas pour garder les rubriques rares mais réelles :
+c'est la qualité de l'information qui est recherchée.
 
 Cette règle ne s'applique jamais aux libellés qui désignent :
 - une personne : nom, prénom, naissance, genre, nationalité ;
@@ -107,7 +128,14 @@ Chaque strate porte une mention de fiabilité :
 
 La mise en page est mesurée sur chaque document, et non fixée d'après les
 exemples. Le programme mesure la taille du texte courant, en déduit les seuils
-des titres, puis repère la colonne des valeurs.
+des titres, puis repère la colonne des valeurs et l'interligne.
+
+Chaque rubrique est un paquet de lignes rapprochées : libellé sur une ou
+plusieurs lignes, valeur alignée en haut ou en bas. Un écart vertical plus
+grand sépare deux rubriques. Le découpage ne dépend donc pas de l'alignement
+choisi par le modèle. Les en-têtes et pieds de page sont écartés, qu'ils
+soient connus (« Synthèse de dépôt », « Synthèse définitive ») ou simplement
+répétés au même endroit sur la plupart des pages.
 
 La section « Qualité de la lecture » donne, par année et par type de
 formalité, la part des documents « à vérifier ». Un document est à vérifier

@@ -21,6 +21,7 @@ if (majeur < 20 || (majeur === 20 && mineur < 16) || (majeur === 22 && mineur < 
 const telechargements = path.join(os.homedir(), 'Downloads');
 const dossier = process.argv[2] ? path.resolve(process.argv[2]) : path.join(telechargements, 'Documents de synthèse pour Legalize');
 const sortie = path.join(telechargements, 'Resultats syntheses Legalize');
+const exemples = path.join(telechargements, 'Exemples syntheses a envoyer');
 
 if (!fs.existsSync(dossier) || !fs.statSync(dossier).isDirectory()) {
   console.error(`Dossier introuvable : ${dossier}`);
@@ -31,7 +32,11 @@ if (!fs.existsSync(dossier) || !fs.statSync(dossier).isDirectory()) {
 console.log('Analyse des synthèses du Guichet unique');
 console.log(`  Synthèses : ${dossier}`);
 console.log(`  Résultats : ${sortie}`);
-console.log('  Les PDF ne sont ni modifiés ni copiés ; les résultats ne contiennent aucune donnée personnelle.\n');
+console.log(`  Exemples  : ${exemples}`);
+console.log('  Les PDF ne sont pas modifiés ; les résultats ne contiennent aucune donnée personnelle.\n');
 
-process.argv = [process.argv[0], path.join(__dirname, 'scripts', 'corpus-syntheses.js'), dossier, '--sortie', sortie];
+// Pas de fiches par formalité (trop volumineuses pour être envoyées) ; quelques PDF
+// de lecture difficile sont mis de côté pour la mise au point du programme.
+process.argv = [process.argv[0], path.join(__dirname, 'scripts', 'corpus-syntheses.js'), dossier,
+  '--sortie', sortie, '--sans-fiches', '--exemples', exemples];
 require('./scripts/corpus-syntheses.js');

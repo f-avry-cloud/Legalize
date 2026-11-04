@@ -46,7 +46,7 @@ const sansAccents = (s) => norm(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
 const cle = (s) => sansAccents(s).toLowerCase().replace(/\s*:$/, '');
 const condense = (s) => crypto.createHash('sha256').update(String(s)).digest('hex').slice(0, 16);
 
-const EN_TETE = /^(synthese de depot au guichet unique|formalite j\d{6,}|page \d+\s*\/\s*\d+)$/;
+const EN_TETE = /^(synthese .{0,40}au guichet unique|formalite j\d{6,}|page \d+\s*\/\s*\d+)$/;
 
 // ---------------------------------------------------------------------------
 // 1. Lecture du PDF
@@ -217,22 +217,51 @@ function mesurer(corps) {
   const titre = taille + (HAUTEUR_TITRE - 8.4);
   const titre1 = taille + (HAUTEUR_TITRE_1 - 8.4);
   const xs = [];
-  for (const l of lignes(corps.filter((it) => it.h < titre))) {
+  const ecarts = [];
+  const courantes = lignes(corps.filter((it) => it.h < titre));
+  courantes.forEach((l, k) => {
     const i = l.items.findIndex((it) => /:$/.test(it.s));
     if (i >= 0 && l.items[i + 1]) xs.push(Math.round(l.items[i + 1].x * 2) / 2);
-  }
+    // Interligne : écart le plus fréquent entre deux lignes proches (lignes d'une même rubrique).
+    const prec = courantes[k - 1];
+    if (prec && prec.page === l.page) {
+      const d = prec.y - l.y;
+      if (d > 0.5 * taille && d < 1.6 * taille) ecarts.push(Math.round(d * 2) / 2);
+    }
+  });
   const xValeur = mode(xs);
-  return { taille, titre, titre1, xValeur, colonne: xValeur ? xValeur - 4 : COLONNE_VALEUR };
+  const interligne = mode(ecarts) || 1.21 * taille;
+  return {
+    taille, titre, titre1, xValeur, interligne,
+    colonne: xValeur ? xValeur - 4 : COLONNE_VALEUR,
+    // Au-delà de cet écart vertical, deux lignes appartiennent à deux rubriques différentes.
+    ecart: 1.5 * interligne,
+  };
+}
+
+/** En-têtes et pieds de page : textes répétés au même endroit, en haut ou en bas de la plupart des pages. */
+function enTetesRepetes(items) {
+  const pages = items.reduce((m, it) => Math.max(m, it.page), 1);
+  if (pages < 2) return new Set();
+  const vus = new Map();
+  for (const it of items) {
+    if (it.y > 60 && it.y < 780) continue;
+    const k = `${Math.round(it.y)}|${it.s}`;
+    if (!vus.has(k)) vus.set(k, new Set());
+    vus.get(k).add(it.page);
+  }
+  return new Set([...vus].filter(([, p]) => p.size >= Math.max(2, Math.ceil(0.6 * pages))).map(([k]) => k));
 }
 
 function analyserElements(elements) {
   const items = dedoublonner((elements || []).filter((e) => e && e.s));
+  const repetes = enTetesRepetes(items);
   let liasse = null;
   const corps = [];
   for (const it of items) {
     const m = /^Formalité (J\d{6,})$/i.exec(it.s);
     if (m) { liasse = liasse || m[1].toUpperCase(); continue; }
-    if (EN_TETE.test(cle(it.s))) continue;
+    if (EN_TETE.test(cle(it.s)) || repetes.has(`${Math.round(it.y)}|${it.s}`)) continue;
     corps.push(it);
   }
   const mise = mesurer(corps);
@@ -252,19 +281,52 @@ function analyserElements(elements) {
   const mentions = [];
   let section = null;
   let bloc = null;
-  let orphelines = 0; // lignes restées sans deux-points : signe d'une mise en page mal lue
-  let attente = { libelle: [], valeur: [], textes: [], page: null };
-  const vider = () => {
-    if (attente.textes.length) {
-      mentions.push({ section, bloc, texte: norm(attente.textes.join(' ')), page: attente.page });
-      orphelines += attente.textes.length;
+  let orphelines = 0; // lignes restées hors rubrique : signe d'une mise en page mal lue
+
+  // Une rubrique = un paquet de lignes rapprochées (libellé sur une ou plusieurs lignes,
+  // valeur alignée en haut ou en bas) ; deux rubriques sont séparées par un écart vertical
+  // plus grand. Le découpage ne dépend donc pas de l'alignement retenu par le modèle.
+  let paquet = [];
+  const decouper = (l) => {
+    const gauche = l.items.filter((it) => it.x < mise.colonne);
+    return { l, gauche, droite: l.items.filter((it) => it.x >= mise.colonne), deuxPoints: gauche.some((it) => /:$/.test(it.s)) };
+  };
+  const horsRubrique = (groupe) => {
+    mentions.push({ section, bloc, texte: norm(groupe.map((x) => joindre(x.l.items)).join(' ')), page: groupe[0].l.page });
+    orphelines += groupe.length;
+  };
+  const emettre = (groupe) => {
+    const libelle = groupe.map((x) => x.gauche.map((it) => it.s.replace(/\s*:$/, '')).filter(Boolean).join(' ')).filter(Boolean).join(' ');
+    const valeur = groupe.map((x) => (x.droite.length ? joindre(x.droite) : '')).filter(Boolean).join(' ');
+    rubriques.push({ section, bloc, libelle: norm(libelle), valeur: norm(valeur), page: groupe[groupe.length - 1].l.page });
+  };
+  const traiterPaquet = () => {
+    if (!paquet.length) return;
+    const ls = paquet.map(decouper);
+    paquet = [];
+    const nbDeuxPoints = ls.filter((x) => x.deuxPoints).length;
+    if (nbDeuxPoints === 0) { horsRubrique(ls); return; }
+    if (nbDeuxPoints === 1) { emettre(ls); return; }
+    // Rubriques collées : chacune s'achève sur sa ligne de deux-points ; ce qui suit la
+    // dernière s'y rattache si ce n'est que de la valeur (valeur alignée en haut).
+    const groupes = [];
+    let courant = [];
+    for (const x of ls) {
+      courant.push(x);
+      if (x.deuxPoints) { groupes.push(courant); courant = []; }
     }
-    attente = { libelle: [], valeur: [], textes: [], page: null };
+    if (courant.length) {
+      if (courant.every((x) => !x.gauche.length)) groupes[groupes.length - 1].push(...courant);
+      else horsRubrique(courant);
+    }
+    groupes.forEach(emettre);
   };
 
+  let precedente = null;
   for (const l of lignes(reste)) {
     if (l.items.some((it) => it.h >= mise.titre)) {
-      vider();
+      traiterPaquet();
+      precedente = null;
       const texte = joindre(l.items);
       const niveau = Math.max(...l.items.map((it) => it.h)) >= mise.titre1 ? 1 : 2;
       if (niveau === 1) section = texte;
@@ -272,29 +334,28 @@ function analyserElements(elements) {
       titres.push({ niveau, texte, page: l.page });
       continue;
     }
-    const gauche = l.items.filter((it) => it.x < mise.colonne);
-    const droite = l.items.filter((it) => it.x >= mise.colonne);
-    const deuxPoints = gauche.some((it) => /:$/.test(it.s));
+    const deuxPoints = l.items.some((it) => it.x < mise.colonne && /:$/.test(it.s));
     // Phrase en gras sans deux-points : mention, pas un début de libellé.
     if (!deuxPoints && l.items.every((it) => it.gras)) {
-      vider();
+      traiterPaquet();
+      precedente = null;
       mentions.push({ section, bloc, texte: joindre(l.items), page: l.page });
       continue;
     }
-    if (attente.page === null) attente.page = l.page;
-    attente.textes.push(joindre(l.items));
-    if (droite.length) attente.valeur.push(joindre(droite));
-    const morceaux = gauche.map((it) => it.s.replace(/\s*:$/, '')).filter(Boolean);
-    if (morceaux.length) attente.libelle.push(morceaux.join(' '));
-    if (deuxPoints) {
-      rubriques.push({ section, bloc, libelle: norm(attente.libelle.join(' ')), valeur: norm(attente.valeur.join(' ')), page: l.page });
-      attente = { libelle: [], valeur: [], textes: [], page: null };
+    if (precedente) {
+      // Changement de page : la rubrique continue tant qu'elle n'a pas trouvé ses deux-points.
+      const coupure = precedente.page !== l.page
+        ? paquet.some((x) => x.items.some((it) => it.x < mise.colonne && /:$/.test(it.s)))
+        : precedente.y - l.y > mise.ecart;
+      if (coupure) traiterPaquet();
     }
+    paquet.push(l);
+    precedente = l;
   }
-  vider();
+  traiterPaquet();
 
   return {
-    est_synthese: /synthese de depot/.test(cle(texteTitre)) || rubriques.some((r) => cle(r.libelle) === 'numero de liasse'),
+    est_synthese: /synthese (de depot|definitive)/.test(cle(texteTitre)) || rubriques.some((r) => cle(r.libelle) === 'numero de liasse'),
     nature: /beneficiaires effectifs/.test(cle(texteTitre)) ? 'beneficiaires' : 'principale',
     liasse,
     date_synthese: dateFr(texteTitre),
@@ -421,8 +482,13 @@ const SUSPECT = /@|\d{2}\/\d{2}\/\d{4}|\d{6,}|\+\d{2}\s?\d/;
  */
 const LIBELLES_PERSONNELS = /\bnom\b|prenom|pseudonyme|naissance|genre|sexe|nationalite|matrimonial|conjoint|adresse|courriel|mail\b|telephon|indicatif|signataire|declarant|denomination|enseigne|sigle|reference|siren|siret|\bnic\b|numero|n° |identifi|securite sociale|observation|objet|description|precision|commune|code postal|voie|ville|lieu|date|montant|fichier|intitule/;
 
-/** Seuil de la règle de fréquence : une valeur sort si elle figure dans au moins 20 formalités distinctes. */
-const SEUIL_FREQUENCE = 20;
+/**
+ * Seuil de fréquence : un libellé, un titre ou une valeur ne sort que s'il figure dans au
+ * moins 3 formalités distinctes. Les textes propres à un dossier (dénomination ou adresse
+ * prises pour un libellé après une lecture ratée) sont ainsi écartés, sans perdre les
+ * rubriques rares du modèle.
+ */
+const SEUIL_FREQUENCE = 3;
 
 /** Ce qui peut sortir d'une valeur : la valeur elle-même (liste, oui / non, tranche) ou sa seule présence. */
 function valeurPublique(libelle, valeur) {
@@ -436,7 +502,7 @@ function valeurPublique(libelle, valeur) {
   }
   if (k === 'montant capital') return { valeur: trancheCapital(v) };
   if (k.startsWith('detention') && /%$/.test(v)) return { valeur: tranchePourcentage(v) };
-  if (k.startsWith('nombre de') && /^\d+$/.test(v)) return { valeur: v };
+  if (k.startsWith('nombre d') && /^\d+$/.test(v)) return { valeur: v };
   if (VALEURS_LISTE.has(k)) return SUSPECT.test(v) ? { renseigne: true, masquee: true } : { valeur: v.slice(0, 200) };
   // Libellé inconnu : la valeur reste en mémoire comme candidate ; elle ne sortira que si
   // elle revient dans assez de formalités pour être une valeur de liste (retenirValeursFrequentes).
@@ -473,6 +539,72 @@ function retenirValeursFrequentes(fiches, { seuil = SEUIL_FREQUENCE } = {}) {
     }
   }
   return rendues;
+}
+
+const TRANCHES = new Set([
+  'moins de 1 000 €', '1 000 à 9 999 €', '10 000 à 99 999 €', '100 000 à 999 999 €', '1 000 000 € et plus',
+  'moins de 25 %', '25 à 50 %', 'plus de 50 %', '100 %', 'illisible',
+]);
+/** Valeurs sûres par construction : oui / non, nombre, mois, tranche. */
+const valeurSure = (v) => /^(Oui|Non)$/.test(v) || /^\d+$/.test(v) || /^\d{4}-\d{2}$/.test(v) || TRANCHES.has(v);
+
+/**
+ * Masquage des éléments rares, sur l'ensemble du corpus : tout libellé, titre, mention,
+ * modification, intitulé de pièce ou valeur qui figure dans moins de `seuil` formalités
+ * distinctes est remplacé (« [rubrique rare] », « [rare] »…) ou réduit à sa présence.
+ * Garde-fou indépendant de la lecture : une valeur prise pour un libellé ne sort pas.
+ * Modifie les fiches.
+ * @returns {{ rubriques, valeurs, autres }} nombre d'éléments masqués
+ */
+function masquerRares(fiches, { seuil = SEUIL_FREQUENCE } = {}) {
+  const compte = new Map();
+  const vu = (k, doc) => {
+    if (!compte.has(k)) compte.set(k, new Set());
+    compte.get(k).add(doc);
+  };
+  const n = (k) => compte.get(k)?.size || 0;
+  fiches.forEach((f, i) => {
+    const doc = f.doc || `#${i}`;
+    for (const c of f.champs) {
+      vu(`c|${c.cle}`, doc);
+      vu(`b|${c.cle.split(' › ')[0]}`, doc);
+      if (typeof c.valeur === 'string' && !valeurSure(c.valeur)) vu(`v|${c.cle}|${c.valeur}`, doc);
+    }
+    for (const x of f.sections || []) vu(`s|${x}`, doc);
+    for (const x of f.mentions || []) vu(`m|${x}`, doc);
+    for (const x of f.modifications || []) vu(`d|${x}`, doc);
+    for (const p of f.pieces || []) if (p.intitule) vu(`p|${p.intitule}`, doc);
+    for (const k of ['type', 'forme', 'greffe']) if (f[k]) vu(`${k}|${f[k]}`, doc);
+  });
+  const bilan = { rubriques: 0, valeurs: 0, autres: 0 };
+  const cleSure = (k) => {
+    if (n(`c|${k}`) >= seuil) return k;
+    const bloc = k.split(' › ')[0];
+    return `${n(`b|${bloc}`) >= seuil ? bloc : '[bloc rare]'} › [rubrique rare]`;
+  };
+  const remplacer = (x, k, rare) => {
+    if (n(k) >= seuil) return x;
+    bilan.autres += 1;
+    return rare;
+  };
+  for (const f of fiches) {
+    for (const c of f.champs) {
+      if (typeof c.valeur === 'string' && !valeurSure(c.valeur) && n(`v|${c.cle}|${c.valeur}`) < seuil) {
+        delete c.valeur;
+        c.renseigne = true;
+        bilan.valeurs += 1;
+      }
+      const sure = cleSure(c.cle);
+      if (sure !== c.cle) { c.cle = sure; bilan.rubriques += 1; }
+    }
+    f.sections = (f.sections || []).map((x) => remplacer(x, `s|${x}`, '[section rare]'));
+    f.mentions = (f.mentions || []).map((x) => remplacer(x, `m|${x}`, '[mention rare]'));
+    f.modifications = (f.modifications || []).map((x) => remplacer(x, `d|${x}`, '[modification rare]'));
+    for (const p of f.pieces || []) if (p.intitule) p.intitule = remplacer(p.intitule, `p|${p.intitule}`, '[pièce rare]');
+    for (const k of ['type', 'forme', 'greffe']) if (f[k]) f[k] = remplacer(f[k], `${k}|${f[k]}`, '[rare]');
+    if (f.versions?.rubriques_modifiees) f.versions.rubriques_modifiees = [...new Set(f.versions.rubriques_modifiees.map(cleSure))].sort();
+  }
+  return bilan;
 }
 
 const premiere = (rubriques, libelle) => rubriques.find((r) => cle(r.libelle) === libelle)?.valeur || null;
@@ -578,7 +710,7 @@ const pourcent = (x, n) => (n ? Math.round((1000 * x) / n) / 10 : 0);
  * @param {object[]} documents fiches anonymes, une par formalité et par nature (dernière version),
  *   chacune avec versions: { nombre, rubriques_modifiees: [] }
  */
-function agreger(documents, { lus = documents.length, ignores = 0, erreurs = {} } = {}) {
+function agreger(documents, { lus = documents.length, ignores = 0, erreurs = {}, masquage = null } = {}) {
   const repartition = { nature: {}, type: {}, forme: {}, greffe: {}, annee: {} };
   const modifications = {};
   const combinaisons = {};
@@ -684,6 +816,7 @@ function agreger(documents, { lus = documents.length, ignores = 0, erreurs = {} 
     documents_ignores: ignores,
     erreurs,
     formalites: documents.length,
+    masquage,
     lecture,
     repartition: Object.fromEntries(Object.entries(repartition).map(([k, v]) => [k, Object.fromEntries(classer(v))])),
     modifications: Object.fromEntries(classer(modifications)),
@@ -711,7 +844,11 @@ function rapport(agregats, { stratesDetaillees = 12 } = {}) {
   out.push(`- PDF lus : ${a.documents_lus}`);
   out.push(`- PDF écartés (pas une synthèse du guichet) : ${a.documents_ignores}`);
   out.push(`- PDF illisibles : ${Object.values(a.erreurs).reduce((s, n) => s + n, 0)}`);
-  out.push(`- Formalités retenues (dernière version, synthèse principale ou des bénéficiaires effectifs) : ${a.formalites}`, '');
+  out.push(`- Formalités retenues (dernière version, synthèse principale ou des bénéficiaires effectifs) : ${a.formalites}`);
+  if (a.masquage) {
+    out.push(`- Éléments présents dans moins de ${a.masquage.seuil} formalités, masqués : ${a.masquage.rubriques} rubriques, ${a.masquage.valeurs} valeurs, ${a.masquage.autres} autres (titres, mentions, pièces, types)`);
+  }
+  out.push('');
 
   if (a.lecture) {
     out.push('## Qualité de la lecture', '');
@@ -777,6 +914,7 @@ module.exports = {
   rubriquesModifiees,
   agreger,
   retenirValeursFrequentes,
+  masquerRares,
   lectureDouteuse,
   SEUIL_FREQUENCE,
   fiabilite,

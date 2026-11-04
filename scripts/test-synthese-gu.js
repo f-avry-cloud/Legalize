@@ -37,10 +37,10 @@ const CORPS = 8.4;
 const INTERLIGNE = 10.2;
 
 /** Modèle du guichet observé ; une variante (colonne, tailles) simule une autre version du modèle. */
-const MODELE = { xVal: X_VAL, corps: CORPS, titre1: 10.8, titre2: 9.6, interligne: INTERLIGNE };
+const MODELE = { xVal: X_VAL, corps: CORPS, titre1: 10.8, titre2: 9.6, interligne: INTERLIGNE, entete: 'Synthèse de dépôt au Guichet Unique', pied: null };
 
 function composer({ liasse, nature = 'principale', date, contenu }, modele = MODELE) {
-  const { xVal, corps, titre1, titre2, interligne } = modele;
+  const { xVal, corps, titre1, titre2, interligne, entete = MODELE.entete, pied = null } = modele;
   const elements = [];
   let page = 1;
   let y = 735;
@@ -75,16 +75,21 @@ function composer({ liasse, nature = 'principale', date, contenu }, modele = MOD
     const val = [].concat(b.valeur ?? []).filter((v) => v !== '');
     const n = Math.max(lib.length, val.length, 1);
     const bas = y - (n - 1) * interligne;
-    lib.forEach((t, i) => pose(X_LIB, bas + (lib.length - 1 - i) * interligne, corps, t));
-    pose(X_LIB + lib[lib.length - 1].length * 4.2 + 3, bas, corps, ':');
-    val.forEach((t, i) => pose(xVal, bas + (val.length - 1 - i) * interligne, corps, t));
+    // Alignement de la ligne du tableau : en bas (modèle observé) ou en haut (valeur qui déborde vers le bas).
+    const haut = b.aligne === 'haut';
+    const yLib = (i) => (haut ? y - i * interligne : bas + (lib.length - 1 - i) * interligne);
+    const yVal = (i) => (haut ? y - i * interligne : bas + (val.length - 1 - i) * interligne);
+    lib.forEach((t, i) => pose(X_LIB, yLib(i), corps, t));
+    pose(X_LIB + lib[lib.length - 1].length * 4.2 + 3, yLib(lib.length - 1), corps, ':');
+    val.forEach((t, i) => pose(xVal, yVal(i), corps, t));
     y = bas - 20;
     if (y < 60) throw new Error(`page ${page} trop pleine : ajouter un saut de page`);
   }
   for (let p = 1; p <= page; p += 1) {
-    elements.push({ page: p, x: X_LIB, y: 815, h: corps, w: 0, s: 'Synthèse de dépôt au Guichet Unique' });
+    elements.push({ page: p, x: X_LIB, y: 815, h: corps, w: 0, s: entete });
     elements.push({ page: p, x: 448.3, y: 815, h: corps, w: 0, s: `Formalité ${liasse}` });
     elements.push({ page: p, x: 448.3, y: 25, h: corps - 0.4, w: 0, s: `Page ${p}/${page}` });
+    if (pied) elements.push({ page: p, x: X_LIB, y: 40, h: corps - 0.4, w: 0, s: pied });
   }
   return elements;
 }
@@ -294,6 +299,27 @@ async function main() {
     !s.lectureDouteuse(a1.lecture, 174.5) && s.lectureDouteuse(variante.lecture, 174.5)
     && s.lectureDouteuse({ ...a1.lecture, orphelines: 1 }, 174.5) && s.lectureDouteuse({ ...a1.lecture, rubriques: 4 }, 174.5));
 
+  // Modèle récent : en-tête « Synthèse définitive », valeur qui déborde vers le bas
+  // (référence client sur deux lignes), libellé sur deux lignes aligné en haut.
+  const recente = s.analyserElements(composer({
+    liasse: 'J00000000009',
+    date: '1 mars 2026',
+    contenu: [
+      { titre: 'Résumé de votre formalité' },
+      { libelle: 'Référence client', valeur: ['TA/ESSAI', 'NOMCLIENT SUITE'], aligne: 'haut' },
+      { libelle: 'Type de formalité', valeur: 'Création' },
+      { libelle: ['Reliée à une entreprise', 'agricole'], valeur: 'Non', aligne: 'haut' },
+      { libelle: 'Entreprise agricole', valeur: 'Non' },
+      { libelle: 'Numéro de liasse', valeur: 'J00000000009' },
+    ],
+  }, { ...MODELE, entete: 'Synthèse définitive au Guichet Unique' }));
+  verifier('valeur débordant vers le bas : rattachée à sa rubrique, la suivante intacte',
+    rubrique(recente, 'Référence client')?.valeur === 'TA/ESSAI NOMCLIENT SUITE' && rubrique(recente, 'Type de formalité')?.valeur === 'Création'
+    && rubrique(recente, 'Reliée à une entreprise agricole')?.valeur === 'Non' && recente.lecture.orphelines === 0, recente.rubriques);
+  verifier('en-tête « Synthèse définitive » écarté, synthèse reconnue', recente.est_synthese && !JSON.stringify(recente.rubriques).includes('définitive'));
+  const pied = s.analyserElements(creation(1, { ...MODELE, pied: 'Document édité par le guichet' }));
+  verifier('pied de page répété sur chaque page écarté', essentiel(pied) === essentiel(a1), pied.mentions);
+
   // -------------------------------------------------------------------------
   console.log('Anonymisation');
   const sel = 'sel-de-test';
@@ -344,7 +370,23 @@ async function main() {
     motifs.filter((m) => m.valeur === 'Dissolution anticipée').length === 24 && motifs[0].valeur === undefined && motifs[0].renseigne === true && rendues === 24, motifs.slice(0, 2));
   verifier('jamais de valeur pour un nom ou le genre, même présents partout ; valeur unique effacée ; aucune candidate laissée',
     !/DURAND|Masculin|repreneur|_candidat|Motif très rare/.test(JSON.stringify(fichesCessation)));
-  verifier('seuil de fréquence par défaut : 20 formalités', s.SEUIL_FREQUENCE === 20);
+  verifier('seuil de fréquence par défaut : 3 formalités', s.SEUIL_FREQUENCE === 3);
+
+  // Garde-fou indépendant de la lecture : ce qui ne revient pas dans 3 formalités est masqué.
+  const fiche = (doc, type, champs, autres = {}) => ({
+    doc, nature: 'principale', type, forme: 'SAS', greffe: 'TCO DE PARIS', modifications: [], sections: ['Identité'],
+    champs, pieces: [{ intitule: 'Statuts', origine: 'deposant' }], mentions: [], versions: { nombre: 1, rubriques_modifiees: [] }, ...autres,
+  });
+  const corpus = [
+    ...['a', 'b', 'c', 'd'].map((d) => fiche(d, 'Création', [{ cle: 'Identité › Forme juridique', valeur: 'SAS' }, { cle: 'Publication › Journal de publication', valeur: d === 'a' ? 'Journal unique' : 'Gazette' }])),
+    fiche('e', 'NOMCLIENT Création', [{ cle: 'Identité › 16 Rue Exemple Adresse du siège', renseigne: true }, { cle: 'Inconnu Total › Libellé', valeur: 'X' }]),
+  ];
+  const bilanMasquage = s.masquerRares(corpus, { seuil: 3 });
+  verifier('type, rubrique et valeur rares masqués ; rubriques et valeurs fréquentes conservées',
+    corpus[4].type === '[rare]' && corpus[4].champs[0].cle === 'Identité › [rubrique rare]' && corpus[4].champs[1].cle === '[bloc rare] › [rubrique rare]'
+    && corpus[0].champs[1].valeur === undefined && corpus[0].champs[1].renseigne === true && corpus[1].champs[1].valeur === 'Gazette'
+    && corpus[0].champs[0].valeur === 'SAS' && corpus[0].type === 'Création', { corpus: corpus.map((f) => [f.type, f.champs]), bilanMasquage });
+  verifier('bilan du masquage', bilanMasquage.rubriques === 2 && bilanMasquage.valeurs === 2 && bilanMasquage.autres === 1, bilanMasquage);
 
   // -------------------------------------------------------------------------
   console.log('Versions');
@@ -403,7 +445,8 @@ async function main() {
     fs.writeFileSync(path.join(dossier, 'casse.pdf'), Buffer.from('ceci n’est pas un PDF'));
     fs.writeFileSync(path.join(dossier, '._creation_v1.pdf'), Buffer.from('fichier caché macOS'));
     const sortie = path.join(racine, 'resultats');
-    const console_ = execFileSync(process.execPath, [path.join(__dirname, 'corpus-syntheses.js'), dossier, '--sortie', sortie], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    // Seuil 1 : corpus de trois formalités, rien ne doit être masqué pour vérifier le contenu.
+    const console_ = execFileSync(process.execPath, [path.join(__dirname, 'corpus-syntheses.js'), dossier, '--sortie', sortie, '--seuil', '1'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     verifier('bilan : 7 PDF lus, 3 formalités, 1 écarté, 1 illisible', /7 PDF lus .*: 3 formalités retenues, 1 PDF écartés \(pas une synthèse\), 1 illisibles\./.test(console_), console_);
     verifier('le fichier illisible est nommé à l’écran seulement', /casse\.pdf/.test(console_));
     const lignes = fs.readFileSync(path.join(sortie, 'fiches.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
@@ -414,6 +457,17 @@ async function main() {
     const ecrits = ['agregats.json', 'rapport.md', 'fiches.jsonl'].map((f) => fs.readFileSync(path.join(sortie, f), 'utf8')).join('\n');
     verifier('aucune donnée personnelle, aucun nom de fichier, aucune valeur candidate dans les résultats',
       fuites(ecrits).length === 0 && !/casse|creation_v|RECEPISSE|\.pdf|_candidat/i.test(ecrits.replace(/Document_de_Synthese/g, '')), fuites(ecrits));
+
+    // Réglages du paquet Windows : seuil par défaut (3), sans fiches, exemples mis de côté.
+    const exemples = path.join(racine, 'exemples');
+    const sortie2 = path.join(racine, 'resultats2');
+    const console2 = execFileSync(process.execPath, [path.join(__dirname, 'corpus-syntheses.js'), dossier, '--sortie', sortie2, '--sans-fiches', '--exemples', exemples], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const ag2 = JSON.parse(fs.readFileSync(path.join(sortie2, 'agregats.json'), 'utf8'));
+    verifier('seuil par défaut : sur deux formalités distinctes, tout libellé est masqué', ag2.masquage?.seuil === 3 && ag2.masquage.rubriques > 0
+      && !JSON.stringify(ag2).includes('Montant capital') && JSON.stringify(ag2).includes('[rubrique rare]'), ag2.masquage);
+    verifier('sans fiches : fichier absent', !fs.existsSync(path.join(sortie2, 'fiches.jsonl')));
+    verifier('exemples : le PDF écarté mis de côté, dans le dossier d’exemples seulement', JSON.stringify(fs.readdirSync(exemples)) === JSON.stringify(['ecarte-1.pdf'])
+      && /Exemples de lecture difficile copiés .*ecarte : 1 sur 1/.test(console2), { fichiers: fs.readdirSync(exemples), console2 });
 
     // Poste sans la bibliothèque graphique native de pdf.js (analyse lancée hors du projet, sous Windows) :
     // la lecture du texte doit fonctionner quand même, sans avertissement à l'écran.

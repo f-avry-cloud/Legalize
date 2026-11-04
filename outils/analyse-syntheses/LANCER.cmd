@@ -20,7 +20,9 @@ if errorlevel 1 (
   exit /b 1
 )
 start "" explorer "%USERPROFILE%\Downloads\Resultats syntheses Legalize"
+if exist "%USERPROFILE%\Downloads\Exemples syntheses a envoyer" start "" explorer "%USERPROFILE%\Downloads\Exemples syntheses a envoyer"
 echo.
-echo Termine. Envoyez a Claude les trois fichiers du dossier "Resultats syntheses Legalize".
+echo Termine. Envoyez a Claude rapport.md et agregats.json (dossier "Resultats syntheses Legalize"),
+echo ainsi que les PDF du dossier "Exemples syntheses a envoyer".
 echo.
 pause
