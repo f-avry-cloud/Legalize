@@ -248,12 +248,33 @@ const PIECES_CREATION = {
   PJ_31: (t) => def(t.activite_reglementee, () => t.activite_reglementee === true),
 };
 
+/**
+ * Création d'une SAS (ou SASU) avec apports en numéraire : le portail bloque
+ * tant que manquent, chacun sous son type, le certificat du dépositaire
+ * (PJ_06) et l'attestation de dépôt des fonds (PJ_180) (relevé du portail du
+ * 5/11/2026). Les deux lignes n'acceptent alors aucun document de
+ * substitution : une pièce rangée sous l'autre type y manquerait.
+ */
+const fondsSas = (t) => t.apports_numeraire === true && ['SAS', 'SASU'].includes(t.forme_creation);
+const FONDS_SAS = {
+  PJ_180: {
+    condition: 'SAS : en cas d’apports en numéraire, exigée par le portail en plus du certificat du dépositaire (le même document de la banque peut être joint sur les deux lignes)',
+    regle: (t) => def(t.apports_numeraire, () => fondsSas(t)),
+  },
+};
+/** Création : l'attestation de parution est proposée par le portail, la copie de l'insertion (PJ_09) est exigée. */
+const PARUTION_FACULTATIVE = { PJ_08: 'attestation de parution, proposée par le portail en plus de la copie de l’insertion (PJ_09), seule exigée' };
+
+/** Société par actions (SA ou SAS) : codes INSEE 55xx, 56xx et 57xx. */
+const parActions = (fiche) => /^5[5-7]/.test(String(fiche?.forme_juridique_code || ''));
+
 const REGLES = {
   '01M': {
     questions: ['forme_creation', 'associe_unique_nature', 'entrants', 'premiers_dirigeants_statuts', 'siege_occupation', 'domiciliataire_meme_greffe',
       'apports_numeraire', 'apports_nature', 'commissaire_apports', 'fonds_origine', 'activite_reglementee'],
     pieces: PIECES_CREATION,
-    ajouts: creation.AJOUTS,
+    ajouts: { ...creation.AJOUTS, ...FONDS_SAS },
+    facultatives: PARUTION_FACULTATIVE,
     personnes: true,
   },
   '02M': {
@@ -261,7 +282,8 @@ const REGLES = {
       'apports_numeraire', 'apports_nature', 'commissaire_apports'],
     pieces: Object.fromEntries(Object.entries(PIECES_CREATION).filter(([c]) => !['PJ_05', 'PJ_31'].includes(c))),
     // L'évaluation des apports en nature vaut aussi sans activité ; la fiche ne la porte pas.
-    ajouts: { PJ_05: { condition: 'en cas d’apports en nature', regle: PIECES_CREATION.PJ_05 } },
+    ajouts: { PJ_05: { condition: 'en cas d’apports en nature', regle: PIECES_CREATION.PJ_05 }, ...FONDS_SAS },
+    facultatives: PARUTION_FACULTATIVE,
     personnes: true,
   },
   '11M': {
@@ -281,21 +303,22 @@ const REGLES = {
   '13M': {
     questions: ['rapport_transformation'],
     pieces: {
-      PJ_160: (t) => def(t.rapport_transformation, () => t.rapport_transformation === true),
+      PJ_91: (t) => def(t.rapport_transformation, () => t.rapport_transformation === true),
       PJ_58: (t) => def(t.rapport_transformation, () => t.rapport_transformation === true),
     },
   },
   '15M': {
     questions: ['capital_sens', 'capital_modalite', 'commissaire_apports'],
     pieces: {
-      PJ_180: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'numeraire')),
-      PJ_163: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'nature' && t.commissaire_apports !== false)),
+      PJ_56: (t, fiche) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'numeraire' && parActions(fiche))),
+      PJ_180: (t, fiche) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'numeraire' && !parActions(fiche))),
+      PJ_04: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'nature' && t.commissaire_apports !== false)),
       // Cas rare (société par actions, apport en nature sans commissaire,
       // évaluation antérieure) : seul le cabinet sait s'il s'applique.
       PJ_191: (t) => (t.capital_modalite === 'nature' && t.commissaire_apports === false ? 'manuel' : false),
       PJ_57: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation' && def(t.capital_modalite, () => t.capital_modalite === 'compensation')),
-      PJ_155: (t) => def(t.capital_sens, () => t.capital_sens === 'augmentation'),
-      PJ_156: (t) => def(t.capital_sens, () => t.capital_sens === 'reduction'),
+      // Augmentation comme réduction : la décision de l'assemblée (PJ_54).
+      PJ_54: (t) => def(t.capital_sens, () => true),
     },
   },
   '34M': {
@@ -438,7 +461,7 @@ function resoudre(operations, typologie = {}, fiche = {}, rep = {}) {
     for (const p of f.pieces_selon_le_cas) {
       if (regles.personnes && PIECES_PAR_PERSONNE.has(p.code)) continue;
       const regle = regles.pieces?.[p.code];
-      const due = regle ? regle(t) : 'manuel';
+      const due = regle ? regle(t, fiche) : 'manuel';
       if (due !== 'manuel') {
         if (due === true) ajouter(p.code, p.code, 'obligatoire', op, { raison: p.condition });
         else if (due === undefined) {
@@ -453,7 +476,7 @@ function resoudre(operations, typologie = {}, fiche = {}, rep = {}) {
     // Pièces que la situation rend nécessaires sans que la fiche les porte
     // (origine du fonds à la création, par exemple).
     for (const [code, a] of Object.entries(regles.ajouts || {})) {
-      const due = a.regle(t);
+      const due = a.regle(t, fiche);
       if (due === true) ajouter(code, code, 'obligatoire', op, { raison: a.condition });
       else if (due === undefined) ajouter(code, code, 'a_preciser', op, { condition: a.condition, question: questionAjout(a) });
     }
@@ -527,6 +550,10 @@ function resoudre(operations, typologie = {}, fiche = {}, rep = {}) {
       }
     }
     for (const code of FACULTATIVES) ajouter(code, code, 'facultative', op);
+    for (const [code, raison] of Object.entries(regles.facultatives || {})) ajouter(code, code, 'facultative', op, { raison });
+  }
+  if (ops.some((c) => ['01M', '02M'].includes(c)) && fondsSas(t)) {
+    for (const code of ['PJ_06', 'PJ_180']) if (pieces.has(code)) pieces.get(code).variantes = [];
   }
 
   // Le cabinet dépose toujours comme mandataire (« mandataire ayant
@@ -692,10 +719,13 @@ function champs(ops, t, fiche, rep = {}) {
     // Rubriques que le portail demande pour une dissolution (synthèses du cabinet :
     // poursuite d'activité et publicité dans 98 à 100 % des dossiers ; 19 des 60
     // dissolutions sont « avec poursuite d'activité »).
-    '22M': [{ name: 'lieu_liquidation', label: 'Siège de la liquidation', type: 'choix', options: [['S', 'Au siège social'], ['L', 'À l’adresse du liquidateur'], ['A', 'À une autre adresse']], defaut: 'S' },
+    // Portail (relevé du 5/11/2026) : lieu de liquidation et, sans poursuite
+    // d'activité, date de cessation d'activité obligatoires.
+    '22M': [{ name: 'lieu_liquidation', label: 'Siège de la liquidation', type: 'choix', options: [['S', 'Au siège social'], ['L', 'À l’adresse du liquidateur'], ['A', 'À une autre adresse']], defaut: 'S', requis: true },
       { name: 'adresse_liquidation', label: 'Adresse de liquidation (si autre)', type: 'adresse' },
       { name: 'poursuite_activite', label: 'L’activité se poursuit pendant la liquidation', type: 'ouinon', requis: true },
       { name: 'date_cessation_activite', label: 'Date de cessation d’activité, si l’activité ne se poursuit pas', type: 'date',
+        requis: rep?.['22M']?.poursuite_activite === false,
         aide: 'En général la date de la dissolution ; elle fixe aussi la fermeture des établissements.' },
       ...PUBLICATION('de la dissolution')],
     '42M': [{ name: 'date_cloture_liquidation', label: 'Date de clôture de la liquidation', type: 'date', requis: true },

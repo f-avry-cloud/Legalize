@@ -457,9 +457,10 @@ async function ouvrirDepotPieces({ reference, siren, operations, typologie, repo
   let id;
   let avertissement = null;
   if (reference) {
-    const f = await chargerModifiable(reference);
+    // Un dossier marqué enregistré est d'abord relu au guichet (formalité disparue, statut à jour).
+    const { f } = await rafraichirEnregistrement(await chargerModifiable(reference));
     id = f.id;
-    if (f.inpi_id) throw erreur('Dossier déjà enregistré au guichet : les pièces ne se complètent plus ici.', 409);
+    if (f.inpi_id) return ouvrirComplement(f, { nouveauLien, saisies: [operations, typologie, reponses, exigencesChamps] });
     await appliquerSaisies(id, { operations: operations ? operationsValides(operations) : null, typologie, reponses, exigences_champs: exigencesChamps });
     if (nouveauLien !== true && f.depot_jeton && f.depot_expire && new Date(f.depot_expire) > new Date()) {
       return {
@@ -494,6 +495,54 @@ async function ouvrirDepotPieces({ reference, siren, operations, typologie, repo
     lien_valable_jusqu_au: expire,
     consigne: 'Donnez ce lien à l’avocat : il y dépose les PDF (10 Mo maximum chacun), depuis son téléphone ou son ordinateur. Vérifiez ensuite avec pieces_recues.',
     ...(avertissement ? { avertissement } : {}),
+    dossier: vue,
+  };
+}
+
+/**
+ * Formalité enregistrée, pas encore signée : seules des pièces peuvent encore
+ * lui être ajoutées (contrat d'interface, §3.11), jamais ses données. Le lien
+ * de complément reçoit les PDF manquants ; ils partent au guichet avec
+ * transmettre_pieces, sur accord de l'avocat, qui régénère la synthèse (§6.4).
+ * Constat du 5/11/2026 : une création déposée sans la copie de l'insertion
+ * (PJ_09) ou sans l'attestation de dépôt des fonds (PJ_180) ne se signe pas
+ * sur le portail, et la ramener en brouillon lui fait perdre ses pièces.
+ */
+const AVANT_SIGNATURE = ['RECEIVED', 'SIGNATURE_PENDING'];
+async function ouvrirComplement(f, { nouveauLien, saisies }) {
+  if (saisies.some((v) => v !== undefined && v !== null)) {
+    throw erreur('Dossier déjà enregistré au guichet : ses données ne se modifient plus ici. Seul un complément de pièces est possible : rappelez ouvrir_depot_pieces avec la seule référence.', 409);
+  }
+  if (f.simule || String(f.inpi_id).startsWith('SIM-')) throw erreur('Dossier simulé : il n’existe pas au guichet.', 409);
+  if (!AVANT_SIGNATURE.includes(f.statut)) {
+    throw erreur(`Formalité au statut « ${statutInfo(f.statut).libelle} » : les pièces ne se complètent plus ici (seulement entre le dépôt et la signature).`, 409);
+  }
+  const suite = 'Une fois les PDF déposés : pieces_recues, puis transmettre_pieces (accord de l’avocat) les joint à la formalité et régénère la synthèse. '
+    + 'Ensuite seulement, l’avocat signe depuis « À signer », sans ramener la formalité en brouillon.';
+  const c = f.typologie?._complement;
+  const vue = await vueDossier(f.id);
+  if (nouveauLien !== true && c && String(c.inpi_id) === String(f.inpi_id) && f.depot_jeton && f.depot_expire && new Date(f.depot_expire) > new Date()) {
+    return {
+      lien_depot: null, lien_valable_jusqu_au: f.depot_expire, complement: true,
+      consigne: 'Le lien de complément déjà remis à l’avocat reste valable : ne lui en donnez pas d’autre (nouveau_lien: true pour le remplacer).',
+      pieces_manquantes: vue.etat.pieces_manquantes, suite, dossier: vue,
+    };
+  }
+  const pieces = await q(supabase.from('formalite_pieces').select('id').eq('formalite_id', f.id));
+  const apres = pieces.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0);
+  const jeton = crypto.randomBytes(24).toString('base64url');
+  const expire = new Date(Date.now() + DUREE_LIEN_JOURS * JOUR_MS).toISOString();
+  const typologie = { ...(f.typologie || {}), _complement: { inpi_id: String(f.inpi_id), depuis: new Date().toISOString(), apres_piece: apres } };
+  await q(supabase.from('formalites').update({ depot_jeton: empreinte(jeton), depot_expire: expire, typologie }).eq('id', f.id).select('id'));
+  await q(supabase.from('formalite_evenements').insert({ formalite_id: f.id, type: 'note',
+    message: `Lien de complément de pièces émis pour la formalité enregistrée n° ${f.inpi_id}, avant signature (valable jusqu’au ${expire.slice(0, 10)}).` }).select('id'));
+  return {
+    lien_depot: `${adresseApplication()}/depot/${jeton}`,
+    lien_valable_jusqu_au: expire,
+    complement: true,
+    consigne: 'Donnez ce lien à l’avocat : il y dépose seulement les PDF qui manquent à la formalité enregistrée (les pièces déjà transmises y sont verrouillées).',
+    pieces_manquantes: vue.etat.pieces_manquantes,
+    suite,
     dossier: vue,
   };
 }
@@ -1101,6 +1150,7 @@ const OUTILS = [
     name: 'ouvrir_depot_pieces',
     description: 'Ouvre le dossier de la formalité (ou le met à jour si « reference » est donnée) et renvoie un lien, valable 7 jours, où l’avocat dépose les PDF. '
       + 'Rappelé avec la même référence, il garde le lien en cours (lien_depot: null) : pour compléter le dossier, préférez renseigner_formalite. '
+      + 'Formalité déjà enregistrée et pas encore signée : rappelé avec la seule référence, il ouvre un lien de complément pour les PDF qui lui manquent (complement: true), à joindre ensuite avec transmettre_pieces sur accord de l’avocat. '
       + 'Renvoie la référence du dossier, à noter dans la fiche dossier.',
     inputSchema: {
       type: 'object',

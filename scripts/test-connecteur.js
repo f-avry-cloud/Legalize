@@ -456,6 +456,12 @@ function verifier(nom, condition, detail) {
   verifier('aucune valeur fictive : le pouvoir du CAC part sans représentant',
     pouvoirs46.find((p) => p.entreprise?.denomination === 'GORIOUX FARO ET ASSOCIES')?.representant === undefined
     && pouvoirs46.find((p) => p.entreprise?.siren === '552032534')?.representant?.descriptionPersonne?.nom === 'LE GALL', pouvoirs46.map((p) => p.representant));
+  // Portail : « Souhaitez-vous désigner un représentant permanent ? » (relevé du 5/11/2026) : oui quand l'identité part,
+  // rien de deviné sinon (la réponse du registre n'est pas remplacée).
+  verifier('pouvoir déjà inscrit : représentant permanent désigné quand son identité est transmise, sans réponse devinée sinon',
+    pouvoirs46.find((p) => p.entreprise?.siren === '552032534')?.designerRepresentantPermanent === true
+    && pouvoirs46.find((p) => p.entreprise?.denomination === 'GORIOUX FARO ET ASSOCIES')?.designerRepresentantPermanent === undefined,
+    pouvoirs46.map((p) => ({ siren: p.entreprise?.siren, designer: p.designerRepresentantPermanent })));
   // Saisie partielle sous levée : non bloquante, mais non transmise.
   await outil('renseigner_formalite', { reference: ref46, reponses: { _registre: { [repCAC]: { nom: 'FARO', adresse: { codePostal: '29000', commune: 'Quimper' } } } } });
   const partiel = await outil('controler_formalite', { reference: ref46 });
@@ -760,6 +766,47 @@ function verifier(nom, condition, detail) {
   f46.statut = 'PAYMENT_PENDING';
   guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'PAYMENT_PENDING', liasseNumber: 'J00297491839' }, id);
   verifier('retirer_piece_guichet : refusé après signature', /après la signature/.test((await outil('retirer_piece_guichet', { reference: ref46, piece_id: String(auGuichet3[3].id), confirmation_avocat: true })).texte));
+  f46.statut = 'SIGNATURE_PENDING';
+
+  // Complément de pièces avant signature (relevé du portail du 5/11/2026 : une création déposée sans
+  // PJ_09 ni PJ_180 ne se signe pas sur le portail, et la ramener en brouillon lui fait perdre ses pièces).
+  guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'SIGNATURE_PENDING', liasseNumber: 'J00297491839' }, id);
+  const refusSaisie = await outil('ouvrir_depot_pieces', { reference: ref46, reponses: { commun: { date_decision: '2026-09-02' } } });
+  verifier('dossier enregistré : ses données ne se modifient pas par ouvrir_depot_pieces', refusSaisie.erreur && /Seul un complément de pièces/.test(refusSaisie.texte), refusSaisie.texte);
+  const comp = await outil('ouvrir_depot_pieces', { reference: ref46 });
+  verifier('formalité « À signer » : lien de complément émis, transmission ensuite sur accord de l’avocat',
+    !comp.erreur && comp.json.complement === true && /\/depot\/[\w-]{30,}$/.test(comp.json.lien_depot || '') && /transmettre_pieces/.test(comp.json.suite) && /sans ramener la formalité en brouillon/.test(comp.json.suite), comp.texte);
+  const jetonC = comp.json.lien_depot.split('/').pop();
+  const etatC = (await http('GET', `/depot/${jetonC}/etat`)).corps;
+  const fichiersC = (e) => [...e.pieces.flatMap((p) => p.fichiers), ...e.autres];
+  verifier('page de complément ouverte, pièces déjà au dossier verrouillées', etatC.complement === true && etatC.transmis === false
+    && fichiersC(etatC).length > 0 && fichiersC(etatC).every((x) => x.verrouille === true), etatC);
+  const cleC = etatC.pieces[0].cle;
+  const tC = await http('POST', `/depot/${jetonC}/televersement`, { cle: cleC, nom: 'complement.pdf', taille: PDF.length });
+  fichiers.set(tC.corps.chemin, PDF);
+  const confC = await http('POST', `/depot/${jetonC}/confirmer`, { cle: cleC, chemin: tC.corps.chemin, nom: 'complement.pdf' });
+  const nouvelleC = confC.corps ? fichiersC(confC.corps).find((x) => x.nom === 'complement.pdf') : null;
+  verifier('pièce déposée pendant le complément : reçue, modifiable', confC.statut === 200 && nouvelleC && !nouvelleC.verrouille, confC.corps);
+  const ancienneC = fichiersC(etatC)[0];
+  verifier('pièce déjà jointe à la formalité : ni retrait ni reclassement par le lien',
+    (await http('DELETE', `/depot/${jetonC}/pieces/${ancienneC.id}`)).statut === 409
+    && (await http('POST', `/depot/${jetonC}/pieces/${ancienneC.id}/reclasser`, { cle: cleC })).statut === 409);
+  verifier('pièce du complément : retrait possible par le lien', (await http('DELETE', `/depot/${jetonC}/pieces/${nouvelleC.id}`)).statut === 200);
+  const memeLien = await outil('ouvrir_depot_pieces', { reference: ref46 });
+  verifier('rappelé : le lien de complément en cours est gardé', !memeLien.erreur && memeLien.json.lien_depot === null && memeLien.json.complement === true, memeLien.json);
+  // Bout en bout : la pièce manquante déposée par le lien part seule au guichet, sur accord de l'avocat.
+  const PDF2 = Buffer.concat([PDF, Buffer.from('\n% complément\n')]);
+  const t2 = await http('POST', `/depot/${jetonC}/televersement`, { cle: cleC, nom: 'insertion-jal.pdf', taille: PDF2.length });
+  fichiers.set(t2.corps.chemin, PDF2);
+  await http('POST', `/depot/${jetonC}/confirmer`, { cle: cleC, chemin: t2.corps.chemin, nom: 'insertion-jal.pdf' });
+  const avantC = auGuichet3.length;
+  const trC = await outil('transmettre_pieces', { reference: ref46, confirmation_avocat: true });
+  verifier('transmettre_pieces : seule la pièce du complément part, rien n’est renvoyé',
+    !trC.erreur && trC.json.transmises.length === 1 && trC.json.transmises[0].nom === 'insertion-jal.pdf' && auGuichet3.length === avantC + 1, trC.json);
+  guichet.lire = async (id) => guichet.normaliserFormalite({ id, status: 'PAYMENT_PENDING', liasseNumber: 'J00297491839' }, id);
+  const apresSignature = await outil('ouvrir_depot_pieces', { reference: ref46 });
+  verifier('formalité signée : plus de complément', apresSignature.erreur && /ne se complètent plus/.test(apresSignature.texte), apresSignature.texte);
+  verifier('lien de complément fermé après la signature', (await http('POST', `/depot/${jetonC}/televersement`, { cle: cleC, nom: 'x.pdf', taille: 10 })).statut === 409);
   f46.statut = 'SIGNATURE_PENDING';
 
   // Ramenée en brouillon sur le portail : controler_formalite le constate de lui-même (sans statut_formalite d'abord).

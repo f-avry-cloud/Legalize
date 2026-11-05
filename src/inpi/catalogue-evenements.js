@@ -59,6 +59,10 @@ const PIECES_GENEREES = [
 const PV = ['PJ_54'];
 const STATUTS_MAJ = ['PJ_02'];
 const ANNONCE = ['PJ_08'];
+// Création : le portail exige la copie de l'insertion (PJ_09) et ne propose
+// l'attestation de parution (PJ_08) qu'en facultatif (relevé du portail du
+// 5/11/2026, création de SAS). Envoyée sous PJ_08, l'annonce y manque.
+const INSERTION = ['PJ_09'];
 const IDENTITE_DIRIGEANT = [
   ['PJ_11', 'pour chaque nouveau dirigeant personne physique (ou passeport)'],
   ['PJ_17', 'pour chaque nouveau dirigeant personne physique'],
@@ -99,7 +103,7 @@ const DETAIL = {
       ['Présence de salariés', 'BlocEtablissementSalarie.presenceSalarie'],
     ],
     pieces: [
-      ['PJ_01'], ANNONCE, ...SIEGE,
+      ['PJ_01'], INSERTION, ...SIEGE,
       ['PJ_06', 'en cas d’apports en numéraire'],
       ['PJ_03', 'si les premiers dirigeants ne sont pas désignés dans les statuts'],
       ...IDENTITE_DIRIGEANT,
@@ -127,7 +131,7 @@ const DETAIL = {
       ['Options fiscales', 'PersonneMorale.optionsFiscales'],
     ],
     pieces: [
-      ['PJ_01'], ANNONCE, ...SIEGE,
+      ['PJ_01'], INSERTION, ...SIEGE,
       ['PJ_06', 'en cas d’apports en numéraire'],
       ['PJ_03', 'si les premiers dirigeants ne sont pas désignés dans les statuts'],
       ...IDENTITE_DIRIGEANT,
@@ -146,7 +150,7 @@ const DETAIL = {
       ['Adresse et activité de l’établissement où l’activité commence', 'PersonneMorale.autresEtablissements'],
     ],
     pieces: [
-      ['PJ_01'], ANNONCE, ...SIEGE,
+      ['PJ_01'], INSERTION, ...SIEGE,
       ['PJ_25', 'pour l’établissement où l’activité est exercée'],
       ['PJ_06', 'en cas d’apports en numéraire'],
       ...IDENTITE_DIRIGEANT,
@@ -234,8 +238,11 @@ const DETAIL = {
       ['Capital, s’il est modifié à cette occasion', 'BlocDetailPersonneMorale.montantCapital'],
     ],
     pieces: [
-      ['PJ_153'], ['PJ_157'], STATUTS_MAJ, ANNONCE,
-      ['PJ_160', 'lorsqu’un commissaire à la transformation doit être désigné'],
+      // PJ_157 et PJ_160 sont des pièces de dépôt d'actes (DA) au dictionnaire du
+      // guichet : le portail propose ici le PV de transformation, les statuts et
+      // le rapport du commissaire à la transformation (PJ_91).
+      ['PJ_153'], STATUTS_MAJ, ANNONCE,
+      ['PJ_91', 'lorsqu’un commissaire à la transformation doit être désigné'],
       ['PJ_58', 'pour la transformation d’une SARL en SA'],
       ['PJ_03', 'si de nouveaux dirigeants sont nommés'],
       ...IDENTITE_DIRIGEANT,
@@ -263,14 +270,17 @@ const DETAIL = {
       ['Nature de l’opération (augmentation, réduction) et modalités', 'BlocDetailPersonneMorale.is15MTriggered'],
     ],
     pieces: [
+      // PJ_155, PJ_156 et PJ_163 sont des pièces de dépôt d'actes (DA) au
+      // dictionnaire du guichet : le portail propose, pour une modification du
+      // capital, le PV de l'assemblée, le rapport du commissaire aux apports et,
+      // pour une SA ou une SAS, le certificat du dépositaire (relevé du 5/11/2026).
       STATUTS_MAJ, ANNONCE,
-      ['PJ_155', 'en cas d’augmentation : décision ou procès-verbal'],
-      ['PJ_156', 'en cas de réduction : décision actant son principe'],
-      ['PJ_54', 'en cas de réduction : décision constatant sa réalisation'],
+      ['PJ_54', 'décision ou procès-verbal de l’assemblée ayant décidé la modification du capital (et, pour une réduction, celle qui constate sa réalisation)'],
       ['PJ_55', 'SA ou SAS : décision du conseil ou du directoire agissant sur délégation'],
-      ['PJ_180', 'augmentation en numéraire'],
+      ['PJ_56', 'SA ou SAS : augmentation en numéraire, certificat du dépositaire des fonds'],
+      ['PJ_180', 'augmentation en numéraire d’une société autre qu’une SA ou une SAS'],
       ['PJ_57', 'SA ou SAS : libération par compensation de créances'],
-      ['PJ_163', 'augmentation par apport en nature (avec le récépissé de son dépôt)'],
+      ['PJ_04', 'augmentation par apport en nature : rapport du commissaire aux apports'],
       ['PJ_191', 'société par actions, apport en nature sans commissaire aux apports : absence de circonstance nouvelle'],
     ],
   },
