@@ -45,7 +45,7 @@ Changer `MCP_GU_JETON` dans Vercel révoque immédiatement l'ancienne adresse.
 | `reclasser_piece`, `retirer_piece`, `catalogue_pieces` | Ranger une pièce reçue sous la bonne ligne ou un autre type officiel |
 | `lister_pieces_deposees` | Actes et comptes annuels déposés au registre pour un SIREN (lecture seule) |
 | `telecharger_acte` | PDF d'un acte et son texte, par reconnaissance de caractères s'il est numérisé (lecture seule) |
-| `annonces_bodacc` | Annonces publiées au BODACC pour un SIREN (données ouvertes de la DILA, sans compte) ; pour une TUP, `controler_formalite` y cherche la publication de la dissolution et calcule la fin du délai d'opposition |
+| `annonces_bodacc` | Annonces publiées au BODACC pour un SIREN (données ouvertes de la DILA, sans compte) ; pour la radiation après une TUP (`RADTUP`), `controler_formalite` y cherche la publication de la dissolution et calcule la fin du délai d'opposition |
 | `telecharger_comptes` | PDF des comptes annuels, texte et données saisies par l'INPI (postes libellés, chiffres clés) ; comptes confidentiels non récupérés (lecture seule) |
 
 Aucun outil ne signe ni ne paie : la signature et le paiement restent sur le portail.
@@ -259,3 +259,20 @@ select cree_le, methode, chemin, statut, duree_ms, reponse from guichet_traces o
 `/api/formalities/{id}/synthesis` refuse `Accept: application/pdf` (406). La
 synthèse est lue comme pièce jointe de la formalité (PJ_99, puis PJ_119, via
 `/api/attachments/{id}/file`), puis à défaut sur `/synthesis` en JSON.
+
+## TUP en deux temps
+
+Comme le guichet et la pratique du cabinet, la transmission universelle de patrimoine se dépose en deux
+formalités :
+
+1. **28M, déclaration de la dissolution sans liquidation**, dès la décision de l'associé unique publiée :
+   associé unique qui recueille le patrimoine, journal et date de l'annonce ; pièces : décision (PJ_108),
+   annonce légale (PJ_08), pouvoir. La société reste immatriculée (`indicateurMaintienImmatriculationRegistre`).
+2. **RADTUP, radiation à l'issue du délai d'opposition** (30 jours après la publication), déposée en
+   événement 42M « à la suite d'un 28M » : date de transmission du patrimoine (contrôlée par rapport à la
+   décision et à la publication au BODACC), associé unique ; pièces : pouvoir, Kbis de l'associé unique à
+   préciser. La liasse porte `dateTransfertPatrimoine` et `indicateurDisparitionPMTransmissionUniversellePatrimoine`.
+
+Un dossier 28M ouvert avant cette scission (date de transmission ou date unique) se dépose comme avant, en un
+seul temps. La liasse RADTUP est à valider sur le serveur de démonstration (`npm run banc:guichet seule-RADTUP`)
+avant le premier dépôt réel.

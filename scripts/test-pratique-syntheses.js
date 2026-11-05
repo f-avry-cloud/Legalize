@@ -44,6 +44,12 @@ verifier('42M : publicité de la clôture demandée', ['journal_publication', 'd
 console.log('\nTUP et fusion : pièces constatées dans la pratique');
 const tup = parcours.resoudre(['28M'], {}, FICHE);
 verifier('28M : Kbis de l’associé unique proposé', codes(tup.pieces.a_preciser).includes('PJ_188'), tup.pieces);
+const rad = parcours.resoudre(['RADTUP'], {}, FICHE);
+verifier('RADTUP : Kbis de l’associé unique proposé, pièces de liquidation absentes',
+  codes(rad.pieces.a_preciser).includes('PJ_188') && !['PJ_133', 'PJ_82', 'PJ_240', 'PJ_241'].some((c) => codes(rad.pieces.obligatoires).includes(c)), rad.pieces);
+const ch28 = tup.champs.find((g) => g.op === '28M').champs.map((c) => c.name);
+verifier('28M : publicité de la dissolution demandée, transmission renvoyée à la radiation',
+  ['associe_unique', 'journal_publication', 'date_publication'].every((n) => ch28.includes(n)) && !ch28.includes('date_transmission'), ch28);
 const fusion = parcours.resoudre(['41M'], {}, FICHE);
 verifier('41M : annonce légale exigée', codes(fusion.pieces.obligatoires).includes('PJ_08'));
 verifier('41M : Kbis de l’absorbante proposé', codes(fusion.pieces.a_preciser).includes('PJ_20'));

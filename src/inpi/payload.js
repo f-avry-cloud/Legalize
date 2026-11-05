@@ -713,5 +713,5 @@ function indicateursEvenement(valeur, chemin = '', acc = []) {
 
 module.exports = {
   construirePayload, indicateursEvenement,
-  dateInpi, clotureInpi, adresseInpi, pouvoirIndividu, contenuAnterieur, nettoyer, codeNationalite, beneficiairesInpi,
+  dateInpi, clotureInpi, adresseInpi, pouvoirIndividu, contenuAnterieur, nettoyer, codeNationalite, beneficiairesInpi, journalInpi,
 };

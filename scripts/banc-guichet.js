@@ -80,7 +80,7 @@ function creation(forme, sc = {}) {
   };
 }
 
-const CESSATIONS = ['28M', '40M', '41M'];
+const CESSATIONS = ['28M', 'RADTUP', '40M', '41M'];
 
 function modification(ops, fiche, extra = {}) {
   return {
@@ -117,7 +117,8 @@ function modification(ops, fiche, extra = {}) {
         '63M': { date_rachat: '2026-09-30' },
         '67PMF': { activite: '0', description: 'Édition de logiciels applicatifs de prise de rendez-vous' },
         '84M': { mode: 'D', locataire: PM('LOCATAIRE FICTIF'), date_effet: '2026-09-30' },
-        '28M': { date_transmission: '2026-11-02', associe_unique: PM('ASSOCIE UNIQUE FICTIF', { forme_juridique_code: '5599' }) },
+        '28M': { associe_unique: PM('ASSOCIE UNIQUE FICTIF', { forme_juridique_code: '5599' }), journal_publication: 'Ouest-France', date_publication: '2026-10-02' },
+        RADTUP: { date_transmission: '2026-11-02', associe_unique: PM('ASSOCIE UNIQUE FICTIF', { forme_juridique_code: '5599' }) },
         '40M': { date_cessation: '2026-09-30' },
         '80PMF': { etablissement: '6', date_fermeture: '2026-09-30', destination: 'B' },
         MAJDIR: { maj_0: { denomination: 'NOUVELLE DENOMINATION FICTIVE', siren: '775726417', forme_juridique_code: '5599', greffe: 'NANTERRE',
@@ -147,7 +148,7 @@ function scenarios(fiche) {
   for (const ops of [['15M', '35M'], ['10M', '15M', '35M'], ['12M', '16M'], ['13M', '14M', '25M'], ['12M', '17M']]) {
     l.push([`modification-${ops.join('-')}`, modification(ops, fiche)]);
   }
-  for (const op of ['18M', '19M', '20M', '29M', '38F', '51M', '54PMF', '55PM', '60PMF', '61PMF', '62M', '63M', '67PMF', '84M', '28M', '40M', '80PMF', '41M', 'MAJDIR']) {
+  for (const op of ['18M', '19M', '20M', '29M', '38F', '51M', '54PMF', '55PM', '60PMF', '61PMF', '62M', '63M', '67PMF', '84M', '28M', 'RADTUP', '40M', '80PMF', '41M', 'MAJDIR']) {
     l.push([`seule-${op}`, modification([op], fiche)]);
   }
   return l;

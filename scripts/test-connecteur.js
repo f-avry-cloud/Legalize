@@ -855,30 +855,52 @@ function verifier(nom, condition, detail) {
   global.fetch = fetchOrigine;
   verifier('aucun appel réel à l’INPI', appelsInpi.length === 0, appelsInpi);
 
-  console.log('\nTUP : radiation après transmission universelle de patrimoine (28M)');
+  console.log('\nTUP en deux temps : déclaration de la dissolution (28M), puis radiation (RADTUP, événement 42M)');
+  const HOLDING = { denomination: 'HOLDING MERE', siren: '552032534', forme_juridique_code: '5710', greffe: 'Quimper', adresse: { voie: 'rue de Brest', codePostal: '29000', commune: 'Quimper' } };
   const exTup = await outil('exigences_formalite', { operations: ['28M'], siren: '552100554' });
   const champsTup = exTup.json.champs.flatMap((g) => g.champs.map((c) => `${g.groupe}.${c.name}`));
-  verifier('TUP : date de décision, date de transmission et associé unique demandés',
-    ['commun.date_decision', '28M.date_transmission', '28M.associe_unique'].every((k) => champsTup.includes(k)) && !champsTup.includes('28M.date_dissolution'), champsTup);
-  verifier('TUP : décision, annonce légale et pouvoir exigés',
+  verifier('28M : décision, associé unique et publicité de la dissolution demandés, pas la transmission',
+    ['commun.date_decision', '28M.associe_unique', '28M.journal_publication', '28M.date_publication'].every((k) => champsTup.includes(k)) && !champsTup.includes('28M.date_transmission'), champsTup);
+  verifier('28M : décision, annonce légale et pouvoir exigés',
     ['PJ_108', 'PJ_08', 'PJ_51'].every((c) => exTup.json.pieces.obligatoires.some((p) => p.code === c)), exTup.json.pieces.obligatoires.map((p) => p.code));
-  const { resoudre: resoudreTup } = require('../src/inpi/parcours');
-  const trop = resoudreTup(['28M'], {}, {}, { commun: { date_decision: '2026-09-01' }, '28M': { date_transmission: '2026-09-15' } }).incompatibilites;
-  verifier('TUP : transmission moins de 30 jours après la décision refusée', trop.some((m) => /moins de 30 jours/.test(m)), trop);
-  const futur = resoudreTup(['28M'], {}, {}, { commun: { date_decision: '2026-09-01' }, '28M': { date_transmission: '2099-01-01' } }).incompatibilites;
-  verifier('TUP : transmission pas encore réalisée refusée', futur.some((m) => /pas encore réalisée/.test(m)), futur);
-  const coherent = resoudreTup(['28M'], {}, {}, { commun: { date_decision: '2026-09-01' }, '28M': { date_transmission: '2026-10-08' } }).incompatibilites;
-  verifier('TUP : dates cohérentes acceptées', !coherent.length, coherent);
-  const ech = require('../src/connecteur/service').echeanceDe(['28M'], { commun: { date_decision: '2026-09-01' }, '28M': { date_transmission: '2026-10-08' } }, new Date('2026-10-26'));
-  verifier('TUP : échéance d’un mois à compter de la transmission', ech.depart === '2026-10-08' && ech.limite === '2026-11-08', ech);
-  const corpsTup = construireParcours({ operations: ['28M'], fiche: await rne.entreprise('552100554'), siren: '552100554', typologie: {},
-    reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false }, '28M': { date_transmission: '2026-10-08',
-      associe_unique: { denomination: 'HOLDING MERE', siren: '552032534', forme_juridique_code: '5710', greffe: 'Quimper', adresse: { voie: 'rue de Brest', codePostal: '29000', commune: 'Quimper' } } } }, pieces: [] }).corps;
+  const exRad = await outil('exigences_formalite', { operations: ['RADTUP'], siren: '552100554' });
+  const champsRad = exRad.json.champs.flatMap((g) => g.champs.map((c) => `${g.groupe}.${c.name}`));
+  verifier('RADTUP : date de transmission et associé unique demandés', ['RADTUP.date_transmission', 'RADTUP.associe_unique'].every((k) => champsRad.includes(k)), champsRad);
+  verifier('RADTUP : pouvoir exigé, Kbis de l’associé unique à préciser, rien de la clôture de liquidation',
+    exRad.json.pieces.obligatoires.map((p) => p.code).join() === 'PJ_51' && exRad.json.pieces.a_preciser.some((p) => p.code === 'PJ_188')
+    && !['PJ_133', 'PJ_82', 'PJ_240', 'PJ_241'].some((c) => [...exRad.json.pieces.obligatoires, ...exRad.json.pieces.a_preciser].some((p) => p.code === c)), exRad.json.pieces);
+  const { resoudre: resoudreTup, evenementAttendu } = require('../src/inpi/parcours');
+  verifier('RADTUP : enregistrée par le guichet en 42M', evenementAttendu('RADTUP') === '42M');
+  verifier('déclaration et radiation : deux dépôts distincts', resoudreTup(['28M', 'RADTUP'], {}, {}).incompatibilites.some((m) => /Une seule opération de dissolution/.test(m)));
+  const trop = resoudreTup(['RADTUP'], {}, {}, { commun: { date_decision: '2026-09-01' }, RADTUP: { date_transmission: '2026-09-15' } }).incompatibilites;
+  verifier('RADTUP : transmission moins de 30 jours après la décision refusée', trop.some((m) => /moins de 30 jours/.test(m)), trop);
+  const futur = resoudreTup(['RADTUP'], {}, {}, { commun: { date_decision: '2026-09-01' }, RADTUP: { date_transmission: '2099-01-01' } }).incompatibilites;
+  verifier('RADTUP : transmission pas encore réalisée refusée', futur.some((m) => /pas encore réalisée/.test(m)), futur);
+  const coherent = resoudreTup(['RADTUP'], {}, {}, { commun: { date_decision: '2026-09-01' }, RADTUP: { date_transmission: '2026-10-08' } }).incompatibilites;
+  verifier('RADTUP : dates cohérentes acceptées', !coherent.length, coherent);
+  const declaration = resoudreTup(['28M'], {}, {}, { commun: { date_decision: '2026-11-01' } }).incompatibilites;
+  verifier('28M : la déclaration se dépose dès la décision, sans attendre le délai d’opposition', !declaration.length, declaration);
+  const ech = require('../src/connecteur/service').echeanceDe(['RADTUP'], { commun: { date_decision: '2026-09-01' }, RADTUP: { date_transmission: '2026-10-08' } }, new Date('2026-10-26'));
+  verifier('RADTUP : échéance d’un mois à compter de la transmission', ech.depart === '2026-10-08' && ech.limite === '2026-11-08', ech);
+  const ech28 = require('../src/connecteur/service').echeanceDe(['28M'], { commun: { date_decision: '2026-09-01' } }, new Date('2026-09-10'));
+  verifier('28M : échéance d’un mois à compter de la décision', ech28.depart === '2026-09-01' && ech28.limite === '2026-10-01', ech28);
+  const corpsDecl = construireParcours({ operations: ['28M'], fiche: await rne.entreprise('552100554'), siren: '552100554', typologie: {},
+    reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false }, '28M': { associe_unique: HOLDING, journal_publication: 'Ouest-France', date_publication: '2026-09-05' } }, pieces: [] }).corps;
+  const dd = corpsDecl.content.personneMorale.detailCessationEntreprise;
+  verifier('28M : dissolution sans liquidation, immatriculation maintenue, sans transmission',
+    corpsDecl.content.evenementCessation === '28M' && dd.typeDissolution === '2' && dd.dateDissolutionDisparition === '2026-09-01' && dd.indicateurMaintienImmatriculationRegistre === true
+    && !dd.dateTransfertPatrimoine && !dd.indicateurDisparitionPM, dd);
+  verifier('28M : publicité de la dissolution transmise', corpsDecl.content.personneMorale.identite.publicationLegale?.datePublication === '2026-09-05');
+  verifier('28M : l’associé unique qui recueille le patrimoine figure (rôle 130)',
+    corpsDecl.content.personneMorale.composition.pouvoirs.some((p) => p.roleEntreprise === '130' && p.entreprise.denomination === 'HOLDING MERE'));
+  const corpsTup = construireParcours({ operations: ['RADTUP'], fiche: await rne.entreprise('552100554'), siren: '552100554', typologie: {},
+    reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false }, RADTUP: { date_transmission: '2026-10-08', associe_unique: HOLDING } }, pieces: [] }).corps;
   const dc = corpsTup.content.personneMorale.detailCessationEntreprise;
-  verifier('TUP : dissolution à la décision, transmission et cessation à l’issue du délai d’opposition',
-    dc.typeDissolution === '2' && dc.dateDissolutionDisparition === '2026-09-01' && dc.dateTransfertPatrimoine === '2026-10-08' && dc.dateCessationTotaleActivite === '2026-10-08', dc);
-  verifier('TUP : l’associé unique qui recueille le patrimoine figure (rôle 130)',
-    corpsTup.content.personneMorale.composition.pouvoirs.some((p) => p.roleEntreprise === '130' && p.entreprise.denomination === 'HOLDING MERE'));
+  verifier('RADTUP : événement 42M, disparition par TUP, transmission et cessation à l’issue du délai d’opposition',
+    corpsTup.content.evenementCessation === '42M' && dc.indicateurDisparitionPM === true && dc.indicateurDisparitionPMTransmissionUniversellePatrimoine === true
+    && dc.dateDissolutionDisparition === '2026-09-01' && dc.dateTransfertPatrimoine === '2026-10-08' && dc.dateCessationTotaleActivite === '2026-10-08', dc);
+  verifier('RADTUP : l’associé unique figure une seule fois',
+    corpsTup.content.personneMorale.composition.pouvoirs.filter((p) => p.roleEntreprise === '130' && p.entreprise?.siren === '552032534').length === 1);
   const ancien = construireParcours({ operations: ['28M'], fiche: await rne.entreprise('552100554'), siren: '552100554', typologie: {},
     reponses: { '28M': { date_dissolution: '2026-09-30', associe_unique: { denomination: 'X' } } }, pieces: [] }).corps.content.personneMorale.detailCessationEntreprise;
   verifier('TUP : dossier ancien (une seule date) toujours déposable', ancien.dateDissolutionDisparition === '2026-09-30' && ancien.dateTransfertPatrimoine === '2026-09-30');
@@ -901,8 +923,8 @@ function verifier(nom, condition, detail) {
     && /dateparution >= date'2026-01-01'/.test(appelsBodacc.at(-1).where) && appelsBodacc.at(-1).order_by === 'dateparution desc', appelsBodacc.at(-1));
   verifier('annonces_bodacc : SIREN ou famille invalides refusés en clair',
     /SIREN invalide/.test((await outil('annonces_bodacc', { siren: '123' })).texte) && /Famille d’annonces inconnue/.test((await outil('annonces_bodacc', { siren: '552100554', famille: 'x' })).texte));
-  const ouvT = await outil('ouvrir_depot_pieces', { siren: '552100554', operations: ['28M'],
-    reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false }, '28M': { date_transmission: '2026-10-05' } } });
+  const ouvT = await outil('ouvrir_depot_pieces', { siren: '552100554', operations: ['RADTUP'],
+    reponses: { commun: { date_decision: '2026-09-01', diffusion_commerciale: false }, RADTUP: { date_transmission: '2026-10-05' } } });
   const ctlT = await outil('controler_formalite', { reference: ouvT.json.dossier.reference });
   verifier('TUP : publication de la dissolution au BODACC retrouvée, fin du délai d’opposition calculée, transmission antérieure signalée',
     ctlT.json.alertes.some((a) => /dissolution publiée le 2026-09-10/.test(a) && /expirant le 2026-10-10/.test(a) && /\(2026-10-05\) est antérieure/.test(a)), ctlT.json.alertes);
@@ -940,7 +962,7 @@ function verifier(nom, condition, detail) {
       for (const p of [...r.pieces.obligatoires, ...r.pieces.a_preciser, ...r.pieces.facultatives]) if (!PIECES[p.code]) inconnues.push(`${op} ${p.code}`);
       for (const qq of r.questions) if (!['entrants', 'sortants', 'maj', 'choix'].includes(qq.type)) sansFormat.push(`${op} ${qq.id}`);
       const demande = (r.champs.find((g) => g.op === '_registre')?.champs || []).some((c) => c.name === 'objet');
-      if (!demande && !['40M', '28M', '41M'].includes(op)) sansObjet.push(op);
+      if (!demande && !['40M', '28M', 'RADTUP', '41M'].includes(op)) sansObjet.push(op);
     }
   }
   verifier(`${toutes.length} opérations : toute pièce exigée est un type reconnu par le guichet`, !inconnues.length, inconnues);
