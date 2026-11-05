@@ -40,21 +40,22 @@ async function etat(f) {
   const ligne = (p, categorie) => ({
     cle: p.cle, code: p.code, piece: p.court || p.libelle, libelle: p.libelle, personne: p.personne || null,
     condition: p.condition || p.raison || null, categorie,
-    fichiers: p.fichiers.map((x) => ({ id: x.id, nom: x.nom, taille: x.taille })),
+    fichiers: p.fichiers.map((x) => ({ id: x.id, nom: x.nom, taille: x.taille, ...(f.inpi_id && !ajouteeAuComplement(f, x) ? { verrouille: true } : {}) })),
   });
   return {
     reference: d.reference,
     societe: d.societe.denomination || '',
     operations: d.operations.map((o) => o.nom),
     expire: f.depot_expire,
-    transmis: Boolean(f.inpi_id),
+    transmis: Boolean(f.inpi_id) && !complementOuvert(f),
+    complement: complementOuvert(f),
     pieces: [
       ...d.pieces.obligatoires.map((p) => ligne(p, 'obligatoire')),
       ...d.pieces.a_preciser.map((p) => ligne(p, 'selon_le_cas')),
       ...d.pieces.facultatives.map((p) => ligne(p, 'facultative')),
     ],
     // Pièces reçues hors de la liste (« Autre pièce »), avec leur type.
-    autres: d.autres_pieces.map((x) => ({ id: x.id, code: x.code, nom: x.nom, taille: x.taille, type: PIECES[x.code]?.libelle || x.code })),
+    autres: d.autres_pieces.map((x) => ({ id: x.id, code: x.code, nom: x.nom, taille: x.taille, type: PIECES[x.code]?.libelle || x.code, ...(f.inpi_id && !ajouteeAuComplement(f, x) ? { verrouille: true } : {}) })),
     types: cataloguePieces().pieces,
   };
 }
@@ -87,6 +88,20 @@ routeur.use((req, res, next) => {
   return dansContexte({ client: service, utilisateur: null }, () => next());
 });
 
+/**
+ * Complément de pièces d'une formalité enregistrée, ouvert par
+ * ouvrir_depot_pieces tant qu'elle n'est pas signée (contrat d'interface,
+ * §3.11 : ajout d'une pièce entre le dépôt et la signature). Les pièces déjà
+ * au dossier lors de l'ouverture du complément ne se touchent plus ici.
+ */
+const AVANT_SIGNATURE = ['RECEIVED', 'SIGNATURE_PENDING'];
+function complementOuvert(f) {
+  const c = f.typologie?._complement;
+  return Boolean(f.inpi_id && !f.simule && c && String(c.inpi_id) === String(f.inpi_id) && AVANT_SIGNATURE.includes(f.statut));
+}
+const ajouteeAuComplement = (f, p) => complementOuvert(f) && Number(p.id) > Number(f.typologie._complement.apres_piece || 0);
+const FERME = 'Le dossier a déjà été transmis au guichet.';
+
 routeur.get('/:jeton', (req, res) => res.type('html').send(PAGE));
 
 routeur.get('/:jeton/etat', async (req, res) => res.json(await etat(await dossierDuLien(req.params.jeton))));
@@ -94,7 +109,7 @@ routeur.get('/:jeton/etat', async (req, res) => res.json(await etat(await dossie
 /** Adresse d'envoi signée pour un PDF destiné à une pièce de la liste. */
 routeur.post('/:jeton/televersement', async (req, res) => {
   const f = await dossierDuLien(req.params.jeton);
-  if (f.inpi_id) throw erreur('Le dossier a déjà été transmis au guichet.', 409);
+  if (f.inpi_id && !complementOuvert(f)) throw erreur(FERME, 409);
   const { cle, code, nom, taille } = req.body || {};
   const piece = await destination(f, { cle, code });
   if (!/\.pdf$/i.test(String(nom || ''))) throw erreur('Seuls les PDF sont acceptés par le guichet.', 422);
@@ -110,7 +125,7 @@ routeur.post('/:jeton/televersement', async (req, res) => {
 /** Le PDF est arrivé dans le stockage : contrôle, puis inscription au dossier. */
 routeur.post('/:jeton/confirmer', async (req, res) => {
   const f = await dossierDuLien(req.params.jeton);
-  if (f.inpi_id) throw erreur('Le dossier a déjà été transmis au guichet.', 409);
+  if (f.inpi_id && !complementOuvert(f)) throw erreur(FERME, 409);
   const { cle, code, chemin, nom } = req.body || {};
   const piece = await destination(f, { cle, code });
   if (typeof chemin !== 'string' || !chemin.startsWith(`formalites/${f.id}/${piece.code}_`) || chemin.includes('..')) throw erreur('Envoi non reconnu.');
@@ -131,9 +146,10 @@ routeur.post('/:jeton/confirmer', async (req, res) => {
 /** Range un fichier reçu sous une autre pièce de la liste, ou sous un autre type. */
 routeur.post('/:jeton/pieces/:pieceId/reclasser', async (req, res) => {
   const f = await dossierDuLien(req.params.jeton);
-  if (f.inpi_id) throw erreur('Le dossier a déjà été transmis au guichet.', 409);
+  if (f.inpi_id && !complementOuvert(f)) throw erreur(FERME, 409);
   const [p] = await q(supabase.from('formalite_pieces').select('*').eq('id', req.params.pieceId).eq('formalite_id', f.id));
   if (!p) throw erreur('Pièce introuvable.', 404);
+  if (f.inpi_id && !ajouteeAuComplement(f, p)) throw erreur('Pièce déjà jointe à la formalité enregistrée : elle ne se modifie plus ici.', 409);
   const cible = await destination(f, req.body || {});
   await parcoursSvc.reclasserPiece(p.id, cible.cle === cible.code && !(await etat(f)).pieces.some((x) => x.cle === cible.cle) ? { code: cible.code } : { cle: cible.cle });
   res.json(await etat(f));
@@ -142,9 +158,10 @@ routeur.post('/:jeton/pieces/:pieceId/reclasser', async (req, res) => {
 /** Retire un fichier déposé par erreur, tant que le dossier n'est pas transmis. */
 routeur.delete('/:jeton/pieces/:pieceId', async (req, res) => {
   const f = await dossierDuLien(req.params.jeton);
-  if (f.inpi_id) throw erreur('Le dossier a déjà été transmis au guichet.', 409);
+  if (f.inpi_id && !complementOuvert(f)) throw erreur(FERME, 409);
   const [p] = await q(supabase.from('formalite_pieces').select('*').eq('id', req.params.pieceId).eq('formalite_id', f.id));
   if (!p) throw erreur('Pièce introuvable.', 404);
+  if (f.inpi_id && !ajouteeAuComplement(f, p)) throw erreur('Pièce déjà jointe à la formalité enregistrée : elle ne se retire plus ici.', 409);
   await parcoursSvc.retirerPiece(p.id);
   await removeFiles([p.filepath]).catch(() => {});
   res.json(await etat(f));
@@ -265,7 +282,7 @@ const PAGE = `<!doctype html>
   function ligneFichier(e, f, actuel) {
     var li = el('li');
     li.appendChild(el('span', '', f.nom + (f.taille ? ' (' + taille(f.taille) + ')' : '')));
-    if (e.transmis) return li;
+    if (e.transmis || f.verrouille) return li;
     var actions = el('span', 'actions');
     var sel = choixDestination(e, actuel);
     sel.onchange = function () {
@@ -288,6 +305,7 @@ const PAGE = `<!doctype html>
     var liste = document.getElementById('liste');
     liste.textContent = '';
     if (e.transmis) { liste.appendChild(el('p', 'note', 'Ce dossier a été transmis au guichet unique : le dépôt de pièces est fermé.')); }
+    if (e.complement) { liste.appendChild(el('p', 'note', 'Formalité déjà enregistrée au guichet unique : déposez seulement les pièces qui lui manquent. Elles lui seront jointes après l’accord de l’avocat ; les pièces déjà transmises ne se modifient plus ici.')); }
     CATEGORIES.forEach(function (c) {
       var pieces = e.pieces.filter(function (p) { return p.categorie === c[0]; });
       if (!pieces.length) return;

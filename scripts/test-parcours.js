@@ -82,7 +82,9 @@ function verifier(nom, condition, detail) {
   })).corps;
   verifier('plus rien à préciser une fois la typologie renseignée', d.pieces.a_preciser.length === 0, d.pieces.a_preciser.map((p) => p.code));
   const attendues = d.pieces.obligatoires.map((p) => p.cle);
-  verifier('pièces de la nouvelle présidente et du démissionnaire', ['PJ_11:e0', 'PJ_17:e0', 'PJ_230:s0', 'PJ_180'].every((c) => attendues.includes(c)), attendues);
+  verifier('pièces de la nouvelle présidente et du démissionnaire', ['PJ_11:e0', 'PJ_17:e0', 'PJ_230:s0'].every((c) => attendues.includes(c)), attendues);
+  // SAS : certificat du dépositaire de la modification du capital (PJ_56), pas de pièce de dépôt d'actes (relevé du portail du 5/11/2026).
+  verifier('augmentation en numéraire d’une SAS : PJ_56 et PV (PJ_54), sans PJ_155 ni PJ_180', ['PJ_56', 'PJ_54'].every((c) => attendues.includes(c)) && !attendues.some((c) => ['PJ_155', 'PJ_180'].includes(c)), attendues);
   verifier('formulaire ciblé complété de la fiche de la nouvelle présidente', d.champs.some((g) => g.op === '35M' && g.champs[0].type === 'personne'));
 
   for (const p of d.pieces.obligatoires) {

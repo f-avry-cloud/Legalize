@@ -28,6 +28,7 @@
     "test:categorie": "node scripts/test-categorie-activite.js",
     "test:syntheses": "node scripts/test-synthese-gu.js",
     "test:pratique": "node scripts/test-pratique-syntheses.js",
+    "test:portail": "node scripts/test-exigences-portail.js",
     "corpus:syntheses": "node scripts/corpus-syntheses.js"
   },
   "engines": {

@@ -65,7 +65,9 @@ function dossier(forme, extra = {}) {
   const vide = resoudre(['01M'], {});
   verifier('la forme est la première question', vide.questions[0]?.id === 'forme_creation', vide.questions.map((q) => q.id));
   verifier('les dirigeants attendent la forme', vide.questions.find((q) => q.id === 'entrants')?.attente, vide.questions.find((q) => q.id === 'entrants'));
-  verifier('statuts et annonce toujours exigés', ['PJ_01', 'PJ_08'].every((c) => vide.pieces.obligatoires.some((p) => p.code === c)));
+  verifier('statuts et copie de l’insertion (PJ_09) toujours exigés, attestation de parution facultative',
+    ['PJ_01', 'PJ_09'].every((c) => vide.pieces.obligatoires.some((p) => p.code === c)) && vide.pieces.facultatives.some((p) => p.code === 'PJ_08')
+    && !vide.pieces.obligatoires.some((p) => p.code === 'PJ_08'), vide.pieces);
 
   const sas = resoudre(['01M'], { forme_creation: 'SAS', siege_occupation: 'domiciliation', domiciliataire_meme_greffe: false, apports_numeraire: true, apports_nature: true, commissaire_apports: true, premiers_dirigeants_statuts: false, fonds_origine: 'achat', activite_reglementee: true,
     entrants: [{ nom: 'Paul MARTIN', nature: 'PP', fonction: '73', hors_ue: true }, { nom: 'HOLDING', nature: 'PM', fonction: '53' }, { nom: 'AUDIT', nature: 'PM', fonction: '71', inscrit: true }] });

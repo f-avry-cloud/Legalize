@@ -192,7 +192,7 @@ Stockage : `typologie.manuel_champs` (`{"<groupe>.<name>": {"requis": false, "mo
 - `src/connecteur/depot.js` : page et API de dépôt, `/depot/:jeton`.
 - `src/routes-formalites-ai.js`, `public/formalites-ai.js` : onglet Suivi Formalités AI.
 - `src/inpi/rne-documents.js`, `src/inpi/texte-pdf.js` : pièces déposées au registre, texte et OCR.
-- Tests : `node scripts/test-connecteur.js`, `node scripts/test-registre.js`, `node scripts/test-categorie-activite.js` (API INPI simulée).
+- Tests : `node scripts/test-connecteur.js`, `node scripts/test-registre.js`, `node scripts/test-categorie-activite.js`, `npm run test:portail` (API INPI simulée).
 - Écarts avec la pratique du cabinet relevés dans ses synthèses du guichet : `docs/ecarts-syntheses.md` ; tests `npm run test:pratique`.
 
 ## Formalité sortie du compte mandataire
@@ -242,6 +242,53 @@ et signé sur le portail, validé le 21/10 sous une nouvelle liasse (J0029164105
   connecteur : c'est la voie pour corriger une création « À signer » sans passer par le brouillon du portail.
 - **Brouillons** : l'API ne documente que `PUT /api/formality_drafts/{id}/transfer_agent` ; un brouillon du
   portail n'est ni listable ni supprimable par le connecteur.
+
+## Exigences du portail (relevé du 5/11/2026)
+
+Relevé fait sur le portail avec trois brouillons fictifs, jamais transmis (création de SAS,
+modification et dissolution d'une SAS dont le président est une personne morale), et lecture des
+référentiels que le portail charge. En modification et en cessation, le portail ne bloque sur aucune
+pièce ; en création, il en exige sept, chacune sous son type. Une pièce envoyée sous un autre type que
+celui de la rubrique y manque : à la signature d'une création, ou si la formalité est ramenée en
+brouillon, le portail la redemande.
+
+Appliqué au connecteur :
+
+- **Création (01M, 02M, 03M)** : copie de l'insertion (PJ_09) exigée ; l'attestation de parution
+  (PJ_08) n'est plus que facultative.
+- **Création d'une SAS ou SASU avec apports en numéraire** : certificat du dépositaire (PJ_06) et
+  attestation de dépôt des fonds (PJ_180), chacun sur sa ligne et sans document de substitution (le
+  même document de la banque peut être joint sur les deux). SARL, SA et autres formes : inchangé, non
+  relevé.
+- **15M** : décision de l'assemblée (PJ_54), rapport du commissaire aux apports (PJ_04) et, pour une SA
+  ou une SAS, certificat du dépositaire (PJ_56). PJ_155, PJ_156 et PJ_163, réservées au dépôt d'actes
+  (DA) par le dictionnaire, ne sont plus demandées.
+- **13M** : rapport du commissaire à la transformation sous PJ_91 (et non PJ_160) ; PJ_157 (DA) n'est
+  plus demandée.
+- **22M** : lieu de liquidation obligatoire (proposé « au siège », à confirmer) ; date de cessation
+  d'activité obligatoire sans poursuite d'activité.
+- **Dirigeant personne morale** : « Souhaitez-vous désigner un représentant permanent ? »
+  (`designerRepresentantPermanent`, GU_POU054) est transmis : oui quand l'identité du représentant
+  part avec la liasse ; non pour une nomination sans représentant ; pour un dirigeant déjà inscrit, rien
+  n'est deviné sans identité.
+- **Date de première clôture** : déjà calculée et transmise quand elle n'est pas saisie.
+- **Complément de pièces avant signature** : une formalité « À signer » à laquelle manque une pièce
+  exigée par le portail se complète sans brouillon. `ouvrir_depot_pieces`, rappelé avec la seule
+  référence, ouvre un lien de complément : les pièces déjà au dossier y sont verrouillées, les données
+  ne se modifient pas. Les PDF déposés partent ensuite avec `transmettre_pieces`, sur accord de
+  l'avocat (§3.11, puis régénération de la synthèse, §6.4). Fermé dès la signature.
+- **Contrôle** : `npm run test:portail` échoue si une opération demande une pièce dont le type n'est pas
+  « PM » au dictionnaire, hors exceptions nommées que le relevé n'a pas couvertes : 41M (PJ_161, PJ_175,
+  PJ_176, PJ_199), 26M (PJ_236), 62M (PJ_53), 11M (PJ_97, absente du dictionnaire).
+
+Écarts du relevé non encore traités : régime fiscal selon la forme (SAS : impôt sur les sociétés ou
+option sociétés de personnes) ; origine du fonds selon la catégorie d'activité ; rôles (auditeur de
+durabilité, personnes ayant le pouvoir d'engager) ; une date d'effet par évènement (`dateEffetXX`) au
+lieu de la date de décision commune ; 29M (fusion simplifiée de l'absorbante, première date de clôture) ;
+12M (activités rattachées à l'établissement, 61PMF / 67PMF) ; 35M (PJ_03 acceptée) ; 38F (bénéficiaires
+effectifs à ressaisir) ; rubriques du portail (`sousTypeDocument`, 343 valeurs au dictionnaire, non
+envoyées). Opérations non relevées sur le portail : création de SARL, EURL, SA et SCI ; 19M, 34M, 51M,
+55PM, 56PMF, 63M, 80PMF, 28M, 40M, 41M, 42M.
 
 ## Traces
 

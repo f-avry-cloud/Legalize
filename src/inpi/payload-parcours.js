@@ -133,6 +133,10 @@ function pouvoirEntrant(e, r, forme, dateEffet) {
         lieuRegistre: r.greffe ? String(r.greffe).toUpperCase() : undefined,
       },
       adresseEntreprise: adresseInpi(r.adresse),
+      // Portail : « Souhaitez-vous désigner un représentant permanent ? » est
+      // obligatoire pour un dirigeant personne morale (designerRepresentantPermanent,
+      // GU_POU054, relevé du 5/11/2026) ; oui dès que son identité est donnée.
+      designerRepresentantPermanent: Boolean(r.representant?.nom),
       // Personne morale dirigeante : le guichet exige la personne physique qui la représente.
       representant: r.representant?.nom ? {
         descriptionPersonne: { ...descriptionIndividu(r.representant, role), statutVisAVisFormalite: '1' },
@@ -311,6 +315,7 @@ const APPLIQUER = {
         if (v.adresse?.codePostal && m.motif === 'adresse') { p.adresseEntreprise = adresseInpi(v.adresse); drapeaux.isModificationAdressePouvoir = true; }
         if (m.motif === 'representant' && v.representant?.nom) {
           p.representant = { descriptionPersonne: { ...descriptionIndividu(v.representant, p.roleEntreprise), statutVisAVisFormalite: '1' }, adresseDomicile: adresseInpi(v.representant.adresse) };
+          p.designerRepresentantPermanent = true;
           drapeaux.isModificationRepresentantPermanent = true;
         }
       } else if (p.individu) {
@@ -503,6 +508,9 @@ function completerPouvoir(p, representant) {
         descriptionPersonne: { ...descriptionIndividu(representant, p.roleEntreprise), statutVisAVisFormalite: '1' },
         adresseDomicile: adresseInpi(representant.adresse),
       };
+      // Le portail demande s'il est désigné : oui, puisque son identité part avec
+      // la liasse. Sans identité, la réponse du registre n'est pas devinée.
+      p.designerRepresentantPermanent = true;
     }
   }
   // Chaque fonction exercée est un pouvoir distinct du registre : pas de second rôle déclaré.
