@@ -14,7 +14,7 @@
  * dossier dont on sait qu'il serait refusé.
  */
 
-const { contenuAnterieur, dateInpi, clotureInpi, adresseInpi, construirePayload, nettoyer, codeNationalite, beneficiairesInpi } = require('./payload');
+const { contenuAnterieur, dateInpi, clotureInpi, adresseInpi, construirePayload, nettoyer, codeNationalite, beneficiairesInpi, journalInpi } = require('./payload');
 const { TYPES_FORMALITE, TYPES_PERSONNE, STATUT_BLOC, rolePrincipal, roleDepuisFonction } = require('./referentiels');
 const { nettoyerSiren } = require('./normalize');
 const creation = require('./parcours-creation');
@@ -366,8 +366,22 @@ const CESSATIONS = {
     for (const e of tousEtablissements(c)) Object.assign(chemin(e, 'descriptionEtablissement'), { statutPourFormalite: '2', destinationEtablissement: 'F', dateEffetFermeture: d });
   },
   '28M'(c, r) {
-    // Dissolution à la date de la décision ; transmission (et cessation d'activité)
-    // à l'issue du délai d'opposition. Dossiers anciens : une seule date.
+    // Déclaration de la dissolution sans liquidation (1er temps de la TUP) : la
+    // société reste immatriculée pendant le délai d'opposition ; la radiation suit
+    // (RADTUP). Dossiers antérieurs à la scission, qui portaient la transmission ou
+    // une date unique : déposés comme avant, en un seul temps.
+    if (!r.date_transmission && !r.date_dissolution) {
+      const d = dateInpi(r.date_decision);
+      c.personneMorale.detailCessationEntreprise = {
+        indicateurDissolution: true, typeDissolution: '2', dateDissolutionDisparition: d,
+        indicateurMaintienImmatriculationRegistre: true, motifCessation: '11',
+      };
+      if (r.journal_publication) {
+        chemin(c, 'personneMorale', 'identite').publicationLegale = { ...journalInpi(r.journal_publication), datePublication: dateInpi(r.date_publication) };
+      }
+      ajouterAssocieUnique(c, r.associe_unique);
+      return;
+    }
     const d = dateInpi(r.date_dissolution || r.date_decision);
     const t = dateInpi(r.date_transmission) || d;
     const a = r.associe_unique || {};
@@ -384,6 +398,37 @@ const CESSATIONS = {
     for (const e of c.personneMorale.autresEtablissements || []) chemin(e, 'descriptionEtablissement').destinationEtablissement = 'B';
   },
 };
+
+/**
+ * Radiation à l'issue du délai d'opposition (2e temps de la TUP), déposée en
+ * 42M « à la suite d'un 28M ». À valider sur le serveur de démonstration
+ * (npm run banc:guichet seule-RADTUP) avant tout dépôt réel.
+ */
+CESSATIONS.RADTUP = (c, r) => {
+  const d = dateInpi(r.date_dissolution || r.date_decision);
+  const t = dateInpi(r.date_transmission);
+  c.personneMorale.detailCessationEntreprise = {
+    indicateurDissolution: true, typeDissolution: '2', dateDissolutionDisparition: d, dateTransfertPatrimoine: t,
+    dateCessationTotaleActivite: t, motifCessation: '11',
+    indicateurDisparitionPM: true, indicateurDisparitionPMTransmissionUniversellePatrimoine: true,
+  };
+  c.natureCessationEntreprise = { dateRadiation: t };
+  // Inscrit au registre par la déclaration de dissolution ; ajouté seulement s'il n'y figure pas.
+  ajouterAssocieUnique(c, r.associe_unique);
+  for (const e of c.personneMorale.autresEtablissements || []) chemin(e, 'descriptionEtablissement').destinationEtablissement = 'B';
+};
+
+/** L'associé unique qui recueille le patrimoine, en pouvoir (rôle 130), s'il n'y est pas déjà. */
+function ajouterAssocieUnique(c, a = {}) {
+  const pouvoirs = chemin(c, 'personneMorale', 'composition').pouvoirs = c.personneMorale.composition.pouvoirs || [];
+  const siren = nettoyerSiren(a.siren);
+  if (siren && pouvoirs.some((p) => nettoyerSiren(p.entreprise?.siren) === siren)) return;
+  pouvoirs.push({
+    typeDePersonne: 'ENTREPRISE', roleEntreprise: '130', statutPourLaFormalite: '1',
+    entreprise: { siren, denomination: a.denomination, formeJuridique: a.forme_juridique_code, roleEntreprise: '130', lieuRegistre: a.greffe ? String(a.greffe).toUpperCase() : undefined },
+    adresseEntreprise: adresseInpi(a.adresse),
+  });
+}
 
 CESSATIONS['41M'] = (c, r) => {
   const d = dateInpi(r.date_fusion);
@@ -411,7 +456,7 @@ function construireCessation(dossier, op) {
   const r = { ...(dossier.reponses?.commun || {}), ...(dossier.reponses?.[op] || {}) };
   const c = socle(copie(contenuAnterieur(fiche)));
   completerRegistre(c, dossier.reponses?._registre || {}, dossier.typologie?._rejets);
-  c.evenementCessation = op;
+  c.evenementCessation = op === 'RADTUP' ? '42M' : op;
   c.natureCessation = '1';
   // Pouvoirs existants : inchangés (exigé par le guichet pour une cessation).
   for (const p of c.personneMorale?.composition?.pouvoirs || []) p.statutPourLaFormalite = '4';

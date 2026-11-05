@@ -146,9 +146,10 @@ function echeanceDe(operations = [], reponses = {}, maintenant = new Date()) {
     depart = Object.values(reponses).map((g) => g?.date_debut_activite).find((v) => DATE.test(String(v || '')));
     if (depart) limite = new Date(Date.parse(depart) + 15 * JOUR_MS).toISOString().slice(0, 10);
     texte = '15 jours à compter du début d’activité';
-  } else if (operations.includes('28M')) {
+  } else if (operations.includes('RADTUP') || (operations.includes('28M') && reponses['28M']?.date_transmission)) {
     // TUP : la radiation suit la transmission du patrimoine, pas la décision.
-    depart = DATE.test(String(reponses['28M']?.date_transmission || '')) ? reponses['28M'].date_transmission : null;
+    const op = operations.includes('RADTUP') ? 'RADTUP' : '28M';
+    depart = DATE.test(String(reponses[op]?.date_transmission || '')) ? reponses[op].date_transmission : null;
     if (depart) limite = ajouterMois(depart, 1);
     texte = '1 mois à compter de la transmission du patrimoine (expiration du délai d’opposition)';
     if (!depart) return { connue: false, regle: texte, message: 'Date de réalisation de la transmission du patrimoine à renseigner.' };
@@ -841,10 +842,12 @@ async function annoncesBodacc({ siren, famille, depuis, limite }) {
  * (annonce légale ou BODACC) : constat en alerte, décision de l'avocat.
  */
 async function controleBodaccTup(f, alertes) {
-  if (!(f.operations || []).includes('28M') || !nettoyerSiren(f.siren || '')) return;
   const rep = f.reponses || {};
-  const decision = rep['28M']?.date_dissolution || rep.commun?.date_decision;
-  const transmission = rep['28M']?.date_transmission;
+  // La radiation (RADTUP), ou un 28M antérieur à la scission qui portait la transmission.
+  const op = (f.operations || []).includes('RADTUP') ? 'RADTUP' : ((f.operations || []).includes('28M') && rep['28M']?.date_transmission ? '28M' : null);
+  if (!op || !nettoyerSiren(f.siren || '')) return;
+  const decision = rep[op]?.date_dissolution || rep.commun?.date_decision;
+  const transmission = rep[op]?.date_transmission;
   try {
     const a = await bodacc.publicationDissolution(f.siren, DATE.test(String(decision || '')) ? decision : undefined);
     if (!a) {

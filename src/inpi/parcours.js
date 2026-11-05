@@ -53,7 +53,10 @@ const OPERATIONS = {
   '80PMF': { nom: 'Fermer un établissement', type: null },
   '84M': { nom: 'Mettre le fonds en location-gérance', type: null },
   '22M': { nom: 'Dissoudre la société (liquidation amiable)', type: 'cessation', cessation: true },
-  '28M': { nom: 'TUP : radier la société après transmission universelle de patrimoine à l’associé unique', type: null, cessation: true },
+  // TUP en deux temps, comme le guichet (dictionnaire : dateTransfertPatrimoine « obligatoire car
+  // c'est un événement 42M à la suite d'un 28M ») et la pratique du cabinet (synthèses 2023-2026).
+  '28M': { nom: 'TUP : déclarer la dissolution sans liquidation (décision de l’associé unique personne morale)', type: null, cessation: true },
+  RADTUP: { nom: 'TUP : radier la société à l’issue du délai d’opposition (après la déclaration de dissolution)', type: null, cessation: true },
   '40M': { nom: 'Mettre la société en sommeil (cessation totale d’activité)', type: null, cessation: true },
   '18M': { nom: 'Qualité d’entreprise de l’économie sociale et solidaire (ESS)', type: null },
   '19M': { nom: 'Changer la nature de la gérance (SARL)', type: null },
@@ -80,6 +83,17 @@ const OPERATIONS = {
  * constaté par dépôt de test) et ont leur propre liste de pièces.
  */
 const FICHES_PROPRES = {
+  RADTUP: () => ({
+    code: 'RADTUP', libelle: 'Disparition de la personne morale à la suite d’une transmission universelle de patrimoine', famille: 'dissolution',
+    quand: 'À l’issue du délai d’opposition des créanciers (30 jours après la publication de la dissolution), la dissolution sans liquidation (28M) étant inscrite. Déposée au guichet en événement 42M.',
+    textes: ['C. civ., art. 1844-5, al. 3', 'Dictionnaire des données INPI (06/2026) : dateTransfertPatrimoine, obligatoire pour un événement 42M à la suite d’un 28M'],
+    informations: [
+      ['Date de réalisation de la transmission du patrimoine (et de cessation d’activité)', 'BlocDetailCessation.dateTransfertPatrimoine'],
+      ['Associé unique qui recueille le patrimoine', null],
+    ],
+    pieces_obligatoires: [],
+    pieces_selon_le_cas: [catalogue.decrirePiece('PJ_188', 'extrait d’immatriculation de l’associé unique qui recueille le patrimoine')],
+  }),
   MAJDIR: () => ({
     code: 'MAJDIR', libelle: 'Modification relative à un dirigeant déjà inscrit', famille: 'dirigeants',
     quand: 'Un dirigeant en place change de dénomination ou de nom, d’adresse ou de représentant permanent.',
@@ -559,6 +573,8 @@ function resoudre(operations, typologie = {}, fiche = {}, rep = {}) {
 function evenementAttendu(code, forme = '') {
   if (code === '34M' && /^5[4-7]/.test(forme)) return '35M';
   if (code === 'MAJDIR') return /^5[4-7]/.test(forme) ? '35M' : '34M';
+  // Radiation après TUP : disparition de la personne morale « à la suite d'un 28M ».
+  if (code === 'RADTUP') return '42M';
   // Constaté : la disparition de la société absorbée est enregistrée en 42M.
   if (code === '41M') return '42M';
   return code.replace(/PMF?$|PM$/, 'M');
@@ -615,8 +631,11 @@ function incompatibilites(ops) {
  */
 function controlesDates(ops, rep = {}) {
   const out = [];
-  if (ops.includes('28M')) {
-    const r = { ...(rep.commun || {}), ...(rep['28M'] || {}) };
+  for (const op of ['RADTUP', '28M']) {
+    if (!ops.includes(op)) continue;
+    const r = { ...(rep.commun || {}), ...(rep[op] || {}) };
+    // 28M : déclaration de la dissolution, sans transmission (dossiers anciens exceptés).
+    if (op === '28M' && !r.date_transmission) continue;
     const dissolution = r.date_dissolution || r.date_decision;
     const transmission = r.date_transmission;
     const jour = (d) => (/^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) ? Date.parse(d) : NaN);
@@ -644,6 +663,10 @@ const DIFFUSION_COMMERCIALE = {
   name: 'diffusion_commerciale', label: 'Diffusion commerciale des données (réutilisation par des tiers)', type: 'ouinon', defaut: false,
   aide: 'Choix du client. Pratique du cabinet : « Non » dans 91 % des créations.',
 };
+
+/** Associé unique personne morale qui recueille le patrimoine (TUP). */
+const ASSOCIE_UNIQUE_TUP = { name: 'associe_unique', label: 'Associé unique qui recueille le patrimoine', type: 'personne_morale', requis: true,
+  sous_requis: ['denomination', 'siren', 'forme_juridique_code', 'greffe', 'adresse.codePostal', 'adresse.commune'] };
 
 /** Journal et date de parution d'une annonce que le portail demande en rubrique. */
 const PUBLICATION = (objet) => [
@@ -731,10 +754,13 @@ function champs(ops, t, fiche, rep = {}) {
       { name: 'date_effet', label: 'Date de début du contrat', type: 'date', requis: true }],
     // La date de décision (groupe commun) est celle de la dissolution ; la transmission
     // n'a lieu qu'à l'issue du délai d'opposition des créanciers (art. 1844-5 C. civ.).
-    '28M': [{ name: 'date_transmission', label: 'Date de réalisation de la transmission du patrimoine (expiration du délai d’opposition des créanciers)', type: 'date', requis: true,
+    // TUP, 1er temps : la dissolution, déclarée dès la décision publiée ; la société
+    // reste immatriculée pendant le délai d'opposition des créanciers.
+    '28M': [ASSOCIE_UNIQUE_TUP, ...PUBLICATION('de la dissolution')],
+    // TUP, 2e temps : la radiation, à l'issue du délai d'opposition.
+    RADTUP: [{ name: 'date_transmission', label: 'Date de réalisation de la transmission du patrimoine (expiration du délai d’opposition des créanciers)', type: 'date', requis: true,
       aide: '30 jours après la publication de la dissolution, sans opposition (ou après le rejet des oppositions, le remboursement des créances ou la constitution de garanties). C’est aussi la date de cessation d’activité.' },
-      { name: 'associe_unique', label: 'Associé unique qui recueille le patrimoine', type: 'personne_morale', requis: true,
-        sous_requis: ['denomination', 'siren', 'forme_juridique_code', 'greffe', 'adresse.codePostal', 'adresse.commune'] }],
+      ASSOCIE_UNIQUE_TUP],
     '80PMF': [{ name: 'etablissement', label: 'Établissement fermé', type: 'choix', requis: true, options: optionsEtablissements(fiche) },
       { name: 'date_fermeture', label: 'Date de fermeture', type: 'date', requis: true },
       { name: 'destination', label: 'Devenir de l’établissement', type: 'choix', requis: true, defaut: 'B',
@@ -899,7 +925,7 @@ function champVise(cleChamp, cheminRefuse) {
 }
 
 /** Formalités de cessation déposées comme telles au guichet (sans description de la société). */
-const CESSATIONS_GU = new Set(['40M', '28M', '41M']);
+const CESSATIONS_GU = new Set(['40M', '28M', 'RADTUP', '41M']);
 
 const vide = (v) => v === undefined || v === null || String(v).trim() === '';
 const descriptionPM = (fiche) => fiche?.brut?.formality?.content?.personneMorale?.identite?.description || {};

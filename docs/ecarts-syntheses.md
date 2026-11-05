@@ -40,6 +40,7 @@ Priorités qui en découlent, par volume :
 | 22M : informations | Poursuite d'activité et publicité présentes dans 98 à 100 % des synthèses ; 19 dissolutions sur 60 « avec poursuite d'activité » | Champs `poursuite_activite`, `date_cessation_activite`, `journal_publication`, `date_publication` |
 | 42M : informations | Publicité de la liquidation dans 87 % des synthèses | Champs `journal_publication`, `date_publication` |
 | 28M : pièces | Kbis de l'associé unique dans 50 % des TUP validées | PJ_188 proposé (« à préciser ») |
+| TUP en deux temps | Sur 34 TUP, environ la moitié sont des déclarations de dissolution (immatriculation maintenue, publicité de la dissolution), l'autre moitié des radiations (« disparition suite à une TUP », date de transfert du patrimoine) ; le connecteur faisait tout en un seul 28M | 28M = déclaration de la dissolution ; nouvelle opération RADTUP = radiation, déposée en 42M après le délai d'opposition (voir `docs/connecteur-guichet-unique.md`) |
 | 41M : pièces | Annonce légale dans 100 % des radiations d'absorbées, Kbis des sociétés participantes dans 96 % | PJ_08 obligatoire, PJ_20 (Kbis de l'absorbante) proposé |
 
 Tests : `npm run test:pratique`. Jeux d'essai existants mis à jour pour confirmer la diffusion
